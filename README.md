@@ -30,7 +30,10 @@ Una partida dura menos de 5 minutos:
    *cuánto cuesta volver al módulo desde donde estás*, y un clic lo abre: pasos, terreno rocoso,
    subida del cráter y cuánto te sobra o te falta. Una muestra solo cuenta si la entregas.
 4. **Informe** — El juego explica la cadena causal (qué decisión produjo qué efecto) y te invita
-   a repetir cambiando una sola decisión. La segunda partida es donde ocurre el aprendizaje.
+   a repetir cambiando una sola decisión. La segunda partida es donde ocurre el aprendizaje:
+   su informe trae la tabla **ANTES vs AHORA** con las decisiones que cambiaste y el resultado
+   de cada partida. Si cambiaste una sola, te dice que esa es la causa; si cambiaste varias,
+   te pide repetir aislando una.
 
 Todos los valores son ficticios y de juego: están calibrados para enseñar, no para simular la realidad.
 
@@ -58,12 +61,13 @@ El motor es testeable sin abrir el navegador:
 node tests/motor.test.js
 ```
 
-Las pruebas (88) verifican, entre otras cosas, el ejemplo canónico (100 Wh con terreno difícil → −8 Wh),
+Las pruebas (119) verifican, entre otras cosas, el ejemplo canónico (100 Wh con terreno difícil → −8 Wh),
 que lanzar solo se bloquee por masa o presupuesto (equivocarse de margen es la lección, no un error),
 que una muestra no cuente hasta volver al módulo, que las dos rutas ganadoras caben en presupuesto,
 que el momento central ocurre con los números exactos (40 Wh en mano, 10 Wh por perforar la veta,
-35 Wh para volver) y que la reserva por tramos se reparte, se sella al lanzar y se compara con el
-consumo real.
+35 Wh para volver), que la reserva por tramos se reparte, se sella al lanzar y se compara con el
+consumo real, y que al repetir el informe identifica qué decisiones cambiaron respecto a la
+partida anterior.
 
 Todo el arte es pixel art original dibujado por código (sprites y primitivas de canvas); no se usa
 ningún activo de terceros.

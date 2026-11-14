@@ -58,7 +58,8 @@ var Motor = (function () {
       sitios: null,
       historial: [],
       resultado: null, // 'exito' | 'parcial' | 'varado'
-      varadoEn: null
+      varadoEn: null,
+      anterior: null   // resumen de la partida previa (solo tras REPETIR), para compararla en el informe
     };
   }
 
@@ -637,15 +638,22 @@ var Motor = (function () {
       if (veta) {
         frases.push('Ya tenías la muestra profunda a bordo. Perforar la veta costó ' + C.veta + ' Wh que el regreso necesitaba: seguir explorando fue la decisión que rompió el balance.');
       }
-      if (rocoso) {
+      if (plan.energiaInicial === 0) {
+        // Sin batería no hay margen que analizar: la causa está en el hangar.
+        frases.push('Lanzaste sin ninguna batería: tenías 0 Wh y el primer paso ya cuesta ' + C.pasoEnergia + ' Wh. El plan pedía ' + plan.totalPrevisto + ' Wh solo para ir, trabajar y volver.');
+      } else if (plan.margenReservado < 0) {
+        frases.push('El plan ya no alcanzaba antes de despegar: llevabas ' + plan.energiaInicial + ' Wh y el recorrido previsto pedía ' + plan.totalPrevisto + ' Wh (faltaban ' + (-plan.margenReservado) + ' Wh incluso con buen terreno).');
+      } else if (rocoso) {
         frases.push('El terreno rocoso encareció cada paso en +' + m.riesgoWh + ' Wh, y el margen que reservaste al lanzar (' + plan.margenReservado + ' Wh) no cubrió ese extra.');
       } else {
         frases.push('El plan estimaba ' + plan.totalPrevisto + ' Wh y reservaste ' + plan.margenReservado + ' Wh de margen; las acciones extra en superficie se comieron la diferencia.');
       }
-      if (plan.reserva && estado.real.regresoNecesario !== null) {
+      if (plan.reserva && plan.energiaInicial > 0 && estado.real.regresoNecesario !== null) {
         frases.push('Habías reservado ' + plan.reserva.regreso + ' Wh para volver; al dar la vuelta el regreso costaba ' + estado.real.regresoNecesario + ' Wh y te quedaban ' + estado.real.energiaAlVolver + '.');
       }
-      frases.push('Prueba a repetir cambiando una sola decisión: una batería mayor, aterrizar más cerca, reservar más para el regreso o explorar menos.');
+      frases.push(plan.energiaInicial === 0
+        ? 'Vuelve a la agencia y equipa una batería: sin energía no hay expedición.'
+        : 'Prueba a repetir cambiando una sola decisión: una batería mayor, aterrizar más cerca, reservar más para el regreso o explorar menos.');
     } else {
       var profunda = estado.muestras.entregadas.some(function (x) { return x.id === 'profunda'; });
       if (estado.resultado === 'exito' && profunda && estado.viaje.corrigio) {
@@ -672,8 +680,94 @@ var Motor = (function () {
     return frases;
   }
 
+  // ---------- comparación entre partidas ----------
+
+  var TIPOS_EQUIPO = [
+    ['bateria', 'Batería'], ['oxigeno', 'Oxígeno'], ['herramienta', 'Herramientas'],
+    ['contenedor', 'Contenedor'], ['combustible', 'Combustible extra']
+  ];
+
+  function textoResultado(res) {
+    if (res.resultado === 'exito') return 'Misión cumplida (sobraron ' + res.energiaFinal + ' Wh)';
+    if (res.resultado === 'parcial') return 'Regreso sin objetivo (sobraron ' + res.energiaFinal + ' Wh)';
+    return 'Varada a ' + res.varadoEn + ' paso(s) del módulo';
+  }
+
+  // Foto de las decisiones y del resultado de una partida terminada.
+  // Solo guarda textos y números ya resueltos: no depende del estado vivo.
+  function resumenPartida(estado) {
+    var equipo = {};
+    TIPOS_EQUIPO.forEach(function (par) {
+      var nombres = estado.equipo.map(obj).filter(function (o) { return o && o.tipo === par[0]; })
+        .map(function (o) { return o.nombre; }).sort();
+      equipo[par[0]] = nombres.length ? nombres.join(' + ') : 'ninguno';
+    });
+    var zonaPlan = estado.viaje.corrigio ? otraZona(estado.zonaAterrizaje) : estado.zonaAterrizaje;
+    var pr = estado.plan ? estado.plan.reserva : null;
+    var res = {
+      cohete: estado.cohete ? cohetePorId(estado.cohete).nombre : 'ninguno',
+      objetivo: DATOS.objetivos[estado.objetivo].corto,
+      zona: DATOS.mapa[zonaPlan].nombre,
+      equipo: equipo,
+      reservaManual: !!(pr && pr.manual),
+      reservaRegreso: pr ? pr.regreso : null,
+      trayectoria: estado.viaje.corrigio ? 'Corregir' : 'Mantener',
+      recogidas: estado.muestras.recogidas.map(function (x) { return x.nombre; }).join(' + ') || 'ninguna',
+      resultado: estado.resultado,
+      varadoEn: estado.varadoEn,
+      energiaFinal: estado.recursos.energiaWh,
+      entregadas: estado.muestras.entregadas.length
+    };
+    res.textoResultado = textoResultado(res);
+    return res;
+  }
+
+  // Compara la partida terminada con la anterior (si se llegó aquí con
+  // REPETIR). Devuelve qué decisiones cambiaron y qué pasó con el resultado.
+  // Con un solo cambio el efecto queda aislado; con varios, el informe lo dice.
+  function compararConAnterior(estado) {
+    if (!estado.anterior || !estado.resultado) return null;
+    var a = estado.anterior;
+    var b = resumenPartida(estado);
+    var cambios = [];
+    function mirar(etiqueta, antes, ahora) {
+      if (antes !== ahora) cambios.push({ etiqueta: etiqueta, antes: antes, ahora: ahora });
+    }
+    mirar('Cohete', a.cohete, b.cohete);
+    mirar('Objetivo', a.objetivo, b.objetivo);
+    mirar('Zona de aterrizaje', a.zona, b.zona);
+    TIPOS_EQUIPO.forEach(function (par) { mirar(par[1], a.equipo[par[0]], b.equipo[par[0]]); });
+    // La reserva automática depende de la zona y del objetivo: solo es una
+    // decisión propia cuando el jugador la movió a mano.
+    if (a.reservaManual || b.reservaManual) {
+      mirar('Reserva para el regreso', a.reservaRegreso + ' Wh', b.reservaRegreso + ' Wh');
+    }
+    mirar('Trayectoria en vuelo', a.trayectoria, b.trayectoria);
+    mirar('Muestras recogidas', a.recogidas, b.recogidas);
+
+    var mismoResultado = a.textoResultado === b.textoResultado;
+    var efecto = mismoResultado
+      ? 'el resultado no cambió: ' + b.textoResultado.toLowerCase() + '.'
+      : 'el resultado pasó de «' + a.textoResultado + '» a «' + b.textoResultado + '».';
+    var frase;
+    if (cambios.length === 0) {
+      frase = mismoResultado
+        ? 'Repetiste exactamente las mismas decisiones y ' + efecto + ' Cambia una y vuelve a comparar.'
+        : 'El plan y las decisiones fueron los mismos; la diferencia estuvo en cuánto te moviste o escaneaste en superficie: ' + efecto;
+    } else if (cambios.length === 1) {
+      var c = cambios[0];
+      frase = 'Cambiaste una sola decisión (' + c.etiqueta + ': ' + c.antes + ' → ' + c.ahora + ') y ' + efecto +
+        (mismoResultado ? ' Esa decisión no era la que ataba.' : ' Ese cambio es la causa.');
+    } else {
+      frase = 'Cambiaste ' + cambios.length + ' decisiones a la vez y ' + efecto +
+        ' Con varios cambios juntos no se sabe cuál pesó: repite cambiando solo una.';
+    }
+    return { antes: a, ahora: b, cambios: cambios, mismoResultado: mismoResultado, frase: frase };
+  }
+
   function generarInforme(estado) {
     return {
+      comparacion: compararConAnterior(estado),
       resultado: estado.resultado,
       titulo: estado.resultado === 'exito' ? 'MISIÓN CUMPLIDA'
         : estado.resultado === 'parcial' ? 'REGRESO SIN OBJETIVO'
@@ -695,6 +789,7 @@ var Motor = (function () {
   // decisiones anteriores para editarlas.
   function repetirConPlan(estado) {
     var n = nuevoEstado();
+    if (estado.resultado) n.anterior = resumenPartida(estado);
     n.objetivo = estado.objetivo;
     n.zonaAterrizaje = estado.viaje.corrigio ? otraZona(estado.zonaAterrizaje) : estado.zonaAterrizaje;
     estado.equipo.forEach(function (id) { equipar(n, id); });
@@ -743,6 +838,8 @@ var Motor = (function () {
     perforar: perforar,
     regresar: regresar,
     generarInforme: generarInforme,
+    resumenPartida: resumenPartida,
+    compararConAnterior: compararConAnterior,
     repetirConPlan: repetirConPlan
   };
 })();

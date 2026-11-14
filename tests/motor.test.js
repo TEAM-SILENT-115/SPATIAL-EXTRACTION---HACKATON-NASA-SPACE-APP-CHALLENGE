@@ -239,6 +239,80 @@ Motor.perforar(dr0);
 igual('tras la veta faltan 5', Motor.desgloseRegreso(dr0).sobra.energia, -5);
 igual('fuera de la superficie el regreso es cero', Motor.desgloseRegreso(Motor.nuevoEstado()).energia.total, 0);
 
+console.log('— Comparación entre partidas (REPETIR) —');
+function jugar(e, decision, conVeta) {
+  hastaLaVeta(e, decision);
+  if (conVeta) Motor.perforar(e);
+  Motor.regresar(e);
+  return e;
+}
+// Partida 1: canónica con escáner, mantiene en la llanura rocosa → varada.
+var p1 = jugar(conEquipo('halcon', baseVeta, 'llanura'), 'mantener', false);
+igual('partida 1 acaba varada', p1.resultado, 'varado');
+igual('sin partida anterior no hay comparación', Motor.generarInforme(p1).comparacion, null);
+var p2 = Motor.repetirConPlan(p1);
+igual('repetir guarda el resultado anterior', p2.anterior.resultado, 'varado');
+igual('repetir guarda la batería anterior', p2.anterior.equipo.bateria, 'Batería 100 Wh');
+igual('en el hangar todavía no se compara', Motor.compararConAnterior(p2), null);
+// Partida 2: un solo cambio (batería 100 → 160) → gana.
+Motor.quitar(p2, 'bat100'); Motor.equipar(p2, 'bat160');
+jugar(p2, 'mantener', false);
+var cmp = Motor.generarInforme(p2).comparacion;
+igual('partida 2 gana', p2.resultado, 'exito');
+igual('un cambio de batería cuenta como una decisión', cmp.cambios.length, 1);
+igual('el cambio es la batería', cmp.cambios[0].etiqueta, 'Batería');
+igual('antes: batería 100', cmp.cambios[0].antes, 'Batería 100 Wh');
+igual('ahora: batería 160', cmp.cambios[0].ahora, 'Batería 160 Wh');
+igual('el resultado cambió', cmp.mismoResultado, false);
+igual('la frase aísla la causa', cmp.frase.indexOf('Cambiaste una sola decisión (Batería: Batería 100 Wh → Batería 160 Wh)') === 0, true);
+igual('la frase nombra el resultado anterior', cmp.frase.indexOf('Varada a') !== -1, true);
+igual('la frase nombra el resultado nuevo', cmp.frase.indexOf('Misión cumplida') !== -1, true);
+// Partida 3: mismas decisiones que la 2 → sin cambios, mismo resultado.
+var p3 = jugar(Motor.repetirConPlan(p2), 'mantener', false);
+var cmp3 = Motor.compararConAnterior(p3);
+igual('repetir igual: cero cambios', cmp3.cambios.length, 0);
+igual('repetir igual: mismo resultado', cmp3.mismoResultado, true);
+igual('solo se compara con la partida inmediatamente anterior', p3.anterior.equipo.bateria, 'Batería 160 Wh');
+// Partida 4: tres cambios a la vez (batería, combustible extra y trayectoria).
+var p4 = Motor.repetirConPlan(p3);
+Motor.quitar(p4, 'bat160'); Motor.equipar(p4, 'bat100'); Motor.equipar(p4, 'fuelextra');
+jugar(p4, 'corregir', false);
+var cmp4 = Motor.compararConAnterior(p4);
+igual('batería + combustible + trayectoria: tres cambios', cmp4.cambios.length, 3);
+igual('con varios cambios la frase pide aislar', cmp4.frase.indexOf('repite cambiando solo una') !== -1, true);
+igual('corregir no cuenta como cambio de zona del plan', cmp4.cambios.some(function (c) { return c.etiqueta === 'Zona de aterrizaje'; }), false);
+// Solo cambia lo recogido en superficie (la veta).
+var p5 = jugar(Motor.repetirConPlan(p4), 'corregir', true);
+var cmp5 = Motor.compararConAnterior(p5);
+igual('perforar la veta es el único cambio', cmp5.cambios.length, 1);
+igual('y se etiqueta como muestras recogidas', cmp5.cambios[0].etiqueta, 'Muestras recogidas');
+// La reserva manual cuenta como decisión; la automática no.
+var p6 = Motor.repetirConPlan(p5);
+Motor.moverReserva(p6, 'exploracion', 'regreso', 5);
+jugar(p6, 'corregir', true);
+igual('mover la reserva a mano aparece en la comparación', Motor.compararConAnterior(p6).cambios.some(function (c) { return c.etiqueta === 'Reserva para el regreso'; }), true);
+igual('misión nueva no arrastra la comparación', Motor.nuevoEstado().anterior, null);
+
+console.log('— Lanzar sin batería o con el plan ya corto —');
+var sb = conEquipo('halcon', ['o2chico', 'taladro', 'cont1'], 'llanura');
+igual('sin batería se puede lanzar (no se bloquea)', Motor.lanzar(sb).ok, true);
+Motor.escanearViaje(sb); Motor.mantener(sb); Motor.descender(sb); Motor.avanzar(sb, 1);
+igual('sin batería: varada al primer paso', sb.resultado, 'varado');
+var csb = Motor.generarInforme(sb).causal;
+igual('el informe nombra la falta de batería', csb.some(function (f) { return f.indexOf('Lanzaste sin ninguna batería') === 0; }), true);
+igual('y no habla de un margen negativo', csb.some(function (f) { return f.indexOf('de margen') !== -1; }), false);
+igual('ni de la reserva de regreso', csb.some(function (f) { return f.indexOf('Habías reservado') !== -1; }), false);
+// Plan corto: hay batería, pero el recorrido previsto ya pide más de lo que lleva.
+var pc = conEquipo('halcon', ['bat100', 'o2chico', 'taladro', 'cont1'], 'llanura');
+DATOS.costos.perforar = 60; // solo para esta prueba: el plan pasa a pedir 125 Wh
+Motor.lanzar(pc); Motor.escanearViaje(pc); Motor.mantener(pc); Motor.descender(pc);
+while (!pc.resultado && pc.posicion < 6) Motor.avanzar(pc, 1);
+if (!pc.resultado) Motor.perforar(pc);
+if (!pc.resultado) Motor.regresar(pc);
+DATOS.costos.perforar = 25;
+igual('plan corto: acaba varada', pc.resultado, 'varado');
+igual('plan corto: el informe dice que no alcanzaba antes de despegar', Motor.generarInforme(pc).causal.some(function (f) { return f.indexOf('El plan ya no alcanzaba antes de despegar') === 0; }), true);
+
 if (fallos) {
   console.error('\n' + fallos + ' prueba(s) fallaron.');
   process.exit(1);

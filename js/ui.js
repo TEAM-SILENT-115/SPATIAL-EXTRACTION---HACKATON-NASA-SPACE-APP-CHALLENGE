@@ -482,6 +482,11 @@ var UI = (function () {
       '<div class="fila-botones">' +
       boton('vercalculo', T.btnVerCalculo) + boton('reservar', T.btnReservar) + boton('probar', T.btnProbar) +
       '</div>' +
+      (t.energia === 0
+        ? '<p class="dato alerta">⚠ Sin batería: no podrás dar ni un paso en superficie.</p>'
+        : margen < 0
+          ? '<p class="dato alerta">⚠ Faltan ' + (-margen) + ' Wh incluso si el terreno sale bien.</p>'
+          : '') +
       '<div class="fila-botones">' + boton('lanzar', T.btnLanzar, { clase: 'grande peligro' }) + '</div>' +
       '<p class="nota">' + T.ficcion + '</p>' +
       '</section>';
@@ -579,6 +584,24 @@ var UI = (function () {
 
     inf.causal.forEach(function (fr) { html += '<p class="causal">' + esc(fr) + '</p>'; });
 
+    // Partida anterior contra esta (solo si se llegó con REPETIR).
+    var cmp = inf.comparacion;
+    var htmlCmp = '';
+    if (cmp) {
+      html += '<p class="causal comparacion">⇄ ' + esc(cmp.frase) + '</p>';
+      htmlCmp = '<h3>ANTES vs AHORA</h3><table class="tabla"><tr><th></th><th>Antes</th><th>Ahora</th></tr>' +
+        // Como mucho 3 filas: con más cambios la lección es "aísla uno", y la
+        // tabla entera empujaría los botones fuera de la pantalla fija.
+        cmp.cambios.slice(0, cmp.cambios.length > 3 ? 2 : 3).map(function (c) {
+          return '<tr><td>' + esc(c.etiqueta) + '</td><td>' + esc(c.antes) + '</td><td><b>' + esc(c.ahora) + '</b></td></tr>';
+        }).join('') +
+        (cmp.cambios.length > 3
+          ? '<tr><td colspan="3">… y ' + (cmp.cambios.length - 2) + ' cambios más (' +
+            esc(cmp.cambios.slice(2).map(function (c) { return c.etiqueta.toLowerCase(); }).join(', ')) + ')</td></tr>'
+          : '') +
+        '<tr><td>Resultado</td><td>' + esc(cmp.antes.textoResultado) + '</td><td class="' + clase + '">' + esc(cmp.ahora.textoResultado) + '</td></tr></table>';
+    }
+
     html += '<div class="dos-columnas"><div><h3>PLAN vs REAL (energía)</h3><table class="tabla">' +
       '<tr><th></th><th>Plan</th><th>Real</th></tr>' +
       '<tr><td>Total Wh</td><td>' + inf.plan.totalPrevisto + '</td><td>' + inf.consumido.energiaWh + '</td></tr>' +
@@ -596,9 +619,10 @@ var UI = (function () {
       (inf.entregadas.length
         ? '<ul>' + inf.entregadas.map(function (x) { return '<li>▣ ' + esc(x.nombre) + '</li>'; }).join('') + '</ul>'
         : '<p class="alerta">Ninguna' + (inf.recogidasNoEntregadas.length ? ' (las ' + inf.recogidasNoEntregadas.length + ' recogidas se quedaron en el terreno)' : '') + '.</p>') +
-      '</div><div><h3>CADENA DE DECISIONES</h3><ul class="historial">';
+      '</div><div>' + htmlCmp + '<h3>CADENA DE DECISIONES</h3><ul class="historial">';
 
-    inf.historial.slice(-8).forEach(function (h) {
+    // Con la tabla de comparación encima queda menos alto para la cadena.
+    inf.historial.slice(cmp ? -Math.max(2, 5 - Math.min(3, cmp.cambios.length)) : -8).forEach(function (h) {
       html += '<li><b>' + esc(h.decision) + '</b><br>→ ' + esc(h.efecto) + '</li>';
     });
 

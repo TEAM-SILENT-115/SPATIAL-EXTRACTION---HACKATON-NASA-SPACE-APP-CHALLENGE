@@ -1,0 +1,16 @@
+# Sistema operativo
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editores
+.vscode/
+.idea/
+
+# Dependencias (el juego no usa ninguna, por si acaso)
+node_modules/
+
+# Archivos locales que no deben publicarse
+*.local.*
+.env
+.claude/

@@ -40,8 +40,11 @@ Es la única fuente de verdad; ante la duda, manda ese documento.
 - **Toda cifra se puede abrir (14-nov-2026):** el indicador "Regreso" de la superficie es
   clicable y abre su desglose; las dos tarjetas del evento del viaje muestran la fórmula de
   cada total y si lo que llevas alcanza; VER CÁLCULO explica el escenario rocoso por partes.
-- 88 pruebas del motor pasando: `node tests/motor.test.js` (23 base + 15 de calibración +
-  30 de reserva por tramos + 20 de desglose). La interfaz se verifica a mano o con un
+- **Comparación entre partidas (14-nov-2026):** tras REPETIR, el informe muestra la frase
+  «Cambiaste una sola decisión (Batería: 100 → 160) y el resultado pasó de … a …» y la tabla
+  ANTES vs AHORA. Detalle en "Comparación entre partidas".
+- 119 pruebas del motor pasando: `node tests/motor.test.js` (23 base + 15 de calibración +
+  30 de reserva por tramos + 20 de desglose + 24 de comparación + 7 de lanzar sin batería). La interfaz se verifica a mano o con un
   navegador sin cabeza.
 
 ## Calibración vigente (solo `datos.js`)
@@ -136,6 +139,26 @@ Es una decisión de **planificación**, no un candado. Lo que hace y lo que no:
   botón ELEGIR del primer cohete. Ahora se ancla hacia la izquierda cuando el término está en
   la mitad izquierda de la pantalla y, además, deja pasar los clics salvo en su propio botón.
 
+## Comparación entre partidas (informe tras REPETIR)
+
+- **Qué guarda:** `Motor.repetirConPlan` deja en `estado.anterior` un resumen de la partida
+  terminada (`Motor.resumenPartida`): cohete, objetivo, zona elegida en el hangar, equipo por
+  tipo, reserva de regreso, trayectoria en vuelo, muestras recogidas y resultado. Solo la
+  partida inmediatamente anterior, y solo en memoria: MISIÓN NUEVA o recargar la borran.
+- **Qué cuenta como una decisión:** cada fila de `Motor.compararConAnterior(estado).cambios`.
+  Cambiar batería 100 por 160 es **una** (se agrupa por tipo de equipo, no por pieza).
+  Corregir en vuelo cuenta como "Trayectoria", no como cambio de zona. La reserva de regreso
+  solo cuenta si alguna de las dos partidas la movió a mano (la automática depende de la zona).
+- **La frase:** 1 cambio → «…Ese cambio es la causa» (o «no era la que ataba» si el resultado
+  no cambió); 2 o más → «…no se sabe cuál pesó: repite cambiando solo una»; 0 → lo dice y, si
+  el resultado difiere, lo atribuye a cuánto se caminó o escaneó en superficie.
+- **En pantalla:** la frase va arriba, con borde de acento y el icono ⇄; la tabla ANTES vs
+  AHORA va sobre la cadena de decisiones, que se acorta (de 8 a entre 2 y 4 entradas) para que
+  todo quepa en 720 px. Con más de 3 cambios la tabla muestra 2 filas y resume el resto en una
+  ("… y 7 cambios más"), para no empujar los botones fuera de la pantalla. Comprobado con 1 y 9.
+- **Lanzar sin batería o con el plan corto:** LANZAR sigue sin bloquearse, pero el hangar avisa
+  sobre el botón y el informe nombra esa causa en vez de hablar de un "margen de −46 Wh".
+
 ## Glosario de primera vez (tooltips)
 
 - **Textos** en `datos.js` (`tooltipMargen`, `tooltipCargaUtil`, `tooltipAutonomia`,
@@ -190,7 +213,16 @@ Son **dos enlaces**:
 > Lo anterior al 14-nov-2026 por la tarde ya está en el commit `d14e2b1`
 > ("feat(juego): calibra el balance, añade [ RESERVAR ] y tooltips de primera vez").
 
-14-nov-2026 — desglose de toda cifra (pendiente de commit):
+14-nov-2026 — comparación entre partidas (pendiente de commit):
+
+- `js/motor.js`: `estado.anterior`, `resumenPartida`, `compararConAnterior`;
+  `repetirConPlan` guarda el resumen; `generarInforme` expone `comparacion`.
+- `js/ui.js`: frase de comparación y tabla ANTES vs AHORA en el informe.
+- `css/style.css`: `.causal.comparacion`.
+- `tests/motor.test.js`: 31 pruebas nuevas (24 de comparación, 7 de lanzar sin batería o con el plan corto). Total 119.
+- `EQUIPO.md` y `README.md`: esta documentación.
+
+14-nov-2026 — desglose de toda cifra (ya en `db9e01d`):
 
 - `js/motor.js`: `componentesTramo` (nueva fuente única del costo de un tramo),
   `costoTramoEnergia` pasa a usarla, `desglose()` expone `componentes`, `desgloseRegreso`.

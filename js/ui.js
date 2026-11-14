@@ -228,6 +228,9 @@ var UI = (function () {
         ctx.fillRect(Math.round(x), Math.round(yy), 2, 1);
       }
     }
+    if (estado.viaje.rocoso && !estado.viaje.corrigio) {
+      [[-14, -10], [-4, -17], [-20, 0]].forEach(function (d) { pint(ctx, SPR_ROCA, cxp + d[0], cyp + d[1]); });
+    }
     if (estado.viaje.escaneado && !estado.viaje.decidido) {
       punteada(cyp - 16, PAL.estrella); // mantener (zona actual)
       punteada(cyp + 16, PAL.A);        // corregir (otra zona)
@@ -325,6 +328,16 @@ var UI = (function () {
     if (c.recargo) partes.push(c.pasosRocosos + ' rocoso(s) × ' + c.recargoUnitario + ' Wh');
     if (c.salida) partes.push(c.salida + ' Wh de subida');
     return partes.join(' + ');
+  }
+
+  function pct(p) { return Math.round(p * 100); }
+
+  // Dado del terreno. Para grabar el video o hacer la demo con un resultado
+  // fijo, abre index.html?terreno=rocoso o index.html?terreno=despejado.
+  function azarTerreno() {
+    var q = /[?&]terreno=(rocoso|despejado)/.exec(window.location.search || '');
+    if (q) return q[1] === 'rocoso' ? 0 : 0.999;
+    return Math.random();
   }
 
   // Desglose de una opción del viaje con lo que llevas a bordo.
@@ -442,6 +455,8 @@ var UI = (function () {
       '</div>' +
       '<p class="dato">Ida ' + pasos + ' pasos · vuelta ' + pasos + ' pasos</p>' +
       '<p class="dato">' + esc(m.nota) + '</p>' +
+      '<p class="dato">' + T.riesgoTerreno + ': <b class="ambar">' + pct(m.probRocoso) + ' %</b> · si sale, +' +
+      (r.adverso.energia.total - r.normal.energia.total) + ' Wh</p>' +
       '<p class="dato">Exige: ' + esc(o.herramienta) +
       (estado.objetivo === 'crater_profunda' && !t.taladro ? ' <span class="alerta">⚠ sin taladro</span>' : '') +
       (t.capacidadMuestras < o.espacioMinimo ? ' <span class="alerta">⚠ falta espacio</span>' : '') +
@@ -510,12 +525,15 @@ var UI = (function () {
 
     if (!estado.viaje.escaneado) {
       html += '<div class="banda"><p>En ruta hacia el planeta. El protocolo pide un último escaneo antes del descenso.</p>' +
+        '<p class="dato">' + T.riesgoTerreno + ' en ' + DATOS.mapa[estado.zonaAterrizaje].nombre + ': <b class="ambar">' +
+        pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso) + ' %</b>. El escaneo dirá qué te tocó.</p>' +
         '<div class="fila-botones">' + boton('escanearviaje', T.btnEscanear, { clase: 'grande' }) + '</div></div>';
     } else if (!estado.viaje.decidido) {
       var p = Motor.proyeccionesViaje(estado);
-      html += '<div class="banda evento"><p>⚠ ' + T.eventoViaje + '</p><div class="comparar">' +
+      html += '<div class="banda evento' + (p.rocoso ? '' : ' despejado') + '"><p>' +
+        (p.rocoso ? '⚠ ' + T.eventoViaje : '✓ ' + T.eventoViajeDespejado) + '</p><div class="comparar">' +
         '<div class="opcion"><h3>MANTENER · ' + DATOS.mapa[p.mantener.zona].nombre + '</h3>' +
-        '<p>Recorrido con terreno rocoso: <b>' + p.mantener.d.energia.total + ' Wh</b></p>' +
+        '<p>Recorrido con terreno ' + (p.rocoso ? 'rocoso' : 'despejado') + ': <b>' + p.mantener.d.energia.total + ' Wh</b></p>' +
         desgloseOpcion(p.mantener.d) +
         '<p>Combustible: se conserva</p>' +
         boton('mantener', T.btnMantener) + '</div>' +
@@ -599,6 +617,9 @@ var UI = (function () {
           ? '<tr><td colspan="3">… y ' + (cmp.cambios.length - 2) + ' cambios más (' +
             esc(cmp.cambios.slice(2).map(function (c) { return c.etiqueta.toLowerCase(); }).join(', ')) + ')</td></tr>'
           : '') +
+        (cmp.terrenoCambio
+          ? '<tr><td>Terreno (azar)</td><td>' + esc(cmp.terrenoCambio.antes) + '</td><td><b>' + esc(cmp.terrenoCambio.ahora) + '</b></td></tr>'
+          : '') +
         '<tr><td>Resultado</td><td>' + esc(cmp.antes.textoResultado) + '</td><td class="' + clase + '">' + esc(cmp.ahora.textoResultado) + '</td></tr></table>';
     }
 
@@ -615,14 +636,15 @@ var UI = (function () {
             return '<tr><td>' + T.tramos[t] + '</td><td>' + inf.reserva[t] + '</td><td class="' + (sobre ? 'alerta' : '') + '">' + inf.porTramo[t] + (sobre ? ' ✖' : '') + '</td></tr>';
           }).join('') + '</table>'
         : '') +
+      '</div><div>' + htmlCmp +
       '<h3>MUESTRAS ENTREGADAS</h3>' +
       (inf.entregadas.length
         ? '<ul>' + inf.entregadas.map(function (x) { return '<li>▣ ' + esc(x.nombre) + '</li>'; }).join('') + '</ul>'
         : '<p class="alerta">Ninguna' + (inf.recogidasNoEntregadas.length ? ' (las ' + inf.recogidasNoEntregadas.length + ' recogidas se quedaron en el terreno)' : '') + '.</p>') +
-      '</div><div>' + htmlCmp + '<h3>CADENA DE DECISIONES</h3><ul class="historial">';
+      '<h3>CADENA DE DECISIONES</h3><ul class="historial">';
 
-    // Con la tabla de comparación encima queda menos alto para la cadena.
-    inf.historial.slice(cmp ? -Math.max(2, 5 - Math.min(3, cmp.cambios.length)) : -8).forEach(function (h) {
+    // Se pintan las 8 últimas; ajustarInforme() recorta las que no quepan.
+    inf.historial.slice(-8).forEach(function (h) {
       html += '<li><b>' + esc(h.decision) + '</b><br>→ ' + esc(h.efecto) + '</li>';
     });
 
@@ -647,7 +669,7 @@ var UI = (function () {
         '<p>Tarea (' + n.tareaNombre + '): <b>' + n.energia.tarea + ' Wh</b></p>' +
         '<p>Regreso: ' + formulaTramo(n.componentes.regreso) + ' = <b>' + n.energia.regreso + ' Wh</b></p>' +
         '<p>Total previsto: <b>' + n.energia.total + ' Wh</b></p><hr>' +
-        '<p>Si el terreno resulta rocoso: ida +' + a.componentes.ida.recargo + ' (' + a.componentes.ida.pasosRocosos + ' rocoso(s) × ' + a.componentes.ida.recargoUnitario + ' Wh) · regreso +' +
+        '<p>Si el terreno resulta rocoso (' + pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso) + ' % de riesgo): ida +' + a.componentes.ida.recargo + ' (' + a.componentes.ida.pasosRocosos + ' rocoso(s) × ' + a.componentes.ida.recargoUnitario + ' Wh) · regreso +' +
         a.componentes.regreso.recargo + ' (' + a.componentes.regreso.pasosRocosos + ' × ' + a.componentes.regreso.recargoUnitario + ' Wh) → <b>' + a.energia.total + ' Wh</b></p>' +
         '<p>Recomendación: ' + a.energia.total + ' + ' + Math.round(C.margenRecomendado * 100) + ' % de margen = <b>' + r.energiaRecomendada + ' Wh</b></p>' +
         '<p class="nota">Oxígeno: ' + n.oxigeno.total + ' O₂ previsto · recomendado ' + r.oxigenoRecomendado + ' O₂</p>';
@@ -669,8 +691,9 @@ var UI = (function () {
           '</div>';
       }
       inner = '<h2>PROYECCIÓN EN SECO</h2><div class="comparar">' +
-        col('ESCENARIO NORMAL', pr.normal, false) + col('ESCENARIO ADVERSO', pr.adverso, true) +
-        '</div><p class="nota">El escenario adverso supone terreno rocoso en la zona elegida. En rojo, el tramo cuya reserva no alcanza. Ninguna de las soluciones es «la correcta»: más batería cuesta masa; aterrizar más cerca es más incierto.</p>';
+        col('TERRENO DESPEJADO · ' + (100 - pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso)) + ' %', pr.normal, false) +
+        col('TERRENO ROCOSO · ' + pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso) + ' %', pr.adverso, true) +
+        '</div><p class="nota">El escaneo del viaje dirá cuál de los dos te toca; el porcentaje es el riesgo de la zona elegida. En rojo, el tramo cuya reserva no alcanza. Ninguna de las soluciones es «la correcta»: más batería cuesta masa; aterrizar más cerca es más incierto.</p>';
     } else if (modal === 'regreso') {
       var dr = Motor.desgloseRegreso(estado);
       var ce = dr.energia;
@@ -737,7 +760,7 @@ var UI = (function () {
       case 'reservarecomendado': r = Motor.reservarRecomendado(estado); break;
       case 'cerrarmodal': modal = null; break;
       case 'lanzar': r = Motor.lanzar(estado); break;
-      case 'escanearviaje': r = Motor.escanearViaje(estado); break;
+      case 'escanearviaje': r = Motor.escanearViaje(estado, azarTerreno()); break;
       case 'corregir': r = Motor.corregir(estado); break;
       case 'mantener': r = Motor.mantener(estado); break;
       case 'descender': r = Motor.descender(estado); break;
@@ -774,6 +797,30 @@ var UI = (function () {
     dibujarViaje();
     dibujarSuperficie();
     colocarGlosario();
+    ajustarInforme();
+  }
+
+  // La pantalla es fija (sin scroll): si el informe no cabe, se recorta la
+  // cadena de decisiones por el principio hasta que los botones vuelvan a
+  // verse. Las frases causales y las tablas nunca se quitan.
+  function ajustarInforme() {
+    var inf = juego.querySelector('.informe');
+    if (!inf) return;
+    var lista = inf.querySelector('.historial');
+    var todas = Array.prototype.slice.call(lista.querySelectorAll('li'));
+    function desborda() { return inf.scrollHeight > inf.clientHeight; }
+    function recortar() {
+      while (lista.children.length > 1 && desborda()) lista.removeChild(lista.firstChild);
+    }
+    recortar();
+    if (desborda()) {
+      // Ni con una sola entrada cabe: letra más compacta en las frases y se
+      // vuelve a intentar con la cadena entera.
+      inf.classList.add('compacto');
+      lista.innerHTML = '';
+      todas.forEach(function (li) { lista.appendChild(li); });
+      recortar();
+    }
   }
 
   function ajustarEscala() {

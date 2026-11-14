@@ -63,6 +63,11 @@ var DATOS = {
     pasoReserva: 5         // Wh que mueve cada pulsación de [ RESERVAR ]
   },
 
+  // TERRENO VARIABLE: el escaneo del viaje tira un dado contra "probRocoso"
+  // de la zona elegida. Si sale rocoso se cobran los recargos de abajo; si
+  // sale despejado, la estimación normal se cumple. La probabilidad es
+  // visible en el hangar: el margen se decide sabiendo el riesgo, no el resultado.
+  //
   // Mapa de superficie según la zona de aterrizaje. El módulo siempre
   // está en el paso 0. "rocosos" son los pasos que encarecen el cruce
   // si el terreno resulta rocoso (evento del viaje). El recargo se cobra
@@ -84,6 +89,7 @@ var DATOS = {
       muestras: [2, 4],
       rocosos: [3, 4, 5],
       riesgoWh: 3,          // Wh extra por paso rocoso
+      probRocoso: 0.3,      // probabilidad de que el escaneo del viaje revele terreno rocoso
       salidaCrater: 5,      // Wh extra al salir del cráter (subida)
       nota: 'Terreno conocido y estable. El cráter queda lejos.'
     },
@@ -93,6 +99,7 @@ var DATOS = {
       muestras: [4, 5],
       rocosos: [0, 1, 2, 3],  // incluye el punto de aterrizaje: toda la zona es rocosa
       riesgoWh: 5,
+      probRocoso: 0.6,      // zona menos reconocida: sale rocosa más veces y cuesta más
       salidaCrater: 5,
       nota: 'Aterrizas junto al cráter (3 pasos), pero el terreno es más incierto: si sale rocoso, cada paso cuesta el doble.'
     }
@@ -134,6 +141,8 @@ var DATOS = {
     tooltipMargen: 'Margen: recursos que llevas por encima de lo que el plan estima consumir. Es lo que te salva cuando el terreno sale peor de lo previsto.',
     tooltipCargaUtil: 'Carga útil: la masa total de equipo que el cohete puede llevar. Cada pieza que equipas la gasta.',
     tooltipAutonomia: 'Autonomía: cuánto puedes operar en superficie con la energía y el oxígeno que llevas, contando la vuelta.',
+    eventoViajeDespejado: 'Nuevo escaneo: el terreno de tu zona de descenso está DESPEJADO. La estimación de la agencia se mantiene.',
+    riesgoTerreno: 'Riesgo de terreno rocoso',
     eventoViaje: 'Nuevo escaneo: el terreno de tu zona de descenso es ROCOSO. Desplazarse ahí costará más energía de la prevista.',
     regresoEstimado: 'Regreso estimado desde aquí'
   }

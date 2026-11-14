@@ -65,7 +65,7 @@ console.log('— Partida completa: corregir trayectoria y ganar —');
 var g = estadoCanonico();
 Motor.equipar(g, 'fuelextra');
 Motor.lanzar(g);
-Motor.escanearViaje(g);
+Motor.escanearViaje(g, 0);
 igual('corregir posible con combustible extra', Motor.corregir(g).ok, true);
 igual('zona tras corregir', g.zonaAterrizaje, 'crater');
 Motor.descender(g);
@@ -81,7 +81,7 @@ igual('muestra entregada', g.muestras.entregadas.length, 1);
 console.log('— Partida completa: mantener sin margen y quedar varado —');
 var v = estadoCanonico();
 Motor.lanzar(v);
-Motor.escanearViaje(v);
+Motor.escanearViaje(v, 0);
 igual('corregir imposible sin combustible', Motor.corregir(v).ok, false);
 Motor.mantener(v);
 Motor.descender(v);
@@ -95,7 +95,7 @@ console.log('— Indicador de regreso —');
 var s = estadoCanonico();
 Motor.equipar(s, 'fuelextra');
 Motor.lanzar(s);
-Motor.escanearViaje(s);
+Motor.escanearViaje(s, 0);
 Motor.corregir(s);
 Motor.descender(s);
 Motor.avanzar(s, 1);
@@ -118,13 +118,13 @@ function conEquipo(cohete, equipo, zona) {
 var baseVeta = ['bat100', 'o2chico', 'taladro', 'cont2', 'escaner'];
 var r1 = conEquipo('halcon', baseVeta.concat(['fuelextra']), 'llanura');
 igual('ruta A (batería 100 + combustible extra) lanza', Motor.lanzar(r1).ok, true);
-Motor.escanearViaje(r1); Motor.corregir(r1); Motor.descender(r1);
+Motor.escanearViaje(r1, 0); Motor.corregir(r1); Motor.descender(r1);
 while (r1.posicion < Motor.pasoObjetivo(r1.zonaAterrizaje, r1.objetivo)) Motor.avanzar(r1, 1);
 Motor.perforar(r1); Motor.escanearSuperficie(r1); Motor.perforar(r1); Motor.regresar(r1);
 igual('ruta A gana incluso con la veta', r1.resultado, 'exito');
 var r2 = conEquipo('halcon', ['bat160', 'o2chico', 'taladro', 'cont2', 'escaner'], 'llanura');
 igual('ruta B (batería 160, mantener) lanza', Motor.lanzar(r2).ok, true);
-Motor.escanearViaje(r2); Motor.mantener(r2); Motor.descender(r2);
+Motor.escanearViaje(r2, 0); Motor.mantener(r2); Motor.descender(r2);
 while (r2.posicion < Motor.pasoObjetivo(r2.zonaAterrizaje, r2.objetivo)) Motor.avanzar(r2, 1);
 Motor.perforar(r2); Motor.escanearSuperficie(r2); Motor.perforar(r2); Motor.regresar(r2);
 igual('ruta B gana incluso con la veta', r2.resultado, 'exito');
@@ -133,7 +133,7 @@ igual('batería 160 + combustible extra no caben juntos', Motor.lanzar(todo).ok,
 
 console.log('— Momento 40/10/35 (aterrizar junto al cráter con batería 100) —');
 function hastaLaVeta(e, decision) {
-  Motor.lanzar(e); Motor.escanearViaje(e);
+  Motor.lanzar(e); Motor.escanearViaje(e, 0);
   if (decision === 'corregir') Motor.corregir(e); else Motor.mantener(e);
   Motor.descender(e);
   while (e.posicion < Motor.pasoObjetivo(e.zonaAterrizaje, e.objetivo)) Motor.avanzar(e, 1);
@@ -189,7 +189,7 @@ igual('fuera del hangar no se mueve', Motor.moverReserva(q, 'ida', 'regreso').ok
 
 console.log('— Consumo real por tramo —');
 var pt = conEquipo('halcon', baseVeta.concat(['fuelextra']), 'llanura');
-Motor.lanzar(pt); Motor.escanearViaje(pt); Motor.corregir(pt); Motor.descender(pt);
+Motor.lanzar(pt); Motor.escanearViaje(pt, 0); Motor.corregir(pt); Motor.descender(pt);
 while (pt.posicion < Motor.pasoObjetivo(pt.zonaAterrizaje, pt.objetivo)) Motor.avanzar(pt, 1);
 Motor.perforar(pt); Motor.escanearSuperficie(pt); Motor.regresar(pt);
 igual('ida real', pt.real.porTramo.ida, 15);
@@ -296,7 +296,7 @@ igual('misión nueva no arrastra la comparación', Motor.nuevoEstado().anterior,
 console.log('— Lanzar sin batería o con el plan ya corto —');
 var sb = conEquipo('halcon', ['o2chico', 'taladro', 'cont1'], 'llanura');
 igual('sin batería se puede lanzar (no se bloquea)', Motor.lanzar(sb).ok, true);
-Motor.escanearViaje(sb); Motor.mantener(sb); Motor.descender(sb); Motor.avanzar(sb, 1);
+Motor.escanearViaje(sb, 0); Motor.mantener(sb); Motor.descender(sb); Motor.avanzar(sb, 1);
 igual('sin batería: varada al primer paso', sb.resultado, 'varado');
 var csb = Motor.generarInforme(sb).causal;
 igual('el informe nombra la falta de batería', csb.some(function (f) { return f.indexOf('Lanzaste sin ninguna batería') === 0; }), true);
@@ -305,13 +305,118 @@ igual('ni de la reserva de regreso', csb.some(function (f) { return f.indexOf('H
 // Plan corto: hay batería, pero el recorrido previsto ya pide más de lo que lleva.
 var pc = conEquipo('halcon', ['bat100', 'o2chico', 'taladro', 'cont1'], 'llanura');
 DATOS.costos.perforar = 60; // solo para esta prueba: el plan pasa a pedir 125 Wh
-Motor.lanzar(pc); Motor.escanearViaje(pc); Motor.mantener(pc); Motor.descender(pc);
+Motor.lanzar(pc); Motor.escanearViaje(pc, 0); Motor.mantener(pc); Motor.descender(pc);
 while (!pc.resultado && pc.posicion < 6) Motor.avanzar(pc, 1);
 if (!pc.resultado) Motor.perforar(pc);
 if (!pc.resultado) Motor.regresar(pc);
 DATOS.costos.perforar = 25;
 igual('plan corto: acaba varada', pc.resultado, 'varado');
 igual('plan corto: el informe dice que no alcanzaba antes de despegar', Motor.generarInforme(pc).causal.some(function (f) { return f.indexOf('El plan ya no alcanzaba antes de despegar') === 0; }), true);
+
+console.log('— Terreno variable (el escaneo tira el dado) —');
+var ROCA = 0, DESPEJADO = 0.99;
+function partida(e, azar, decision) {
+  Motor.lanzar(e); Motor.escanearViaje(e, azar);
+  if (decision === 'corregir') Motor.corregir(e); else Motor.mantener(e);
+  Motor.descender(e);
+  while (!e.resultado && e.posicion < Motor.pasoObjetivo(e.zonaAterrizaje, e.objetivo)) Motor.avanzar(e, 1);
+  if (!e.resultado) Motor.perforar(e);
+  if (!e.resultado) Motor.regresar(e);
+  return e;
+}
+function dice(e, texto) {
+  return Motor.generarInforme(e).causal.some(function (f) { return f.indexOf(texto) !== -1; });
+}
+function escaneo(zona, azar) {
+  var x = conEquipo('halcon', ['bat100', 'o2chico', 'taladro', 'cont1'], zona);
+  Motor.lanzar(x); Motor.escanearViaje(x, azar);
+  return x;
+}
+igual('riesgo de roca en la llanura', DATOS.mapa.llanura.probRocoso, 0.3);
+igual('riesgo de roca en el cráter', DATOS.mapa.crater.probRocoso, 0.6);
+igual('llanura: 0.29 cae en roca', escaneo('llanura', 0.29).viaje.rocoso, true);
+igual('llanura: 0.30 ya es despejado', escaneo('llanura', 0.3).viaje.rocoso, false);
+igual('cráter: 0.59 cae en roca', escaneo('crater', 0.59).viaje.rocoso, true);
+igual('cráter: 0.60 ya es despejado', escaneo('crater', 0.6).viaje.rocoso, false);
+igual('antes de escanear no hay resultado', Motor.nuevoEstado().viaje.rocoso, null);
+var libre = estadoCanonico(); Motor.lanzar(libre); Motor.escanearViaje(libre);
+igual('sin valor fijo el motor tira su propio dado', typeof libre.viaje.rocoso, 'boolean');
+igual('el escaneo guarda el riesgo de la zona', libre.viaje.probRocoso, 0.3);
+igual('fuera del viaje no se escanea', Motor.escanearViaje(estadoCanonico(), ROCA).ok, false);
+var mr = estadoCanonico(); Motor.lanzar(mr);
+igual('mensaje cuando sale roca', Motor.escanearViaje(mr, ROCA).msg, DATOS.textos.eventoViaje);
+var md = estadoCanonico(); Motor.lanzar(md);
+igual('mensaje cuando sale despejado', Motor.escanearViaje(md, DESPEJADO).msg, DATOS.textos.eventoViajeDespejado);
+
+var td = escaneo('llanura', DESPEJADO);
+var ptd = Motor.proyeccionesViaje(td);
+igual('despejado: mantener cuesta la estimación normal', ptd.mantener.d.energia.total, 90);
+igual('despejado: la proyección lo marca', ptd.rocoso, false);
+igual('rocoso: mantener cuesta el escenario adverso', Motor.proyeccionesViaje(escaneo('llanura', ROCA)).mantener.d.energia.total, 108);
+igual('el escaneo queda en la cadena de decisiones', td.historial.some(function (h) { return h.decision.indexOf('Escaneo en vuelo') === 0 && h.efecto.indexOf('despejado') !== -1; }), true);
+
+var suerte = partida(estadoCanonico(), DESPEJADO, 'mantener');
+igual('canónica con terreno despejado: gana', suerte.resultado, 'exito');
+igual('canónica con terreno despejado: sobran 10 Wh', suerte.recursos.energiaWh, 10);
+igual('en superficie no se cobra recargo', suerte.terrenoRocosoActivo, false);
+igual('el informe dice que fue suerte', dice(suerte, 'Esta vez fue suerte, no margen'), true);
+igual('y cuánto habría faltado con roca', dice(suerte, 'te habrían faltado 8 Wh'), true);
+igual('y recuerda el riesgo', dice(suerte, '30 % de riesgo'), true);
+
+var conSalida = estadoCanonico(); Motor.equipar(conSalida, 'fuelextra');
+partida(conSalida, DESPEJADO, 'mantener');
+igual('despejado con combustible: gana', conSalida.resultado, 'exito');
+igual('el informe reconoce la salida de corregir', dice(conSalida, 'llevabas combustible para corregir'), true);
+igual('y no lo llama suerte', dice(conSalida, 'Esta vez fue suerte'), false);
+
+var robusto = partida(conEquipo('halcon', ['bat160', 'o2chico', 'taladro', 'cont1'], 'llanura'), DESPEJADO, 'mantener');
+igual('batería 160 con terreno despejado: gana', robusto.resultado, 'exito');
+igual('el informe dice que el plan no dependía del terreno', dice(robusto, 'tu plan no dependía de eso'), true);
+
+var mala = partida(estadoCanonico(), ROCA, 'mantener');
+igual('canónica con roca: varada', mala.resultado, 'varado');
+igual('el informe recuerda que el riesgo estaba avisado', dice(mala, 'El riesgo estaba avisado: 30 %'), true);
+igual('y no habla de suerte', dice(mala, 'Esta vez fue suerte'), false);
+
+var cd = conEquipo('halcon', ['bat100', 'o2chico', 'taladro', 'cont1', 'fuelextra'], 'llanura');
+partida(cd, DESPEJADO, 'corregir');
+igual('con terreno despejado también se puede corregir', cd.viaje.corrigio, true);
+igual('corregir desde la llanura despejada lleva al cráter', cd.zonaAterrizaje, 'crater');
+igual('y gasta 60 Wh en vez de 90', cd.real.consumido.energiaWh, 60);
+igual('tras corregir no se añade la frase de suerte', dice(cd, 'El terreno salió despejado'), false);
+
+var cc = conEquipo('halcon', baseVeta, 'crater');
+Motor.lanzar(cc); Motor.escanearViaje(cc, DESPEJADO); Motor.mantener(cc); Motor.descender(cc);
+while (cc.posicion < 3) Motor.avanzar(cc, 1);
+Motor.perforar(cc); Motor.escanearSuperficie(cc);
+igual('cráter despejado: tras perforar y escanear quedan 55 Wh', cc.recursos.energiaWh, 55);
+igual('cráter despejado: volver cuesta 20 Wh', Motor.costoRegreso(cc).energia, 20);
+
+console.log('— Comparación entre partidas con el terreno distinto —');
+var q1 = partida(estadoCanonico(), ROCA, 'mantener');
+var q2 = partida(Motor.repetirConPlan(q1), DESPEJADO, 'mantener');
+var cq = Motor.compararConAnterior(q2);
+igual('mismas decisiones, otro terreno: cero cambios', cq.cambios.length, 0);
+igual('el resultado sí cambió', cq.mismoResultado, false);
+igual('la comparación separa el terreno: antes', cq.terrenoCambio.antes, 'Rocoso');
+igual('la comparación separa el terreno: ahora', cq.terrenoCambio.ahora, 'Despejado');
+igual('la frase lo atribuye a la suerte', cq.frase.indexOf('Tomaste las mismas decisiones, pero el terreno salió distinto (Rocoso → Despejado)') === 0, true);
+igual('y nombra para qué sirve el margen', cq.frase.indexOf('Esa diferencia es suerte') !== -1, true);
+
+var q3 = Motor.repetirConPlan(q1);
+Motor.quitar(q3, 'bat100'); Motor.equipar(q3, 'bat160');
+partida(q3, DESPEJADO, 'mantener');
+var cq3 = Motor.compararConAnterior(q3);
+igual('un cambio y otro terreno: sigue siendo un cambio', cq3.cambios.length, 1);
+igual('pero la frase no lo da por causa', cq3.frase.indexOf('Ese cambio es la causa') === -1, true);
+igual('y pide repetir para confirmarlo', cq3.frase.indexOf('no se puede atribuir solo a tu cambio') !== -1, true);
+
+var q4 = Motor.repetirConPlan(q1);
+Motor.quitar(q4, 'bat100'); Motor.equipar(q4, 'bat160');
+partida(q4, ROCA, 'mantener');
+var cq4 = Motor.compararConAnterior(q4);
+igual('un cambio y el mismo terreno: sin aviso de terreno', cq4.terrenoCambio, null);
+igual('y entonces sí es la causa', cq4.frase.indexOf('Ese cambio es la causa.') !== -1, true);
 
 if (fallos) {
   console.error('\n' + fallos + ' prueba(s) fallaron.');

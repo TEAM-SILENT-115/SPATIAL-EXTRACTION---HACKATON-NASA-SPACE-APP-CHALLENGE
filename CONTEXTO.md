@@ -171,6 +171,12 @@ si el plan original sigue siendo viable.
 **Para la demo, un solo acontecimiento importante.** Al aproximarse al planeta, un nuevo escaneo
 revela **terreno rocoso en la zona de descenso elegida**. Dos opciones:
 
+> **Actualización (14-nov-2026):** el escaneo ya no revela siempre terreno rocoso. Cada zona
+> tiene un riesgo visible desde el hangar (llanura 30 %, cráter 60 %) y el escaneo dice qué
+> salió en esa partida. Las dos opciones y sus costos son los mismos. Para la demo con el
+> resultado de esta sección, abrir `index.html?terreno=rocoso`. Detalle en `EQUIPO.md`,
+> "Terreno variable".
+
 | Opción | Costo | Beneficio |
 |---|---|---|
 | **Corregir trayectoria** y aterrizar cerca del cráter | Gasta combustible de maniobra | Acorta el recorrido de exploración |

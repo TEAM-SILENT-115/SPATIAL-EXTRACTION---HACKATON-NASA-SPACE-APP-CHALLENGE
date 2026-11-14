@@ -9,10 +9,83 @@ La idea que el juego quiere enseñar cabe en dos líneas:
 > Un recurso que llevas no es gratis: cuesta masa, presupuesto y espacio. Y el margen que **no**
 > reservas al planificar es el que te deja varado cuando el terreno resulta más difícil de lo previsto.
 
-## Cómo jugar
+## Cómo empezar
 
-No hay nada que instalar. Descarga o clona el repositorio y abre `index.html` en cualquier
-navegador. Funciona offline y en una sola pantalla (1280×720 escalada al tamaño de tu ventana).
+El juego no tiene dependencias ni paso de compilación: son archivos HTML, CSS y JavaScript que
+el navegador abre directamente. Solo necesitas un navegador moderno (Chrome, Edge o Firefox).
+
+### 1. Consigue el código
+
+Con Git:
+
+```bash
+git clone https://github.com/WilsonDnx115/SPATIAL-EXTRACTION---HACKATON-NASA-SPACE-APP-CHALLENGE.git
+```
+
+```bash
+cd SPATIAL-EXTRACTION---HACKATON-NASA-SPACE-APP-CHALLENGE
+```
+
+Sin Git: en la página del repositorio pulsa **Code → Download ZIP** y descomprime la carpeta.
+
+### 2. Abre el juego
+
+Haz doble clic en `index.html`. También puedes abrirlo desde la terminal:
+
+| Sistema | Comando |
+|---|---|
+| Windows | `start index.html` |
+| macOS | `open index.html` |
+| Linux | `xdg-open index.html` |
+
+Funciona sin conexión y en una sola pantalla (1280×720, escalada al tamaño de tu ventana). Para
+verlo más grande, pon el navegador en pantalla completa con `F11`.
+
+### 3. Empieza la partida
+
+Pulsa `[ COMENZAR ]` en la pantalla de título y llegarás al hangar. Todo se maneja con clics; en
+la superficie también puedes moverte con las flechas `←` y `→`. Para una primera partida que
+termine bien, prueba esto:
+
+- Cohete **Halcón ligero**.
+- **Batería 160 Wh**, **Tanque O₂ 100**, **Taladro de núcleo** y **Contenedor simple**.
+- Objetivo **1 profunda**, zona **Llanura**.
+- En el viaje, `[ MANTENER ]`; en la superficie avanza hasta el cráter, `[ PERFORAR ]` y
+  `[ REGRESAR ]`.
+
+Después repite cambiando la batería por la de 100 Wh y mira qué dice el informe.
+
+### Opcional: servirlo desde un servidor local
+
+No hace falta para jugar, pero sirve para probarlo desde otro dispositivo de la misma red. Con
+Python instalado, dentro de la carpeta del proyecto:
+
+```bash
+python -m http.server 8000
+```
+
+Luego abre `http://localhost:8000` en el navegador.
+
+### Opcional: correr las pruebas
+
+Solo si vas a tocar las reglas o los números del juego. Requiere [Node.js](https://nodejs.org):
+
+```bash
+node tests/motor.test.js
+```
+
+Debe terminar con «Todas las pruebas pasaron».
+
+### Para colaborar
+
+1. Crea una rama desde `main`: `git checkout -b feature/nombre-del-cambio`.
+2. Haz tus cambios y corre las pruebas si tocaste `js/motor.js` o `js/datos.js`.
+3. Sube la rama con `git push -u origin feature/nombre-del-cambio` y abre un pull request.
+
+Las convenciones del equipo (mensajes de commit, qué va en cada archivo) están en
+[`EQUIPO.md`](EQUIPO.md).
+
+## Cómo jugar
 
 Una partida dura menos de 5 minutos:
 

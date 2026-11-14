@@ -211,6 +211,34 @@ igual('el informe compara reserva y costo real del regreso', Motor.generarInform
 var rep = Motor.repetirConPlan(inv);
 igual('repetir conserva la reserva manual', Motor.evaluarReserva(rep).regreso.reservado, 35);
 
+console.log('— Desglose del regreso (toda cifra se puede abrir) —');
+var ct = Motor.componentesTramo('llanura', 0, 6, true);
+igual('ida rocosa en la llanura: pasos', ct.pasos, 6);
+igual('ida rocosa en la llanura: base', ct.base, 30);
+igual('ida rocosa en la llanura: pasos rocosos', ct.pasosRocosos, 3);
+igual('ida rocosa en la llanura: recargo', ct.recargo, 9);
+igual('ida rocosa en la llanura: sin subida', ct.salida, 0);
+igual('ida rocosa en la llanura: total', ct.total, 39);
+ct = Motor.componentesTramo('llanura', 6, 0, true);
+igual('regreso rocoso en la llanura: subida', ct.salida, 5);
+igual('regreso rocoso en la llanura: total', ct.total, 44);
+igual('tramo vacío cuesta cero', Motor.componentesTramo('crater', 2, 2, true).total, 0);
+var dg = Motor.desglose('crater', 'crater_profunda', true);
+igual('el desglose expone los componentes', dg.componentes.ida.recargo, 15);
+igual('componentes y totales coinciden', dg.componentes.ida.total + dg.energia.tarea + dg.componentes.regreso.total, dg.energia.total);
+var dr0 = hastaLaVeta(conEquipo('halcon', baseVeta, 'crater'), 'mantener');
+var drg = Motor.desgloseRegreso(dr0);
+igual('regreso desde el cráter rocoso: pasos', drg.energia.pasos, 3);
+igual('regreso desde el cráter rocoso: base', drg.energia.base, 15);
+igual('regreso desde el cráter rocoso: recargo', drg.energia.recargo, 15);
+igual('regreso desde el cráter rocoso: subida', drg.energia.salida, 5);
+igual('el desglose coincide con el indicador', drg.energia.total, Motor.costoRegreso(dr0).energia);
+igual('regreso desde el cráter rocoso: oxígeno', drg.oxigeno.total, 12);
+igual('con 40 Wh sobran 5', drg.sobra.energia, 5);
+Motor.perforar(dr0);
+igual('tras la veta faltan 5', Motor.desgloseRegreso(dr0).sobra.energia, -5);
+igual('fuera de la superficie el regreso es cero', Motor.desgloseRegreso(Motor.nuevoEstado()).energia.total, 0);
+
 if (fallos) {
   console.error('\n' + fallos + ' prueba(s) fallaron.');
   process.exit(1);

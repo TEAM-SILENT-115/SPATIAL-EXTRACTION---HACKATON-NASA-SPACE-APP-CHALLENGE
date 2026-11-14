@@ -229,23 +229,31 @@ var Motor = (function () {
     return Math.max.apply(null, m.muestras);
   }
 
-  // Costo en energía de moverse de "desde" a "hasta" (pasos contiguos
-  // o no). Cuenta el recargo rocoso por cada paso de destino rocoso y
-  // la subida al salir del cráter.
-  function costoTramoEnergia(zona, desde, hasta, rocoso) {
+  // Desglosa el costo en energía de moverse de "desde" a "hasta": pasos por
+  // el costo base, recargo por cada casilla rocosa de destino y la subida al
+  // abandonar el cráter rumbo al módulo. Toda cifra de recorrido que muestra
+  // la interfaz sale de aquí, así que siempre se puede abrir.
+  function componentesTramo(zona, desde, hasta, rocoso) {
     var m = DATOS.mapa[zona];
-    var total = 0;
+    var c = { pasos: 0, base: 0, pasosRocosos: 0, recargoUnitario: m.riesgoWh, recargo: 0, salida: 0, total: 0 };
+    if (desde === hasta) return c;
     var dir = hasta > desde ? 1 : -1;
     var pos = desde;
     while (pos !== hasta) {
       var destino = pos + dir;
-      total += C.pasoEnergia;
-      if (rocoso && m.rocosos.indexOf(destino) !== -1) total += m.riesgoWh;
+      c.pasos += 1;
+      c.base += C.pasoEnergia;
+      if (rocoso && m.rocosos.indexOf(destino) !== -1) { c.pasosRocosos += 1; c.recargo += m.riesgoWh; }
       // subida al abandonar el cráter rumbo al módulo
-      if (pos === m.pasosACrater && dir === -1) total += m.salidaCrater;
+      if (pos === m.pasosACrater && dir === -1) c.salida += m.salidaCrater;
       pos = destino;
     }
-    return total;
+    c.total = c.base + c.recargo + c.salida;
+    return c;
+  }
+
+  function costoTramoEnergia(zona, desde, hasta, rocoso) {
+    return componentesTramo(zona, desde, hasta, rocoso).total;
   }
 
   function costoTramoOxigeno(desde, hasta) {
@@ -262,19 +270,16 @@ var Motor = (function () {
     } else {
       tareaE = 2 * C.recoger; tareaOx = 2 * C.recogerOx; tareaNombre = 'Recoger ×2';
     }
-    var pasaPorCrater = (objetivo === 'crater_profunda');
-    var ida = costoTramoEnergia(zona, 0, destino, adverso);
-    var regreso = costoTramoEnergia(zona, destino, 0, adverso);
-    if (!pasaPorCrater) {
-      // si no entra al cráter no paga la subida (costoTramoEnergia solo
-      // la aplica cuando el camino parte del paso del cráter)
-    }
+    var cIda = componentesTramo(zona, 0, destino, adverso);
+    var cRegreso = componentesTramo(zona, destino, 0, adverso);
+    var ida = cIda.total, regreso = cRegreso.total;
     return {
       zona: zona,
       objetivo: objetivo,
       adverso: !!adverso,
       pasos: destino,
       tareaNombre: tareaNombre,
+      componentes: { ida: cIda, regreso: cRegreso },
       energia: { ida: ida, tarea: tareaE, regreso: regreso, total: ida + tareaE + regreso },
       oxigeno: {
         ida: costoTramoOxigeno(0, destino),
@@ -483,6 +488,24 @@ var Motor = (function () {
     return {
       energia: costoTramoEnergia(estado.zonaAterrizaje, estado.posicion, 0, estado.terrenoRocosoActivo),
       oxigeno: costoTramoOxigeno(estado.posicion, 0)
+    };
+  }
+
+  // Desglose del indicador "regreso estimado": de dónde sale la cifra y si
+  // lo que llevas alcanza. Fuera de la superficie devuelve ceros.
+  function desgloseRegreso(estado) {
+    var enSuperficie = estado.etapa === 'superficie';
+    var c = enSuperficie
+      ? componentesTramo(estado.zonaAterrizaje, estado.posicion, 0, estado.terrenoRocosoActivo)
+      : componentesTramo(estado.zonaAterrizaje, 0, 0, false);
+    var ox = enSuperficie ? costoTramoOxigeno(estado.posicion, 0) : 0;
+    return {
+      desde: estado.posicion,
+      rocoso: !!estado.terrenoRocosoActivo,
+      energia: c,
+      oxigeno: { pasos: c.pasos, unitario: C.pasoOxigeno, total: ox },
+      tienes: { energia: estado.recursos.energiaWh, oxigeno: estado.recursos.oxigeno },
+      sobra: { energia: estado.recursos.energiaWh - c.total, oxigeno: estado.recursos.oxigeno - ox }
     };
   }
 
@@ -710,6 +733,8 @@ var Motor = (function () {
     mantener: mantener,
     descender: descender,
     costoRegreso: costoRegreso,
+    componentesTramo: componentesTramo,
+    desgloseRegreso: desgloseRegreso,
     capacidadLibre: capacidadLibre,
     sitioActual: sitioActual,
     avanzar: avanzar,

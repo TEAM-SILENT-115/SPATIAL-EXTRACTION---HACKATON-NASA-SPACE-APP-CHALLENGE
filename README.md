@@ -27,7 +27,8 @@ Una partida dura menos de 5 minutos:
    combustible o mantienes el rumbo y asumes el recorrido caro? Si no reservaste combustible,
    una de las dos opciones ni siquiera existe para ti.
 3. **Superficie** — Explora, escanea, recoge y perfora. El indicador clave está siempre arriba:
-   *cuánto cuesta volver al módulo desde donde estás*. Una muestra solo cuenta si la entregas.
+   *cuánto cuesta volver al módulo desde donde estás*, y un clic lo abre: pasos, terreno rocoso,
+   subida del cráter y cuánto te sobra o te falta. Una muestra solo cuenta si la entregas.
 4. **Informe** — El juego explica la cadena causal (qué decisión produjo qué efecto) y te invita
    a repetir cambiando una sola decisión. La segunda partida es donde ocurre el aprendizaje.
 
@@ -57,7 +58,7 @@ El motor es testeable sin abrir el navegador:
 node tests/motor.test.js
 ```
 
-Las pruebas (68) verifican, entre otras cosas, el ejemplo canónico (100 Wh con terreno difícil → −8 Wh),
+Las pruebas (88) verifican, entre otras cosas, el ejemplo canónico (100 Wh con terreno difícil → −8 Wh),
 que lanzar solo se bloquee por masa o presupuesto (equivocarse de margen es la lección, no un error),
 que una muestra no cuente hasta volver al módulo, que las dos rutas ganadoras caben en presupuesto,
 que el momento central ocurre con los números exactos (40 Wh en mano, 10 Wh por perforar la veta,
@@ -83,7 +84,6 @@ reserva y la bitácora de cambios están en [`EQUIPO.md`](EQUIPO.md).
 
 Pendiente para iterar en equipo:
 
-- Desglose abrible del indicador de regreso y de las proyecciones del viaje.
 - Animaciones de despegue y descenso.
 - Decidir, probando con gente, si las cuatro burbujas del glosario en el hangar son demasiadas
   seguidas.

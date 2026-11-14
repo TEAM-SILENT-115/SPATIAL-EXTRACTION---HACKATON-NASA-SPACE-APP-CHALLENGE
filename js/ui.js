@@ -207,7 +207,7 @@ var UI = (function () {
     estrellas(ctx, Wd, Hd, 60);
 
     // planeta helado
-    var cxp = 262, cyp = 55, rp = 30;
+    var cxp = 262, cyp = 48, rp = 30;
     ctx.fillStyle = PAL.nieve;
     for (var y = -rp; y <= rp; y++) {
       var half = Math.floor(Math.sqrt(rp * rp - y * y));
@@ -224,7 +224,7 @@ var UI = (function () {
       for (var t = 0; t <= 20; t++) {
         if (t % 2) continue;
         var x = 70 + (cxp - 34 - 70) * t / 20;
-        var yy = 54 + (y2 - 54) * t / 20;
+        var yy = 50 + (y2 - 50) * t / 20;
         ctx.fillRect(Math.round(x), Math.round(yy), 2, 1);
       }
     }
@@ -235,8 +235,8 @@ var UI = (function () {
       punteada(cyp - 16 + (estado.viaje.corrigio ? 32 : 0), PAL.estrella);
     }
 
-    pint(ctx, SPR_COHETE, 58, 44);
-    pint(ctx, SPR_LLAMA, 48, 48);
+    pint(ctx, SPR_COHETE, 58, 40);
+    pint(ctx, SPR_LLAMA, 48, 44);
   }
 
   function dibujarMapa() {
@@ -318,6 +318,25 @@ var UI = (function () {
       '>[ ' + texto + ' ]</button>';
   }
 
+  // "6 pasos × 5 Wh + 3 rocosos × 3 Wh + 5 Wh de subida": la fórmula de un
+  // tramo tal como la calcula el motor.
+  function formulaTramo(c) {
+    var partes = [c.pasos + ' paso(s) × ' + C.pasoEnergia + ' Wh'];
+    if (c.recargo) partes.push(c.pasosRocosos + ' rocoso(s) × ' + c.recargoUnitario + ' Wh');
+    if (c.salida) partes.push(c.salida + ' Wh de subida');
+    return partes.join(' + ');
+  }
+
+  // Desglose de una opción del viaje con lo que llevas a bordo.
+  function desgloseOpcion(d) {
+    var e = estado.recursos.energiaWh;
+    var sobra = e - d.energia.total;
+    return '<p class="dato">Ida ' + d.energia.ida + ' (' + formulaTramo(d.componentes.ida) + ') · ' +
+      d.tareaNombre.toLowerCase() + ' ' + d.energia.tarea + ' · regreso ' + d.energia.regreso + ' (' + formulaTramo(d.componentes.regreso) + ')</p>' +
+      '<p class="dato">Llevas ' + e + ' Wh → ' + (sobra >= 0 ? '<b class="ok">sobran ' + sobra + ' ✓</b>' : '<b class="alerta">faltan ' + (-sobra) + ' ✖</b>') +
+      ' · O₂ ' + d.oxigeno.total + ' de ' + estado.recursos.oxigeno + '</p>';
+  }
+
   function termino(clave, etiqueta) {
     return '<span class="termino" data-a="termino" data-x="' + clave + '" title="' + esc(GLOSARIO[clave]) + '">' + etiqueta + '</span>';
   }
@@ -338,12 +357,19 @@ var UI = (function () {
     burbuja.setAttribute('role', 'note');
     burbuja.innerHTML = '<p>ⓘ ' + esc(GLOSARIO[k]) + '</p>' + boton('entendido', T.btnEntendido, { x: k, clase: 'mini' });
     juego.appendChild(burbuja);
+    // Anclaje: si el término está en la mitad izquierda, la burbuja cuelga
+    // hacia la izquierda (tapa menos botones); si no, hacia la derecha.
     var rj = juego.getBoundingClientRect();
     var rt = objetivo.getBoundingClientRect();
-    var left = (rt.left - rj.left) / escala;
+    var ANCHO = 330;
+    var izq = (rt.left - rj.left) / escala;
+    var der = (rt.right - rj.left) / escala;
+    var haciaIzquierda = (izq + der) / 2 < 640;
+    var left = haciaIzquierda ? der - ANCHO : izq;
     var top = (rt.bottom - rj.top) / escala + 8;
-    left = Math.max(8, Math.min(left, 1280 - 340));
+    left = Math.max(8, Math.min(left, 1280 - ANCHO - 8));
     if (top > 720 - 110) top = (rt.top - rj.top) / escala - 100;
+    if (haciaIzquierda) burbuja.classList.add('derecha');
     burbuja.style.left = left + 'px';
     burbuja.style.top = top + 'px';
   }
@@ -473,7 +499,9 @@ var UI = (function () {
         estado.recursos.combustible < C.maniobra ? 'ambar' : '') +
       '</header>';
 
-    html += '<canvas id="cv-viaje" width="320" height="110" class="escena"></canvas>';
+    // 320×84 a escala 4 = 1280×336: deja sitio a las dos tarjetas del evento
+    // con su desglose y a la consola sin salirse del marco de 720 px.
+    html += '<canvas id="cv-viaje" width="320" height="84" class="escena escena-viaje"></canvas>';
 
     if (!estado.viaje.escaneado) {
       html += '<div class="banda"><p>En ruta hacia el planeta. El protocolo pide un último escaneo antes del descenso.</p>' +
@@ -483,10 +511,12 @@ var UI = (function () {
       html += '<div class="banda evento"><p>⚠ ' + T.eventoViaje + '</p><div class="comparar">' +
         '<div class="opcion"><h3>MANTENER · ' + DATOS.mapa[p.mantener.zona].nombre + '</h3>' +
         '<p>Recorrido con terreno rocoso: <b>' + p.mantener.d.energia.total + ' Wh</b></p>' +
+        desgloseOpcion(p.mantener.d) +
         '<p>Combustible: se conserva</p>' +
         boton('mantener', T.btnMantener) + '</div>' +
         '<div class="opcion"><h3>CORREGIR · ' + DATOS.mapa[p.corregir.zona].nombre + '</h3>' +
         '<p>Recorrido estimado: <b>' + p.corregir.d.energia.total + ' Wh</b></p>' +
+        desgloseOpcion(p.corregir.d) +
         '<p>Combustible: −' + p.corregir.combustible + ' (tienes ' + estado.recursos.combustible + ')</p>' +
         boton('corregir', T.btnCorregir, p.corregir.posible ? {} : { off: true, title: 'Sin combustible suficiente: no reservaste margen para esta maniobra.' }) +
         (p.corregir.posible ? '' : '<p class="alerta">✖ No disponible: falta combustible</p>') +
@@ -517,8 +547,8 @@ var UI = (function () {
       barra('⚡', 'Energía', estado.recursos.energiaWh, estado.plan.energiaInicial) +
       barra('◍', 'Oxígeno', estado.recursos.oxigeno, estado.plan.oxigenoInicial) +
       '<div class="chips"><span class="chip">▣ ' + estado.muestras.recogidas.length + '/' + t.capacidadMuestras + ' muestras</span>' +
-      '<span class="chip chip-reg ' + claseReg + '" title="' + esc(T.regresoEstimado) + '">' + iconoReg + ' Regreso: ' +
-      reg.energia + ' Wh · ' + reg.oxigeno + ' O₂</span>' +
+      '<span class="chip chip-reg clicable ' + claseReg + '" data-a="verregreso" title="' + esc(T.regresoEstimado) + '. Clic para ver de dónde sale.">' + iconoReg + ' Regreso: ' +
+      reg.energia + ' Wh · ' + reg.oxigeno + ' O₂ ⓘ</span>' +
       (estado.plan.reserva
         ? '<span class="chip ' + (estado.recursos.energiaWh >= estado.plan.reserva.regreso ? 'ok' : 'ambar') + '" title="' + esc(T.tooltipReserva) + '">' +
           (estado.recursos.energiaWh >= estado.plan.reserva.regreso ? '✓' : '⚠') + ' Reserva regreso ' + estado.plan.reserva.regreso + ' Wh</span>'
@@ -588,13 +618,13 @@ var UI = (function () {
       var n = Motor.desglose(estado.zonaAterrizaje, estado.objetivo, false);
       var a = Motor.desglose(estado.zonaAterrizaje, estado.objetivo, true);
       var r = Motor.recomendacion(estado);
-      var salida = estado.objetivo === 'crater_profunda' ? DATOS.mapa[estado.zonaAterrizaje].salidaCrater : 0;
       inner = '<h2>DE DÓNDE SALE LA RECOMENDACIÓN</h2>' +
-        '<p>Ida: ' + n.pasos + ' pasos × ' + C.pasoEnergia + ' Wh = <b>' + n.energia.ida + ' Wh</b></p>' +
+        '<p>Ida: ' + formulaTramo(n.componentes.ida) + ' = <b>' + n.energia.ida + ' Wh</b></p>' +
         '<p>Tarea (' + n.tareaNombre + '): <b>' + n.energia.tarea + ' Wh</b></p>' +
-        '<p>Regreso: ' + n.pasos + ' pasos × ' + C.pasoEnergia + ' Wh' + (salida ? ' + ' + salida + ' (salir del cráter)' : '') + ' = <b>' + n.energia.regreso + ' Wh</b></p>' +
+        '<p>Regreso: ' + formulaTramo(n.componentes.regreso) + ' = <b>' + n.energia.regreso + ' Wh</b></p>' +
         '<p>Total previsto: <b>' + n.energia.total + ' Wh</b></p><hr>' +
-        '<p>Si el terreno resulta rocoso: +' + (a.energia.total - n.energia.total) + ' Wh → <b>' + a.energia.total + ' Wh</b></p>' +
+        '<p>Si el terreno resulta rocoso: ida +' + a.componentes.ida.recargo + ' (' + a.componentes.ida.pasosRocosos + ' rocoso(s) × ' + a.componentes.ida.recargoUnitario + ' Wh) · regreso +' +
+        a.componentes.regreso.recargo + ' (' + a.componentes.regreso.pasosRocosos + ' × ' + a.componentes.regreso.recargoUnitario + ' Wh) → <b>' + a.energia.total + ' Wh</b></p>' +
         '<p>Recomendación: ' + a.energia.total + ' + ' + Math.round(C.margenRecomendado * 100) + ' % de margen = <b>' + r.energiaRecomendada + ' Wh</b></p>' +
         '<p class="nota">Oxígeno: ' + n.oxigeno.total + ' O₂ previsto · recomendado ' + r.oxigenoRecomendado + ' O₂</p>';
     } else if (modal === 'probar') {
@@ -617,6 +647,25 @@ var UI = (function () {
       inner = '<h2>PROYECCIÓN EN SECO</h2><div class="comparar">' +
         col('ESCENARIO NORMAL', pr.normal, false) + col('ESCENARIO ADVERSO', pr.adverso, true) +
         '</div><p class="nota">El escenario adverso supone terreno rocoso en la zona elegida. En rojo, el tramo cuya reserva no alcanza. Ninguna de las soluciones es «la correcta»: más batería cuesta masa; aterrizar más cerca es más incierto.</p>';
+    } else if (modal === 'regreso') {
+      var dr = Motor.desgloseRegreso(estado);
+      var ce = dr.energia;
+      function veredicto(sobra, unidad) {
+        return '<b class="' + (sobra < 0 ? 'alerta' : 'ok') + '">' + (sobra < 0 ? 'faltan ' + (-sobra) + ' ' + unidad + ' ✖' : 'sobran ' + sobra + ' ' + unidad + ' ✓') + '</b>';
+      }
+      inner = '<h2>DE DÓNDE SALE EL REGRESO</h2>';
+      if (ce.pasos === 0) {
+        inner += '<p>Estás en el módulo: volver no cuesta nada. Pulsa REGRESAR para entregar las muestras.</p>';
+      } else {
+        inner += '<p>Del paso ' + dr.desde + ' al módulo: ' + ce.pasos + ' paso(s) × ' + C.pasoEnergia + ' Wh = <b>' + ce.base + ' Wh</b></p>' +
+          (ce.pasosRocosos
+            ? '<p>Terreno rocoso: ' + ce.pasosRocosos + ' paso(s) × +' + ce.recargoUnitario + ' Wh = <b>+' + ce.recargo + ' Wh</b></p>'
+            : (dr.rocoso ? '<p>Terreno rocoso: ningún paso rocoso queda en este tramo.</p>' : '')) +
+          (ce.salida ? '<p>Salir del cráter (subida): <b>+' + ce.salida + ' Wh</b></p>' : '') +
+          '<p>Total: <b>' + ce.total + ' Wh</b> · tienes ' + dr.tienes.energia + ' Wh → ' + veredicto(dr.sobra.energia, 'Wh') + '</p><hr>' +
+          '<p>Oxígeno: ' + dr.oxigeno.pasos + ' paso(s) × ' + dr.oxigeno.unitario + ' = <b>' + dr.oxigeno.total + ' O₂</b> · tienes ' + dr.tienes.oxigeno + ' → ' + veredicto(dr.sobra.oxigeno, 'O₂') + '</p>';
+      }
+      inner += '<p class="nota">El indicador se recalcula tras cada acción. Lo que sobra es lo que puedes gastar en seguir explorando sin quedarte varado.</p>';
     } else if (modal === 'reservar') {
       var evr = Motor.evaluarReserva(estado);
       inner = '<h2>REPARTE LA ENERGÍA POR TRAMOS</h2>' +
@@ -653,6 +702,7 @@ var UI = (function () {
       case 'vercalculo': modal = 'calculo'; break;
       case 'probar': modal = 'probar'; break;
       case 'reservar': modal = 'reservar'; break;
+      case 'verregreso': modal = 'regreso'; break;
       case 'reserva': {
         var partes = (x || '').split(':');
         var tramo = partes[0], signo = partes[1];

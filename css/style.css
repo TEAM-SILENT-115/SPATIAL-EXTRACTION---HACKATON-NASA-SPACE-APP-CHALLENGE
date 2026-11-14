@@ -65,6 +65,8 @@ html, body {
   border: 2px solid var(--borde); background: var(--fondo);
   padding: 4px 8px; font-size: 13px; font-weight: bold; white-space: nowrap;
 }
+.chip.clicable { cursor: pointer; }
+.chip.clicable:hover { background: #1a2350; }
 .chip-reg.ok { border-color: var(--ok); color: var(--ok); }
 .chip-reg.ambar { border-color: var(--ambar); color: var(--ambar); }
 .chip-reg.rojo { border-color: var(--rojo); color: var(--rojo); }
@@ -101,6 +103,7 @@ main.hangar {
 
 #cv-mapa { width: 100%; height: auto; image-rendering: pixelated; border: 2px solid var(--borde); }
 .escena { width: 1280px; height: 440px; image-rendering: pixelated; display: block; }
+.escena-viaje { height: 336px; }
 
 .dato { font-size: 13px; color: var(--apagado); line-height: 1.35; }
 .nota { font-size: 11px; color: var(--borde); line-height: 1.3; margin-top: auto; }
@@ -177,10 +180,11 @@ main.hangar {
 .comparar { display: flex; gap: 14px; justify-content: center; }
 .opcion {
   border: 3px solid var(--borde); background: var(--panel);
-  padding: 10px 14px; min-width: 280px;
-  display: flex; flex-direction: column; gap: 6px; font-size: 14px;
+  padding: 8px 12px; min-width: 280px;
+  display: flex; flex-direction: column; gap: 5px; font-size: 14px;
 }
 .opcion h3 { color: var(--acento); font-size: 13px; }
+.opcion .dato { font-size: 12px; }
 
 /* ---------- centro (intro / informe) ---------- */
 
@@ -215,6 +219,7 @@ main.hangar {
 .burbuja {
   position: absolute; z-index: 20;
   width: 330px;
+  pointer-events: none;          /* nunca bloquea lo que hay debajo... */
   background: var(--panel);
   border: 3px solid var(--acento);
   box-shadow: 4px 4px 0 #05081a;
@@ -227,7 +232,8 @@ main.hangar {
   border: 6px solid transparent; border-top: 0;
   border-bottom-color: var(--acento);
 }
-.burbuja .btn { align-self: flex-end; }
+.burbuja .btn { align-self: flex-end; pointer-events: auto; } /* ...salvo su propio botón */
+.burbuja.derecha::before { left: auto; right: 14px; }
 
 /* ---------- modal ---------- */
 

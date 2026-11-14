@@ -37,8 +37,12 @@ Es la única fuente de verdad; ante la duda, manda ese documento.
 - **Tooltips de primera vez (14-nov-2026):** los términos *carga útil*, *autonomía*, *margen*
   y *reserva* salen subrayados; la primera vez que uno aparece se muestra una burbuja de una
   línea con [ ENTENDIDO ] y después se reabre con clic. Detalle en "Glosario de primera vez".
-- 68 pruebas del motor pasando: `node tests/motor.test.js` (23 base + 15 de calibración +
-  30 de reserva por tramos). La interfaz se verifica a mano o con un navegador sin cabeza.
+- **Toda cifra se puede abrir (14-nov-2026):** el indicador "Regreso" de la superficie es
+  clicable y abre su desglose; las dos tarjetas del evento del viaje muestran la fórmula de
+  cada total y si lo que llevas alcanza; VER CÁLCULO explica el escenario rocoso por partes.
+- 88 pruebas del motor pasando: `node tests/motor.test.js` (23 base + 15 de calibración +
+  30 de reserva por tramos + 20 de desglose). La interfaz se verifica a mano o con un
+  navegador sin cabeza.
 
 ## Calibración vigente (solo `datos.js`)
 
@@ -114,6 +118,24 @@ Es una decisión de **planificación**, no un candado. Lo que hace y lo que no:
 - **Lo que no hace, a propósito:** no bloquea LANZAR ni ninguna acción en superficie
   (regla de la spec: equivocarse de margen es la lección).
 
+## Desglose de toda cifra (regla 4 de la spec)
+
+- **Una sola fuente:** `Motor.componentesTramo(zona, desde, hasta, rocoso)` devuelve
+  `{ pasos, base, pasosRocosos, recargoUnitario, recargo, salida, total }`. `costoTramoEnergia`
+  es su `total`, y `desglose()` expone `componentes.ida` y `componentes.regreso`. Si una cifra
+  de recorrido no sale de ahí, está mal.
+- **Superficie:** el chip "Regreso: X Wh · Y O₂ ⓘ" abre el modal "De dónde sale el regreso":
+  pasos × costo base, pasos rocosos × recargo, subida del cráter, total contra lo que tienes
+  (sobran / faltan) y lo mismo para el oxígeno. Lo calcula `Motor.desgloseRegreso(estado)`.
+- **Viaje:** cada tarjeta (MANTENER / CORREGIR) lista "Ida 30 (3 paso(s) × 5 Wh + 3 rocoso(s)
+  × 5 Wh) · perforar 25 · regreso 35 (…)" y "Llevas 100 Wh → sobran 10 ✓ · O₂ 29 de 100".
+  Para que quepan, la escena del viaje mide 320×84 a escala 4 (1280×336) en vez de 440 px.
+- **Hangar:** VER CÁLCULO usa la misma fórmula para ida y regreso y, en el escenario rocoso,
+  dice "ida +15 (3 rocoso(s) × 5 Wh) · regreso +15 (3 × 5 Wh)" en lugar de un "+30" seco.
+- **Burbujas del glosario:** de paso se corrigió que la burbuja de "Carga útil" tapara el
+  botón ELEGIR del primer cohete. Ahora se ancla hacia la izquierda cuando el término está en
+  la mitad izquierda de la pantalla y, además, deja pasar los clics salvo en su propio botón.
+
 ## Glosario de primera vez (tooltips)
 
 - **Textos** en `datos.js` (`tooltipMargen`, `tooltipCargaUtil`, `tooltipAutonomia`,
@@ -153,8 +175,8 @@ Son **dos enlaces**:
 4. ~~Tooltips de primera vez~~ — hecho el 14-nov-2026, ver "Glosario de primera vez".
    Si en las pruebas con gente las cuatro burbujas seguidas del hangar cansan, la opción
    barata es presentar *reserva* solo al abrir [ RESERVAR ].
-5. **Desglose abrible de toda cifra**: el indicador "Regreso estimado" y las proyecciones
-   del evento del viaje muestran el total sin poder abrir de dónde sale.
+5. ~~Desglose abrible de toda cifra~~ — hecho el 14-nov-2026, ver "Desglose de toda
+   cifra".
 6. ~~[ PROBAR ] marca en rojo el tramo donde faltaría~~ — hecho junto con RESERVAR:
    cada escenario lista ida / exploración / regreso con su reserva y lo que necesita.
 7. **Animaciones** de despegue y descenso (hoy el cambio de etapa es seco).
@@ -165,7 +187,23 @@ Son **dos enlaces**:
 
 ## Bitácora de cambios sin commit (para el commit único del equipo)
 
-14-nov-2026 — recalibración:
+> Lo anterior al 14-nov-2026 por la tarde ya está en el commit `d14e2b1`
+> ("feat(juego): calibra el balance, añade [ RESERVAR ] y tooltips de primera vez").
+
+14-nov-2026 — desglose de toda cifra (pendiente de commit):
+
+- `js/motor.js`: `componentesTramo` (nueva fuente única del costo de un tramo),
+  `costoTramoEnergia` pasa a usarla, `desglose()` expone `componentes`, `desgloseRegreso`.
+- `js/ui.js`: `formulaTramo`, `desgloseOpcion`; chip del regreso clicable con modal
+  `regreso`; tarjetas del viaje con desglose; VER CÁLCULO por componentes; escena del viaje
+  320×84; burbuja del glosario anclada por lado y sin bloquear clics.
+- `css/style.css`: `.chip.clicable`, `.escena-viaje`, `.opcion .dato`, `.burbuja` con
+  `pointer-events` y variante `.derecha`.
+- `tests/motor.test.js`: 20 pruebas nuevas (componentes por tramo, consistencia con el
+  indicador, desglose del regreso en el momento 40/10/35). Total 88.
+- `EQUIPO.md` y `README.md`: esta documentación.
+
+14-nov-2026 — recalibración (ya en `d14e2b1`):
 
 - `js/datos.js`: presupuesto 1100; escanear en superficie 5 Wh / 2 O₂; zona del cráter a
   3 pasos, rocosos [0,1,2,3], recargo 5 Wh; comentarios con los números clave.

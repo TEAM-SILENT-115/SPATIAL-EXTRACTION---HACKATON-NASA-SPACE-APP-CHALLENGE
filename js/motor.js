@@ -53,7 +53,7 @@ var Motor = (function () {
       reserva: null, // reparto de la energía por tramos, decidido en el hangar
       posicion: 0,
       terrenoRocosoActivo: false,
-      viaje: { escaneado: false, decidido: false, corrigio: false },
+      viaje: { escaneado: false, decidido: false, corrigio: false, rocoso: null, probRocoso: null }, // rocoso: lo que reveló el escaneo en la zona planeada
       muestras: { recogidas: [], entregadas: [] },
       sitios: null,
       historial: [],
@@ -367,18 +367,36 @@ var Motor = (function () {
 
   // ---------- viaje ----------
 
-  function escanearViaje(estado) {
+  // El escaneo tira el dado del terreno contra la probabilidad de la zona
+  // planeada. "azar" es un número en [0, 1): la interfaz pasa Math.random()
+  // y las pruebas un valor fijo, así el motor sigue siendo determinista
+  // (0 → siempre rocoso; 0.99 → siempre despejado).
+  function escanearViaje(estado, azar) {
     if (estado.etapa !== 'viaje') return { ok: false, msg: 'Solo durante el viaje.' };
     if (estado.viaje.escaneado) return { ok: false, msg: 'Ya escaneaste.' };
+    var prob = DATOS.mapa[estado.zonaAterrizaje].probRocoso;
+    if (typeof azar !== 'number') azar = Math.random();
     estado.viaje.escaneado = true;
-    return { ok: true, msg: DATOS.textos.eventoViaje };
+    estado.viaje.probRocoso = prob;
+    estado.viaje.rocoso = azar < prob;
+    estado.historial.push({
+      decision: 'Escaneo en vuelo sobre ' + DATOS.mapa[estado.zonaAterrizaje].nombre + ' (riesgo de roca: ' + porcentaje(prob) + ' %)',
+      efecto: estado.viaje.rocoso
+        ? 'Salió ROCOSO: el recorrido pasa de ' + estado.plan.totalPrevisto + ' a ' + estado.plan.totalAdverso + ' Wh.'
+        : 'Salió despejado: la estimación de ' + estado.plan.totalPrevisto + ' Wh se mantiene.'
+    });
+    return { ok: true, msg: estado.viaje.rocoso ? DATOS.textos.eventoViaje : DATOS.textos.eventoViajeDespejado };
   }
+
+  function porcentaje(p) { return Math.round(p * 100); }
 
   // Proyección lado a lado de las dos opciones tras el evento.
   function proyeccionesViaje(estado) {
-    var actual = desglose(estado.zonaAterrizaje, estado.objetivo, true);   // quedarse: terreno rocoso
-    var otra = desglose(otraZona(estado.zonaAterrizaje), estado.objetivo, false); // corregir: terreno normal
+    var rocoso = !!estado.viaje.rocoso;
+    var actual = desglose(estado.zonaAterrizaje, estado.objetivo, rocoso);   // quedarse: el terreno que reveló el escaneo
+    var otra = desglose(otraZona(estado.zonaAterrizaje), estado.objetivo, false); // corregir: el escaneo ya confirmó terreno despejado allí
     return {
+      rocoso: rocoso,
       mantener: { zona: estado.zonaAterrizaje, d: actual, combustible: 0 },
       corregir: { zona: otraZona(estado.zonaAterrizaje), d: otra, combustible: C.maniobra, posible: estado.recursos.combustible >= C.maniobra }
     };
@@ -404,11 +422,17 @@ var Motor = (function () {
   function mantener(estado) {
     if (estado.etapa !== 'viaje' || !estado.viaje.escaneado) return { ok: false, msg: 'Primero escanea.' };
     if (estado.viaje.decidido) return { ok: false, msg: 'La trayectoria ya está decidida.' };
-    estado.terrenoRocosoActivo = true;
+    var rocoso = !!estado.viaje.rocoso;
+    estado.terrenoRocosoActivo = rocoso;
     estado.viaje.decidido = true;
-    estado.real.eventos.push('Mantuvo trayectoria: terreno rocoso en ' + DATOS.mapa[estado.zonaAterrizaje].nombre);
-    estado.historial.push({ decision: 'Mantener trayectoria hacia ' + DATOS.mapa[estado.zonaAterrizaje].nombre, efecto: 'Conservó el combustible, pero cada paso rocoso costará +' + DATOS.mapa[estado.zonaAterrizaje].riesgoWh + ' Wh.' });
-    return { ok: true, msg: 'Trayectoria mantenida. El terreno rocoso espera abajo.' };
+    estado.real.eventos.push('Mantuvo trayectoria: terreno ' + (rocoso ? 'rocoso' : 'despejado') + ' en ' + DATOS.mapa[estado.zonaAterrizaje].nombre);
+    estado.historial.push({
+      decision: 'Mantener trayectoria hacia ' + DATOS.mapa[estado.zonaAterrizaje].nombre,
+      efecto: rocoso
+        ? 'Conservó el combustible, pero cada paso rocoso costará +' + DATOS.mapa[estado.zonaAterrizaje].riesgoWh + ' Wh.'
+        : 'Conservó el combustible y el terreno despejado respeta el plan.'
+    });
+    return { ok: true, msg: rocoso ? 'Trayectoria mantenida. El terreno rocoso espera abajo.' : 'Trayectoria mantenida. Terreno despejado: el plan sigue en pie.' };
   }
 
   function descender(estado) {
@@ -644,7 +668,8 @@ var Motor = (function () {
       } else if (plan.margenReservado < 0) {
         frases.push('El plan ya no alcanzaba antes de despegar: llevabas ' + plan.energiaInicial + ' Wh y el recorrido previsto pedía ' + plan.totalPrevisto + ' Wh (faltaban ' + (-plan.margenReservado) + ' Wh incluso con buen terreno).');
       } else if (rocoso) {
-        frases.push('El terreno rocoso encareció cada paso en +' + m.riesgoWh + ' Wh, y el margen que reservaste al lanzar (' + plan.margenReservado + ' Wh) no cubrió ese extra.');
+        frases.push('El terreno rocoso encareció cada paso en +' + m.riesgoWh + ' Wh, y el margen que reservaste al lanzar (' + plan.margenReservado + ' Wh) no cubrió ese extra.' +
+          (estado.viaje.probRocoso !== null ? ' El riesgo estaba avisado: ' + porcentaje(estado.viaje.probRocoso) + ' % en esa zona.' : ''));
       } else {
         frases.push('El plan estimaba ' + plan.totalPrevisto + ' Wh y reservaste ' + plan.margenReservado + ' Wh de margen; las acciones extra en superficie se comieron la diferencia.');
       }
@@ -668,6 +693,19 @@ var Motor = (function () {
           frases.push('Sin taladro equipado, la muestra profunda nunca estuvo a tu alcance: esa decisión se tomó en el hangar.');
         } else {
           frases.push('El recorte vino de los recursos: compara abajo lo previsto con lo consumido y busca el tramo donde se fue el margen.');
+        }
+      }
+      // El terreno salió despejado: ¿el plan habría aguantado el otro resultado
+      // del dado? Aquí es donde se enseña el margen cuando no hizo falta.
+      if (estado.viaje.rocoso === false && !estado.viaje.corrigio && plan.energiaInicial > 0) {
+        var pct = porcentaje(estado.viaje.probRocoso);
+        var faltaria = plan.totalAdverso - plan.energiaInicial;
+        if (faltaria <= 0) {
+          frases.push('El terreno salió despejado, pero tu plan no dependía de eso: con terreno rocoso (' + pct + ' % de riesgo) el recorrido pedía ' + plan.totalAdverso + ' Wh y llevabas ' + plan.energiaInicial + '.');
+        } else if (plan.combustibleInicial >= C.maniobra) {
+          frases.push('El terreno salió despejado. Con terreno rocoso (' + pct + ' % de riesgo) te habrían faltado ' + faltaria + ' Wh, pero llevabas combustible para corregir la trayectoria: esa era tu salida.');
+        } else {
+          frases.push('Esta vez fue suerte, no margen: el terreno salió despejado, pero había ' + pct + ' % de riesgo de roca. Con terreno rocoso te habrían faltado ' + faltaria + ' Wh y no llevabas combustible para corregir.');
         }
       }
       if (estado.real.reservaInvadida) {
@@ -712,6 +750,8 @@ var Motor = (function () {
       reservaManual: !!(pr && pr.manual),
       reservaRegreso: pr ? pr.regreso : null,
       trayectoria: estado.viaje.corrigio ? 'Corregir' : 'Mantener',
+      // No es una decisión: es lo que salió en el dado del escaneo.
+      terreno: estado.viaje.rocoso === null ? null : (estado.viaje.rocoso ? 'Rocoso' : 'Despejado'),
       recogidas: estado.muestras.recogidas.map(function (x) { return x.nombre; }).join(' + ') || 'ninguna',
       resultado: estado.resultado,
       varadoEn: estado.varadoEn,
@@ -745,6 +785,10 @@ var Motor = (function () {
     mirar('Trayectoria en vuelo', a.trayectoria, b.trayectoria);
     mirar('Muestras recogidas', a.recogidas, b.recogidas);
 
+    // El terreno es azar, no decisión: se informa aparte y matiza la frase.
+    var terrenoCambio = (a.terreno && b.terreno && a.terreno !== b.terreno)
+      ? { antes: a.terreno, ahora: b.terreno } : null;
+    var textoTerreno = terrenoCambio ? terrenoCambio.antes + ' → ' + terrenoCambio.ahora : '';
     var mismoResultado = a.textoResultado === b.textoResultado;
     var efecto = mismoResultado
       ? 'el resultado no cambió: ' + b.textoResultado.toLowerCase() + '.'
@@ -752,17 +796,24 @@ var Motor = (function () {
     var frase;
     if (cambios.length === 0) {
       frase = mismoResultado
-        ? 'Repetiste exactamente las mismas decisiones y ' + efecto + ' Cambia una y vuelve a comparar.'
-        : 'El plan y las decisiones fueron los mismos; la diferencia estuvo en cuánto te moviste o escaneaste en superficie: ' + efecto;
+        ? 'Repetiste exactamente las mismas decisiones y ' + efecto + (terrenoCambio ? ' El terreno salió distinto (' + textoTerreno + ') y tu plan dio lo mismo.' : '') + ' Cambia una y vuelve a comparar.'
+        : terrenoCambio
+          ? 'Tomaste las mismas decisiones, pero el terreno salió distinto (' + textoTerreno + ') y ' + efecto + ' Esa diferencia es suerte: el margen existe para la partida en que sale mal.'
+          : 'El plan y las decisiones fueron los mismos; la diferencia estuvo en cuánto te moviste o escaneaste en superficie: ' + efecto;
     } else if (cambios.length === 1) {
       var c = cambios[0];
       frase = 'Cambiaste una sola decisión (' + c.etiqueta + ': ' + c.antes + ' → ' + c.ahora + ') y ' + efecto +
-        (mismoResultado ? ' Esa decisión no era la que ataba.' : ' Ese cambio es la causa.');
+        (mismoResultado
+          ? ' Esa decisión no era la que ataba' + (terrenoCambio ? ', ni siquiera con el terreno distinto (' + textoTerreno + ').' : '.')
+          : terrenoCambio
+            ? ' Pero el terreno también salió distinto (' + textoTerreno + '): no se puede atribuir solo a tu cambio. Repite para confirmarlo.'
+            : ' Ese cambio es la causa.');
     } else {
       frase = 'Cambiaste ' + cambios.length + ' decisiones a la vez y ' + efecto +
-        ' Con varios cambios juntos no se sabe cuál pesó: repite cambiando solo una.';
+        ' Con varios cambios juntos no se sabe cuál pesó: repite cambiando solo una.' +
+        (terrenoCambio ? ' Además, el terreno salió distinto (' + textoTerreno + ').' : '');
     }
-    return { antes: a, ahora: b, cambios: cambios, mismoResultado: mismoResultado, frase: frase };
+    return { antes: a, ahora: b, cambios: cambios, terrenoCambio: terrenoCambio, mismoResultado: mismoResultado, frase: frase };
   }
 
   function generarInforme(estado) {

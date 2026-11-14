@@ -41,7 +41,16 @@ var Motor = (function () {
       equipo: [],
       recursos: { energiaWh: 0, oxigeno: 0, combustible: 0 },
       plan: null,
-      real: { consumido: { energiaWh: 0, oxigeno: 0, combustible: 0 }, eventos: [] },
+      real: {
+        consumido: { energiaWh: 0, oxigeno: 0, combustible: 0 },
+        porTramo: { ida: 0, exploracion: 0, regreso: 0 }, // energía real gastada en cada tramo
+        eventos: [],
+        reservaInvadida: false,   // ¿la energía bajó de la reserva de regreso antes de volver?
+        regresoNecesario: null,   // costo del regreso en el momento de pulsar REGRESAR
+        energiaAlVolver: null     // energía que había en ese momento
+      },
+      fase: null,    // en superficie: 'ida' | 'exploracion' | 'regreso'
+      reserva: null, // reparto de la energía por tramos, decidido en el hangar
       posicion: 0,
       terrenoRocosoActivo: false,
       viaje: { escaneado: false, decidido: false, corrigio: false },
@@ -68,6 +77,95 @@ var Motor = (function () {
     });
     if (estado.cohete) t.combustible += cohetePorId(estado.cohete).combustibleBase;
     return t;
+  }
+
+  // ---------- reserva por tramos ([ RESERVAR ]) ----------
+  // La energía que se lleva se reparte entre ida, exploración y regreso.
+  // Es una decisión de planificación: no bloquea nada en superficie, pero
+  // el simulador compara cada tramo con su estimación, el juego anota el
+  // momento en que se entra en la reserva de regreso y el informe enfrenta
+  // lo reservado con lo consumido.
+
+  var TRAMOS = ['ida', 'exploracion', 'regreso'];
+
+  // Reparto automático: la estimación normal para ida y regreso; el resto
+  // queda para explorar (lo que haría un planificador sin margen).
+  function reservaPorDefecto(estado) {
+    var E = totales(estado).energia;
+    var n = desglose(estado.zonaAterrizaje, estado.objetivo, false);
+    var ida = Math.min(n.energia.ida, E);
+    var regreso = Math.min(n.energia.regreso, E - ida);
+    return { ida: ida, exploracion: E - ida - regreso, regreso: regreso, manual: false };
+  }
+
+  // Mantiene la reserva coherente con la energía equipada. Si el jugador no
+  // la tocó, sigue la estimación; si la tocó, el sobrante va a exploración y
+  // el faltante se recorta de exploración, luego regreso, luego ida.
+  function ajustarReserva(estado) {
+    if (estado.etapa !== 'hangar') return;
+    var E = totales(estado).energia;
+    if (!estado.reserva || !estado.reserva.manual) {
+      estado.reserva = reservaPorDefecto(estado);
+      return;
+    }
+    var r = estado.reserva;
+    var suma = r.ida + r.exploracion + r.regreso;
+    if (suma <= E) { r.exploracion += E - suma; return; }
+    var exceso = suma - E;
+    ['exploracion', 'regreso', 'ida'].forEach(function (t) {
+      var q = Math.min(r[t], exceso);
+      r[t] -= q;
+      exceso -= q;
+    });
+  }
+
+  function moverReserva(estado, desde, hacia, wh) {
+    if (estado.etapa !== 'hangar') return { ok: false, msg: 'La reserva se decide en el hangar.' };
+    if (TRAMOS.indexOf(desde) === -1 || TRAMOS.indexOf(hacia) === -1 || desde === hacia) return { ok: false, msg: 'Tramo desconocido.' };
+    ajustarReserva(estado);
+    wh = wh || C.pasoReserva;
+    var r = estado.reserva;
+    var nombres = DATOS.textos.tramos;
+    if (r[desde] < wh) return { ok: false, msg: 'No hay ' + wh + ' Wh que mover desde ' + nombres[desde].toLowerCase() + '.' };
+    r[desde] -= wh;
+    r[hacia] += wh;
+    r.manual = true;
+    return { ok: true, msg: wh + ' Wh pasan de ' + nombres[desde].toLowerCase() + ' a ' + nombres[hacia].toLowerCase() + '.' };
+  }
+
+  // [ USAR RECOMENDACIÓN ]: reparte según el escenario adverso, primero el
+  // regreso (es lo que te trae de vuelta), luego la ida, el resto a explorar.
+  function reservarRecomendado(estado) {
+    if (estado.etapa !== 'hangar') return { ok: false, msg: 'La reserva se decide en el hangar.' };
+    var E = totales(estado).energia;
+    var a = desglose(estado.zonaAterrizaje, estado.objetivo, true);
+    var regreso = Math.min(a.energia.regreso, E);
+    var ida = Math.min(a.energia.ida, E - regreso);
+    estado.reserva = { ida: ida, exploracion: E - ida - regreso, regreso: regreso, manual: true };
+    var falta = a.energia.total - E;
+    return { ok: true, msg: falta > 0 ? 'Reserva adversa aplicada, pero faltan ' + falta + ' Wh para cubrirla entera.' : 'Reserva ajustada al escenario adverso.' };
+  }
+
+  // Compara la reserva de cada tramo con lo que estima el simulador.
+  function evaluarReserva(estado) {
+    ajustarReserva(estado);
+    var n = desglose(estado.zonaAterrizaje, estado.objetivo, false);
+    var a = desglose(estado.zonaAterrizaje, estado.objetivo, true);
+    var r = estado.reserva;
+    function fila(t, normal, adverso) {
+      return {
+        tramo: t, reservado: r[t], normal: normal, adverso: adverso,
+        faltaNormal: Math.max(0, normal - r[t]),
+        faltaAdverso: Math.max(0, adverso - r[t])
+      };
+    }
+    return {
+      ida: fila('ida', n.energia.ida, a.energia.ida),
+      exploracion: fila('exploracion', n.energia.tarea, a.energia.tarea),
+      regreso: fila('regreso', n.energia.regreso, a.energia.regreso),
+      total: r.ida + r.exploracion + r.regreso,
+      manual: r.manual
+    };
   }
 
   // ---------- hangar ----------
@@ -194,8 +292,9 @@ var Motor = (function () {
     return {
       normal: normal,
       adverso: adverso,
-      energiaRecomendada: Math.ceil(adverso.energia.total * (1 + C.margenRecomendado)),
-      oxigenoRecomendado: Math.ceil(adverso.oxigeno.total * (1 + C.margenRecomendado))
+      // el −1e-9 evita que 90 × 1.1 = 99.00000000000001 suba a 100 por coma flotante
+      energiaRecomendada: Math.ceil(adverso.energia.total * (1 + C.margenRecomendado) - 1e-9),
+      oxigenoRecomendado: Math.ceil(adverso.oxigeno.total * (1 + C.margenRecomendado) - 1e-9)
     };
   }
 
@@ -246,6 +345,16 @@ var Motor = (function () {
     estado.historial.push({ decision: 'Equipo: ' + (estado.equipo.map(function (id) { return obj(id).nombre; }).join(', ') || 'nada'), efecto: 'Energía ' + t.energia + ' Wh, O₂ ' + t.oxigeno + ', espacio para ' + t.capacidadMuestras + ' muestra(s).' });
     estado.historial.push({ decision: 'Objetivo: ' + DATOS.objetivos[estado.objetivo].nombre + ' aterrizando en ' + DATOS.mapa[estado.zonaAterrizaje].nombre, efecto: 'Plan: ' + r.normal.energia.total + ' Wh previstos (adverso ' + r.adverso.energia.total + ' Wh).' });
     estado.historial.push({ decision: 'Margen reservado al lanzar: ' + estado.plan.margenReservado + ' Wh', efecto: estado.plan.margenReservado >= (r.adverso.energia.total - r.normal.energia.total) ? 'Cubre el escenario adverso.' : 'No cubre el escenario adverso (necesitaría ' + (r.adverso.energia.total - r.normal.energia.total) + ' Wh).' });
+    ajustarReserva(estado);
+    var rv = estado.reserva;
+    estado.plan.reserva = { ida: rv.ida, exploracion: rv.exploracion, regreso: rv.regreso, manual: rv.manual };
+    var faltaRegreso = r.adverso.energia.regreso - rv.regreso;
+    estado.historial.push({
+      decision: 'Reserva por tramos: ida ' + rv.ida + ' · exploración ' + rv.exploracion + ' · regreso ' + rv.regreso + ' Wh' + (rv.manual ? '' : ' (reparto automático)'),
+      efecto: faltaRegreso > 0
+        ? 'Si el terreno sale rocoso, volver pide ' + r.adverso.energia.regreso + ' Wh: a la reserva de regreso le faltan ' + faltaRegreso + '.'
+        : 'La reserva de regreso cubre incluso el terreno rocoso (' + r.adverso.energia.regreso + ' Wh).'
+    });
     estado.etapa = 'viaje';
     return { ok: true, msg: '¡Despegue! Las decisiones del hangar quedan selladas.' };
   }
@@ -319,6 +428,7 @@ var Motor = (function () {
       });
     }
     estado.posicion = 0;
+    estado.fase = 'ida';
     estado.etapa = 'superficie';
     return { ok: true, msg: 'Descenso completado en ' + m.nombre + '. El reloj de recursos corre.' };
   }
@@ -330,6 +440,17 @@ var Motor = (function () {
     estado.recursos.oxigeno -= ox;
     estado.real.consumido.energiaWh += wh;
     estado.real.consumido.oxigeno += ox;
+    if (estado.fase) estado.real.porTramo[estado.fase] += wh;
+    // Entrar en la reserva de regreso no bloquea nada: se anota una sola
+    // vez para que el informe pueda señalar el momento exacto.
+    if (estado.plan && estado.plan.reserva && !estado.real.reservaInvadida &&
+        estado.fase !== 'regreso' && estado.recursos.energiaWh < estado.plan.reserva.regreso) {
+      estado.real.reservaInvadida = true;
+      estado.historial.push({
+        decision: 'Entró en la reserva de regreso (' + estado.plan.reserva.regreso + ' Wh) a ' + estado.posicion + ' paso(s) del módulo',
+        efecto: 'Quedan ' + Math.max(0, estado.recursos.energiaWh) + ' Wh. Desde aquí cada acción extra se paga con el viaje de vuelta.'
+      });
+    }
   }
 
   function comprobarVarado(estado) {
@@ -370,8 +491,9 @@ var Motor = (function () {
     var destino = estado.posicion + (dir >= 0 ? 1 : -1);
     if (destino < 0 || destino >= estado.sitios.length) return { ok: false, msg: 'No hay camino en esa dirección.' };
     var e = costoTramoEnergia(estado.zonaAterrizaje, estado.posicion, destino, estado.terrenoRocosoActivo);
-    gastar(estado, e, C.pasoOxigeno);
     estado.posicion = destino;
+    gastar(estado, e, C.pasoOxigeno);
+    if (estado.fase === 'ida' && estado.posicion >= pasoObjetivo(estado.zonaAterrizaje, estado.objetivo)) estado.fase = 'exploracion';
     if (comprobarVarado(estado)) return { ok: true, msg: 'Las reservas se agotaron en el camino.' };
     return { ok: true, msg: 'Te desplazas (−' + e + ' Wh, −' + C.pasoOxigeno + ' O₂).' };
   }
@@ -380,6 +502,7 @@ var Motor = (function () {
     if (estado.etapa !== 'superficie') return { ok: false, msg: 'Solo en superficie.' };
     if (!totales(estado).escaner) return { ok: false, msg: 'No llevas escáner de terreno: no puedes escanear aquí.' };
     var s = sitioActual(estado);
+    if (estado.fase === 'ida') estado.fase = 'exploracion';
     gastar(estado, C.escanearSup, C.escanearSupOx);
     if (comprobarVarado(estado)) return { ok: true, msg: 'Las reservas se agotaron.' };
     s.revelado = true;
@@ -404,6 +527,7 @@ var Motor = (function () {
     var s = sitioActual(estado);
     if (s.tipo !== 'muestra' || s.recogida) return { ok: false, msg: 'Aquí no hay muestra superficial por recoger.' };
     if (capacidadLibre(estado) < 1) return { ok: false, msg: 'Sin espacio en el contenedor.' };
+    if (estado.fase === 'ida') estado.fase = 'exploracion';
     gastar(estado, C.recoger, C.recogerOx);
     if (comprobarVarado(estado)) return { ok: true, msg: 'Las reservas se agotaron.' };
     s.recogida = true;
@@ -420,6 +544,7 @@ var Motor = (function () {
     if (!totales(estado).taladro) return { ok: false, msg: 'No llevas taladro: la muestra profunda queda fuera de tu alcance.' };
     if (!s.perforada) {
       if (capacidadLibre(estado) < 1) return { ok: false, msg: 'Sin espacio en el contenedor.' };
+      if (estado.fase === 'ida') estado.fase = 'exploracion';
       gastar(estado, C.perforar, C.perforarOx);
       if (comprobarVarado(estado)) return { ok: true, msg: 'Las reservas se agotaron perforando.' };
       s.perforada = true;
@@ -430,6 +555,7 @@ var Motor = (function () {
     }
     if (s.vetaRevelada && !s.vetaExtraida) {
       if (capacidadLibre(estado) < 1) return { ok: false, msg: 'Sin espacio en el contenedor para la veta.' };
+      if (estado.fase === 'ida') estado.fase = 'exploracion';
       gastar(estado, C.veta, C.vetaOx);
       if (comprobarVarado(estado)) return { ok: true, msg: 'Las reservas se agotaron en la veta.' };
       s.vetaExtraida = true;
@@ -442,6 +568,9 @@ var Motor = (function () {
 
   function regresar(estado) {
     if (estado.etapa !== 'superficie') return { ok: false, msg: 'Solo en superficie.' };
+    estado.real.regresoNecesario = costoRegreso(estado).energia;
+    estado.real.energiaAlVolver = estado.recursos.energiaWh;
+    estado.fase = 'regreso';
     if (estado.posicion === 0) {
       return entregar(estado);
     }
@@ -449,8 +578,8 @@ var Motor = (function () {
     while (estado.posicion > 0) {
       var destino = estado.posicion - 1;
       var e = costoTramoEnergia(estado.zonaAterrizaje, estado.posicion, destino, estado.terrenoRocosoActivo);
-      gastar(estado, e, C.pasoOxigeno);
       estado.posicion = destino;
+      gastar(estado, e, C.pasoOxigeno);
       if (comprobarVarado(estado)) {
         return { ok: true, msg: 'El regreso se cortó a ' + estado.posicion + ' paso(s) del módulo.' };
       }
@@ -481,12 +610,19 @@ var Motor = (function () {
     var m = DATOS.mapa[estado.zonaAterrizaje];
     if (estado.resultado === 'varado') {
       frases.push('Te quedaste sin reservas a ' + estado.varadoEn + ' paso(s) del módulo, así que ninguna muestra cuenta.');
+      var veta = estado.muestras.recogidas.some(function (x) { return x.id === 'veta'; });
+      if (veta) {
+        frases.push('Ya tenías la muestra profunda a bordo. Perforar la veta costó ' + C.veta + ' Wh que el regreso necesitaba: seguir explorando fue la decisión que rompió el balance.');
+      }
       if (rocoso) {
         frases.push('El terreno rocoso encareció cada paso en +' + m.riesgoWh + ' Wh, y el margen que reservaste al lanzar (' + plan.margenReservado + ' Wh) no cubrió ese extra.');
       } else {
         frases.push('El plan estimaba ' + plan.totalPrevisto + ' Wh y reservaste ' + plan.margenReservado + ' Wh de margen; las acciones extra en superficie se comieron la diferencia.');
       }
-      frases.push('Prueba a repetir cambiando una sola decisión: una batería mayor, aterrizar más cerca o explorar menos.');
+      if (plan.reserva && estado.real.regresoNecesario !== null) {
+        frases.push('Habías reservado ' + plan.reserva.regreso + ' Wh para volver; al dar la vuelta el regreso costaba ' + estado.real.regresoNecesario + ' Wh y te quedaban ' + estado.real.energiaAlVolver + '.');
+      }
+      frases.push('Prueba a repetir cambiando una sola decisión: una batería mayor, aterrizar más cerca, reservar más para el regreso o explorar menos.');
     } else {
       var profunda = estado.muestras.entregadas.some(function (x) { return x.id === 'profunda'; });
       if (estado.resultado === 'exito' && profunda && estado.viaje.corrigio) {
@@ -502,6 +638,9 @@ var Motor = (function () {
         } else {
           frases.push('El recorte vino de los recursos: compara abajo lo previsto con lo consumido y busca el tramo donde se fue el margen.');
         }
+      }
+      if (estado.real.reservaInvadida) {
+        frases.push('Llegaste a entrar en la reserva de regreso y aun así volviste: el margen que apartaste en la agencia fue el que te trajo de vuelta.');
       }
       if (estado.viaje.corrigio) {
         frases.push('La maniobra costó ' + C.maniobra + ' de combustible que habías decidido llevar desde la agencia.');
@@ -522,6 +661,9 @@ var Motor = (function () {
       eventos: estado.real.eventos,
       entregadas: estado.muestras.entregadas,
       recogidasNoEntregadas: estado.resultado === 'varado' ? estado.muestras.recogidas : [],
+      reserva: estado.plan ? estado.plan.reserva : null,
+      porTramo: estado.real.porTramo,
+      reservaInvadida: estado.real.reservaInvadida,
       historial: estado.historial
     };
   }
@@ -534,6 +676,11 @@ var Motor = (function () {
     n.zonaAterrizaje = estado.viaje.corrigio ? otraZona(estado.zonaAterrizaje) : estado.zonaAterrizaje;
     estado.equipo.forEach(function (id) { equipar(n, id); });
     if (estado.cohete) elegirCohete(n, estado.cohete);
+    if (estado.plan && estado.plan.reserva && estado.plan.reserva.manual) {
+      var pr = estado.plan.reserva;
+      n.reserva = { ida: pr.ida, exploracion: pr.exploracion, regreso: pr.regreso, manual: true };
+      ajustarReserva(n);
+    }
     return n;
   }
 
@@ -552,6 +699,10 @@ var Motor = (function () {
     desglose: desglose,
     recomendacion: recomendacion,
     probar: probar,
+    reservaPorDefecto: reservaPorDefecto,
+    moverReserva: moverReserva,
+    reservarRecomendado: reservarRecomendado,
+    evaluarReserva: evaluarReserva,
     lanzar: lanzar,
     escanearViaje: escanearViaje,
     proyeccionesViaje: proyeccionesViaje,

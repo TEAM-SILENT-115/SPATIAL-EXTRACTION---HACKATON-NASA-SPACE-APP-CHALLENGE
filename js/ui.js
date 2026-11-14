@@ -13,8 +13,21 @@ var UI = (function () {
   var estado = Motor.nuevoEstado();
   var mensaje = 'Bienvenido a la agencia. Diseña tu misión.';
   var intro = true;
-  var modal = null; // null | 'calculo' | 'probar'
+  var modal = null; // null | 'calculo' | 'probar' | 'reservar'
   var juego, marco;
+  var escala = 1;
+
+  // Glosario de términos técnicos (textos en datos.js). Cada término se
+  // presenta con una burbuja de una línea la primera vez que aparece en
+  // pantalla; después queda subrayado y se puede volver a abrir con clic.
+  var GLOSARIO = {
+    margen: T.tooltipMargen,
+    cargaUtil: T.tooltipCargaUtil,
+    autonomia: T.tooltipAutonomia,
+    reserva: T.tooltipReserva
+  };
+  var vistos = {};           // términos cuya burbuja de primera vez ya se cerró
+  var terminoAbierto = null; // término reabierto a mano con clic
 
   /* ---------------- paleta y sprites ---------------- */
 
@@ -177,7 +190,7 @@ var UI = (function () {
         }
       }
       if (s.tipo === 'muestra' && !s.recogida) pint(ctx, SPR_MUESTRA, x - 2, SUELO - 8);
-      if (s.rocoso) pint(ctx, SPR_ROCA, x - 3, SUELO - 4);
+      if (s.rocoso && s.tipo !== 'modulo') pint(ctx, SPR_ROCA, x - 3, SUELO - 4);
       if (s.tipo === 'modulo') pint(ctx, SPR_MODULO, x - 7, SUELO - 9);
     }
 
@@ -305,6 +318,59 @@ var UI = (function () {
       '>[ ' + texto + ' ]</button>';
   }
 
+  function termino(clave, etiqueta) {
+    return '<span class="termino" data-a="termino" data-x="' + clave + '" title="' + esc(GLOSARIO[clave]) + '">' + etiqueta + '</span>';
+  }
+
+  // Coloca la burbuja del glosario: la del término reabierto con clic o, si
+  // no hay, la del primer término en pantalla que aún no se presentó.
+  function colocarGlosario() {
+    var terminos = juego.querySelectorAll('.termino');
+    var objetivo = null;
+    for (var i = 0; i < terminos.length; i++) {
+      var clave = terminos[i].getAttribute('data-x');
+      if (terminoAbierto ? clave === terminoAbierto : !vistos[clave]) { objetivo = terminos[i]; break; }
+    }
+    if (!objetivo) return;
+    var k = objetivo.getAttribute('data-x');
+    var burbuja = document.createElement('div');
+    burbuja.className = 'burbuja';
+    burbuja.setAttribute('role', 'note');
+    burbuja.innerHTML = '<p>ⓘ ' + esc(GLOSARIO[k]) + '</p>' + boton('entendido', T.btnEntendido, { x: k, clase: 'mini' });
+    juego.appendChild(burbuja);
+    var rj = juego.getBoundingClientRect();
+    var rt = objetivo.getBoundingClientRect();
+    var left = (rt.left - rj.left) / escala;
+    var top = (rt.bottom - rj.top) / escala + 8;
+    left = Math.max(8, Math.min(left, 1280 - 340));
+    if (top > 720 - 110) top = (rt.top - rj.top) / escala - 100;
+    burbuja.style.left = left + 'px';
+    burbuja.style.top = top + 'px';
+  }
+
+  // Tres barras que se quitan entre sí. Con controles, cada [ + ] toma 5 Wh
+  // de la exploración (o del regreso, si el tramo es la exploración) y cada
+  // [ − ] se los devuelve. Es una convención de la interfaz: el motor solo
+  // sabe mover energía de un tramo a otro.
+  function parReserva(tramo) { return tramo === 'exploracion' ? 'regreso' : 'exploracion'; }
+
+  function htmlReserva(ev, total, controles) {
+    var html = '<div class="reserva" title="' + esc(T.tooltipReserva) + '">';
+    ['ida', 'exploracion', 'regreso'].forEach(function (t) {
+      var f = ev[t];
+      var clase = f.faltaNormal > 0 ? 'rojo' : (f.faltaAdverso > 0 ? 'ambar' : 'ok');
+      var icono = f.faltaNormal > 0 ? '✖' : (f.faltaAdverso > 0 ? '⚠' : '✓');
+      var pct = total > 0 ? Math.round(f.reservado / total * 100) : 0;
+      html += '<div class="reserva-fila ' + clase + '">' +
+        '<span class="etq">' + T.tramos[t] + '</span>' +
+        (controles ? boton('reserva', '−', { x: t + ':-', clase: 'mini cuadrado', off: f.reservado < C.pasoReserva, title: 'Devuelve ' + C.pasoReserva + ' Wh a ' + T.tramos[parReserva(t)].toLowerCase() }) : '') +
+        '<div class="b-pista"><div class="b-relleno" style="width:' + pct + '%"></div></div>' +
+        (controles ? boton('reserva', '+', { x: t + ':+', clase: 'mini cuadrado', off: ev[parReserva(t)].reservado < C.pasoReserva, title: 'Toma ' + C.pasoReserva + ' Wh de ' + T.tramos[parReserva(t)].toLowerCase() }) : '') +
+        '<span class="num"><b>' + f.reservado + '</b> Wh · estima ' + f.normal + ' / rocoso ' + f.adverso + ' ' + icono + '</span></div>';
+    });
+    return html + '</div>';
+  }
+
   /* ---------------- pantallas ---------------- */
 
   function htmlIntro() {
@@ -323,11 +389,12 @@ var UI = (function () {
     var m = DATOS.mapa[estado.zonaAterrizaje];
     var o = DATOS.objetivos[estado.objetivo];
     var pasos = Motor.pasoObjetivo(estado.zonaAterrizaje, estado.objetivo);
+    var ev = Motor.evaluarReserva(estado);
 
     var html = '<header class="cabecera">' +
       barra('🪙', 'Presupuesto', estado.presupuesto.gastado, estado.presupuesto.total,
         estado.presupuesto.gastado > estado.presupuesto.total ? 'rojo' : '') +
-      barra('⚖', 'Masa', estado.masa.usada, estado.masa.capacidad || 0,
+      barra('⚖', termino('cargaUtil', 'Carga útil'), estado.masa.usada, estado.masa.capacidad || 0,
         estado.masa.usada > estado.masa.capacidad ? 'rojo' : '') +
       '<div class="chips"><span class="chip">⚡ ' + t.energia + ' Wh</span>' +
       '<span class="chip">◍ ' + t.oxigeno + ' O₂</span>' +
@@ -376,15 +443,18 @@ var UI = (function () {
     // --- panel recursos y simulador ---
     var margen = t.energia - r.normal.energia.total;
     html += '<section class="panel"><h2>3 · RECURSOS Y SIMULADOR</h2>' +
+      '<p class="dato">' + termino('autonomia', 'Autonomía') + ' en superficie (energía y oxígeno):</p>' +
       '<table class="tabla"><tr><th></th><th>Llevas</th><th>Estimado</th><th>Recomendado</th></tr>' +
       '<tr><td>⚡ Energía</td><td>' + t.energia + '</td><td>' + r.normal.energia.total + '</td><td>' + r.energiaRecomendada + '</td></tr>' +
       '<tr><td>◍ Oxígeno</td><td>' + t.oxigeno + '</td><td>' + r.normal.oxigeno.total + '</td><td>' + r.oxigenoRecomendado + '</td></tr>' +
       '<tr><td>▲ Comb.</td><td>' + t.combustible + '</td><td>0</td><td>' + C.maniobra + '</td></tr></table>' +
-      '<p class="dato" title="' + esc(T.tooltipMargen) + '">Margen de energía: <b class="' +
+      '<p class="dato">' + termino('margen', 'Margen') + ' de energía: <b class="' +
       (margen < 0 ? 'alerta' : (t.energia > 0 && margen < r.adverso.energia.total - r.normal.energia.total ? 'ambar' : 'ok')) + '">' +
       margen + ' Wh</b> ' + (margen < 0 ? '✖' : (margen < r.adverso.energia.total - r.normal.energia.total ? '⚠' : '✓')) + '</p>' +
+      '<p class="dato">' + termino('reserva', 'Reserva') + ' por tramos' + (ev.manual ? '' : ' (automática: estimación normal, el resto a explorar)') + ':</p>' +
+      htmlReserva(ev, t.energia, false) +
       '<div class="fila-botones">' +
-      boton('vercalculo', T.btnVerCalculo) + boton('probar', T.btnProbar) +
+      boton('vercalculo', T.btnVerCalculo) + boton('reservar', T.btnReservar) + boton('probar', T.btnProbar) +
       '</div>' +
       '<div class="fila-botones">' + boton('lanzar', T.btnLanzar, { clase: 'grande peligro' }) + '</div>' +
       '<p class="nota">' + T.ficcion + '</p>' +
@@ -448,8 +518,12 @@ var UI = (function () {
       barra('◍', 'Oxígeno', estado.recursos.oxigeno, estado.plan.oxigenoInicial) +
       '<div class="chips"><span class="chip">▣ ' + estado.muestras.recogidas.length + '/' + t.capacidadMuestras + ' muestras</span>' +
       '<span class="chip chip-reg ' + claseReg + '" title="' + esc(T.regresoEstimado) + '">' + iconoReg + ' Regreso: ' +
-      reg.energia + ' Wh · ' + reg.oxigeno + ' O₂</span></div>' +
-      '</header>';
+      reg.energia + ' Wh · ' + reg.oxigeno + ' O₂</span>' +
+      (estado.plan.reserva
+        ? '<span class="chip ' + (estado.recursos.energiaWh >= estado.plan.reserva.regreso ? 'ok' : 'ambar') + '" title="' + esc(T.tooltipReserva) + '">' +
+          (estado.recursos.energiaWh >= estado.plan.reserva.regreso ? '✓' : '⚠') + ' Reserva regreso ' + estado.plan.reserva.regreso + ' Wh</span>'
+        : '') +
+      '</div></header>';
 
     html += '<canvas id="cv-sup" width="320" height="110" class="escena"></canvas>';
 
@@ -481,6 +555,13 @@ var UI = (function () {
       '<tr><td>Margen</td><td>' + inf.plan.margenReservado + '</td><td>' + (inf.plan.energiaInicial - inf.consumido.energiaWh) + '</td></tr>' +
       '<tr><td>O₂ usado</td><td>—</td><td>' + inf.consumido.oxigeno + '</td></tr>' +
       '<tr><td>Comb. usado</td><td>—</td><td>' + inf.consumido.combustible + '</td></tr></table>' +
+      (inf.reserva
+        ? '<h3>POR TRAMO (Wh)</h3><table class="tabla"><tr><th></th><th>Reservado</th><th>Real</th></tr>' +
+          ['ida', 'exploracion', 'regreso'].map(function (t) {
+            var sobre = inf.porTramo[t] > inf.reserva[t];
+            return '<tr><td>' + T.tramos[t] + '</td><td>' + inf.reserva[t] + '</td><td class="' + (sobre ? 'alerta' : '') + '">' + inf.porTramo[t] + (sobre ? ' ✖' : '') + '</td></tr>';
+          }).join('') + '</table>'
+        : '') +
       '<h3>MUESTRAS ENTREGADAS</h3>' +
       (inf.entregadas.length
         ? '<ul>' + inf.entregadas.map(function (x) { return '<li>▣ ' + esc(x.nombre) + '</li>'; }).join('') + '</ul>'
@@ -518,17 +599,32 @@ var UI = (function () {
         '<p class="nota">Oxígeno: ' + n.oxigeno.total + ' O₂ previsto · recomendado ' + r.oxigenoRecomendado + ' O₂</p>';
     } else if (modal === 'probar') {
       var pr = Motor.probar(estado);
-      function col(nombre, ev) {
-        return '<div class="opcion"><h3>' + nombre + '</h3>' +
-          '<p>Ida ' + ev.desglose.energia.ida + ' + tarea ' + ev.desglose.energia.tarea + ' + regreso ' + ev.desglose.energia.regreso + '</p>' +
-          '<p>Necesitas <b>' + ev.desglose.energia.total + ' Wh</b> · llevas ' + pr.llevas.energia + ' Wh</p>' +
+      var evp = Motor.evaluarReserva(estado);
+      function col(nombre, ev, adverso) {
+        var filas = ['ida', 'exploracion', 'regreso'].map(function (t) {
+          var f = evp[t];
+          var necesita = adverso ? f.adverso : f.normal;
+          var falta = adverso ? f.faltaAdverso : f.faltaNormal;
+          return '<p class="' + (falta > 0 ? 'alerta' : '') + '">' + T.tramos[t] + ': reserva ' + f.reservado + ' · necesita ' + necesita +
+            (falta > 0 ? ' ✖ faltan ' + falta : ' ✓') + '</p>';
+        }).join('');
+        return '<div class="opcion"><h3>' + nombre + '</h3>' + filas +
+          '<p>Total: necesitas <b>' + ev.desglose.energia.total + ' Wh</b> · llevas ' + pr.llevas.energia + ' Wh</p>' +
           '<p>Margen: <b class="' + (ev.margenEnergia < 0 ? 'alerta' : 'ok') + '">' + ev.margenEnergia + ' Wh ' + (ev.margenEnergia < 0 ? '✖ falta' : '✓') + '</b></p>' +
           '<p>Oxígeno: ' + ev.desglose.oxigeno.total + ' de ' + pr.llevas.oxigeno + ' <b class="' + (ev.margenOxigeno < 0 ? 'alerta' : 'ok') + '">' + (ev.margenOxigeno < 0 ? '✖' : '✓') + '</b></p>' +
           '</div>';
       }
       inner = '<h2>PROYECCIÓN EN SECO</h2><div class="comparar">' +
-        col('ESCENARIO NORMAL', pr.normal) + col('ESCENARIO ADVERSO', pr.adverso) +
-        '</div><p class="nota">El escenario adverso supone terreno rocoso en la zona elegida. Ninguna de las soluciones es «la correcta»: más batería cuesta masa; aterrizar más cerca es más incierto.</p>';
+        col('ESCENARIO NORMAL', pr.normal, false) + col('ESCENARIO ADVERSO', pr.adverso, true) +
+        '</div><p class="nota">El escenario adverso supone terreno rocoso en la zona elegida. En rojo, el tramo cuya reserva no alcanza. Ninguna de las soluciones es «la correcta»: más batería cuesta masa; aterrizar más cerca es más incierto.</p>';
+    } else if (modal === 'reservar') {
+      var evr = Motor.evaluarReserva(estado);
+      inner = '<h2>REPARTE LA ENERGÍA POR TRAMOS</h2>' +
+        '<p>Llevas <b>' + evr.total + ' Wh</b>. Lo que no apartes para la ida o el regreso queda para explorar. ' +
+        'Cada botón mueve ' + C.pasoReserva + ' Wh entre ese tramo y la exploración (la exploración los intercambia con el regreso).</p>' +
+        htmlReserva(evr, evr.total, true) +
+        '<div class="fila-botones">' + boton('reservarecomendado', T.btnRecomendado, { title: 'Reparte según el escenario adverso: primero el regreso, luego la ida, el resto a explorar.' }) + '</div>' +
+        '<p class="nota">La reserva no bloquea nada en superficie: el juego avisa cuando entras en la de regreso y el informe compara lo reservado con lo consumido. LANZAR nunca se bloquea por reservar poco.</p>';
     }
     return '<div class="velo" data-a="cerrarmodal"><div class="panel modal">' + inner +
       '<div class="fila-botones">' + boton('cerrarmodal', 'CERRAR') + '</div></div></div>';
@@ -538,7 +634,16 @@ var UI = (function () {
 
   function manejar(a, x) {
     var r = null;
+    // Cualquier acción que no sea abrir un término cierra la burbuja de
+    // primera vez que estuviera en pantalla: ya se presentó.
+    if (a !== 'termino') {
+      var abierta = juego.querySelector('.burbuja [data-a="entendido"]');
+      if (abierta) vistos[abierta.getAttribute('data-x')] = true;
+      terminoAbierto = null;
+    }
     switch (a) {
+      case 'termino': terminoAbierto = (terminoAbierto === x ? null : x); break;
+      case 'entendido': vistos[x] = true; break;
       case 'comenzar': intro = false; break;
       case 'zona': r = Motor.fijarZona(estado, x); break;
       case 'objetivo': r = Motor.fijarObjetivo(estado, x); break;
@@ -547,6 +652,15 @@ var UI = (function () {
       case 'quitar': r = Motor.quitar(estado, x); break;
       case 'vercalculo': modal = 'calculo'; break;
       case 'probar': modal = 'probar'; break;
+      case 'reservar': modal = 'reservar'; break;
+      case 'reserva': {
+        var partes = (x || '').split(':');
+        var tramo = partes[0], signo = partes[1];
+        r = signo === '+' ? Motor.moverReserva(estado, parReserva(tramo), tramo)
+                          : Motor.moverReserva(estado, tramo, parReserva(tramo));
+        break;
+      }
+      case 'reservarecomendado': r = Motor.reservarRecomendado(estado); break;
       case 'cerrarmodal': modal = null; break;
       case 'lanzar': r = Motor.lanzar(estado); break;
       case 'escanearviaje': r = Motor.escanearViaje(estado); break;
@@ -585,11 +699,12 @@ var UI = (function () {
     dibujarMapa();
     dibujarViaje();
     dibujarSuperficie();
+    colocarGlosario();
   }
 
   function ajustarEscala() {
-    var s = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
-    juego.style.transform = 'scale(' + s + ')';
+    escala = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    juego.style.transform = 'scale(' + escala + ')';
   }
 
   function iniciar() {

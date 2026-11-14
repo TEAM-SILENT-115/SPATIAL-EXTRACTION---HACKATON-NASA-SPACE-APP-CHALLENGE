@@ -18,7 +18,11 @@ Una partida dura menos de 5 minutos:
 
 1. **Hangar** — Elige objetivo científico y zona de aterrizaje, equipa el cohete y revisa el
    simulador. Cada pieza cuesta créditos y masa. El botón `[ VER CÁLCULO ]` abre el desglose de
-   cada número: nada es caja negra.
+   cada número: nada es caja negra. Con `[ RESERVAR ]` repartes la energía entre ida,
+   exploración y regreso en tres barras que se quitan entre sí; `[ PROBAR ]` marca en rojo el
+   tramo que no alcanzaría si el terreno sale rocoso. Los términos técnicos (carga útil,
+   autonomía, margen, reserva) se explican en una línea la primera vez que aparecen; luego
+   basta con hacer clic sobre ellos.
 2. **Viaje** — Un escaneo revela terreno rocoso en tu zona. ¿Corriges trayectoria gastando
    combustible o mantienes el rumbo y asumes el recorrido caro? Si no reservaste combustible,
    una de las dos opciones ni siquiera existe para ti.
@@ -53,9 +57,12 @@ El motor es testeable sin abrir el navegador:
 node tests/motor.test.js
 ```
 
-Las pruebas verifican, entre otras cosas, el ejemplo canónico (100 Wh con terreno difícil → −8 Wh),
+Las pruebas (68) verifican, entre otras cosas, el ejemplo canónico (100 Wh con terreno difícil → −8 Wh),
 que lanzar solo se bloquee por masa o presupuesto (equivocarse de margen es la lección, no un error),
-y que una muestra no cuente hasta volver al módulo.
+que una muestra no cuente hasta volver al módulo, que las dos rutas ganadoras caben en presupuesto,
+que el momento central ocurre con los números exactos (40 Wh en mano, 10 Wh por perforar la veta,
+35 Wh para volver) y que la reserva por tramos se reparte, se sella al lanzar y se compara con el
+consumo real.
 
 Todo el arte es pixel art original dibujado por código (sprites y primitivas de canvas); no se usa
 ningún activo de terceros.
@@ -68,14 +75,20 @@ botón. No hay netcode ni cuentas: es colaboración de mesa, a propósito.
 
 ## Estado del proyecto
 
-Versión base jugable de punta a punta (hangar → viaje → superficie → informe). Pendiente para
-iterar en equipo:
+Versión jugable de punta a punta (hangar → viaje → superficie → informe) con los números
+calibrados: dos rutas ganadoras distintas (batería chica + combustible para corregir, o batería
+grande para aguantar el terreno rocoso), el dilema de la veta con 40/10/35 Wh y el reparto de
+energía por tramos con `[ RESERVAR ]`. El detalle de la calibración, el funcionamiento de la
+reserva y la bitácora de cambios están en [`EQUIPO.md`](EQUIPO.md).
 
-- Reparto fino de recursos entre tramos (botón `[ RESERVAR ]` con tres barras).
+Pendiente para iterar en equipo:
+
+- Desglose abrible del indicador de regreso y de las proyecciones del viaje.
 - Animaciones de despegue y descenso.
-- Tooltips de primera aparición para términos técnicos (hoy son títulos al pasar el cursor).
-- Recalibrar números jugando hasta confirmar que ambas rutas ganadoras se sienten justas.
+- Decidir, probando con gente, si las cuatro burbujas del glosario en el hangar son demasiadas
+  seguidas.
 - Sonido.
+- Despliegue en línea (segundo enlace del hackatón; el primero es la presentación).
 
 ## Créditos
 

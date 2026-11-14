@@ -18,8 +18,10 @@ Es la única fuente de verdad; ante la duda, manda ese documento.
 - Las 4 pantallas funcionan de punta a punta: hangar → viaje → superficie → informe.
 - Ejemplo canónico implementado y verificado: batería 100 Wh, plan 30+25+35 = 90 Wh,
   terreno rocoso +18 → 108 Wh, faltan 8.
-- Evento del viaje: escaneo revela terreno rocoso; CORREGIR (−30 combustible, ruta corta)
-  o MANTENER (ruta cara). Sin combustible reservado, CORREGIR aparece bloqueado.
+- Evento del viaje: el escaneo tira el dado del terreno (30 % de roca en la llanura, 60 % en
+  el cráter) y revela si salió rocoso o despejado; CORREGIR (−30 combustible, a la otra zona
+  con terreno despejado) o MANTENER. Sin combustible reservado, CORREGIR aparece bloqueado.
+  Detalle en "Terreno variable".
 - Indicador permanente de "regreso estimado" (verde / ámbar <15 % / rojo no alcanza).
 - Informe final causal escrito desde `historial` (decisión → efecto), con botón de
   repetir conservando el plan.
@@ -43,8 +45,9 @@ Es la única fuente de verdad; ante la duda, manda ese documento.
 - **Comparación entre partidas (14-nov-2026):** tras REPETIR, el informe muestra la frase
   «Cambiaste una sola decisión (Batería: 100 → 160) y el resultado pasó de … a …» y la tabla
   ANTES vs AHORA. Detalle en "Comparación entre partidas".
-- 119 pruebas del motor pasando: `node tests/motor.test.js` (23 base + 15 de calibración +
-  30 de reserva por tramos + 20 de desglose + 24 de comparación + 7 de lanzar sin batería). La interfaz se verifica a mano o con un
+- 166 pruebas del motor pasando: `node tests/motor.test.js` (23 base + 15 de calibración +
+  30 de reserva por tramos + 20 de desglose + 24 de comparación + 7 de lanzar sin batería +
+  47 de terreno variable). La interfaz se verifica a mano o con un
   navegador sin cabeza.
 
 ## Calibración vigente (solo `datos.js`)
@@ -139,6 +142,45 @@ Es una decisión de **planificación**, no un candado. Lo que hace y lo que no:
   botón ELEGIR del primer cohete. Ahora se ancla hacia la izquierda cuando el término está en
   la mitad izquierda de la pantalla y, además, deja pasar los clics salvo en su propio botón.
 
+## Terreno variable (el dado del escaneo)
+
+Antes el terreno salía siempre rocoso y la segunda partida ya no tenía incertidumbre. Ahora:
+
+- **Riesgo por zona** en `datos.js` (`mapa.<zona>.probRocoso`): llanura **0.3**, cráter **0.6**.
+  La llanura es más segura y más lejana; el cráter, más cerca, más probable que salga mal y
+  más caro cuando sale mal (+30 Wh contra +18). Los costos de cada escenario no cambiaron:
+  toda la "Calibración vigente" sigue valiendo, solo que el rocoso ya no es seguro.
+- **Cuándo se tira:** en `Motor.escanearViaje(estado, azar)`. `azar` es un número en [0, 1);
+  sale roca si `azar < probRocoso`. La interfaz pasa `Math.random()`; las pruebas pasan 0
+  (roca) o 0.99 (despejado), así que el motor sigue siendo determinista y testeable.
+- **Qué guarda:** `estado.viaje.rocoso` (lo que salió en la zona planeada) y
+  `estado.viaje.probRocoso`. MANTENER aplica ese terreno; CORREGIR lleva a la otra zona con
+  terreno despejado (el combustible compra certeza). También se puede corregir con terreno
+  despejado: desde la llanura, 30 de combustible ahorran 30 Wh.
+- **Dónde se ve el riesgo antes de decidir:** panel 1 del hangar ("Riesgo de terreno rocoso:
+  30 % · si sale, +18 Wh"), [ PROBAR ] (las dos columnas llevan su porcentaje), VER CÁLCULO y
+  la banda previa al escaneo. El jugador decide el margen conociendo el riesgo, no el resultado.
+- **El informe separa suerte de decisión:**
+  - Ganó con terreno despejado y el plan no cubría el rocoso → «Esta vez fue suerte, no
+    margen… te habrían faltado 8 Wh y no llevabas combustible para corregir».
+  - Ganó con despejado y llevaba combustible → reconoce que corregir era su salida.
+  - Ganó con despejado y el plan cubría el rocoso → «tu plan no dependía de eso».
+  - Varado con roca → añade «El riesgo estaba avisado: 30 % en esa zona».
+- **En la comparación entre partidas** el terreno no cuenta como decisión: va en una fila
+  aparte, "Terreno (azar)". Si cambió, la frase lo dice: con las mismas decisiones, «esa
+  diferencia es suerte»; con un solo cambio, «no se puede atribuir solo a tu cambio. Repite
+  para confirmarlo».
+- **Demo y video con resultado fijo:** `index.html?terreno=rocoso` o `?terreno=despejado`
+  (lo lee `azarTerreno()` en `ui.js`). Sin el parámetro, el dado es real.
+- **Informe que siempre cabe:** con las frases nuevas el informe podía pasarse del alto de
+  la pantalla. `ajustarInforme()` recorta la cadena de decisiones por el principio y, si aun
+  así no cabe, compacta la letra de las frases. Las muestras entregadas pasaron a la columna
+  derecha. Comprobado en el navegador en cinco casos (primera partida ganada y varada,
+  repetir con 0, 1 y 9 cambios).
+- **Pendiente de decidir con gente:** con 30 % en la llanura, el plan sin margen gana 7 de
+  cada 10 veces (y el informe le dice que fue suerte). Si en las pruebas la lección se ve
+  poco, subir `probRocoso` es cambiar un número.
+
 ## Comparación entre partidas (informe tras REPETIR)
 
 - **Qué guarda:** `Motor.repetirConPlan` deja en `estado.anterior` un resumen de la partida
@@ -213,7 +255,22 @@ Son **dos enlaces**:
 > Lo anterior al 14-nov-2026 por la tarde ya está en el commit `d14e2b1`
 > ("feat(juego): calibra el balance, añade [ RESERVAR ] y tooltips de primera vez").
 
-14-nov-2026 — comparación entre partidas (pendiente de commit):
+14-nov-2026 — terreno variable (pendiente de commit):
+
+- `js/datos.js`: `mapa.<zona>.probRocoso`, textos `eventoViajeDespejado` y `riesgoTerreno`.
+- `js/motor.js`: `escanearViaje(estado, azar)` tira el dado y lo anota en el historial;
+  `viaje.rocoso` / `viaje.probRocoso`; `proyeccionesViaje` y `mantener` usan el terreno
+  revelado; `causal` añade las frases de suerte y de riesgo avisado; `resumenPartida` guarda
+  el terreno y `compararConAnterior` devuelve `terrenoCambio` y matiza la frase.
+- `js/ui.js`: riesgo en el hangar, en PROBAR, en VER CÁLCULO y antes del escaneo; banda verde
+  cuando sale despejado; rocas sobre el planeta cuando sale rocoso; `azarTerreno()` con el
+  parámetro `?terreno=`; fila "Terreno (azar)" en ANTES vs AHORA; `ajustarInforme()`.
+- `css/style.css`: `.banda.evento.despejado`, `.informe.compacto`.
+- `tests/motor.test.js`: las pruebas anteriores fijan el dado en roca (`escanearViaje(e, 0)`)
+  y hay 47 nuevas. Total 166.
+- `README.md`, `EQUIPO.md` y una nota en `CONTEXTO.md`.
+
+14-nov-2026 — comparación entre partidas (ya en la rama `feature/comparacionpartidas`):
 
 - `js/motor.js`: `estado.anterior`, `resumenPartida`, `compararConAnterior`;
   `repetirConPlan` guarda el resumen; `generarInforme` expone `comparacion`.

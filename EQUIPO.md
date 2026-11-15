@@ -13,7 +13,96 @@ es el que te deja varado cuando el terreno resulta más difícil de lo previsto.
 La especificación completa está en [`CONTEXTO.md`](CONTEXTO.md), en la raíz de este repo.
 Es la única fuente de verdad; ante la duda, manda ese documento.
 
-## Estado actual (versión base, ya jugable)
+## Interfaz guiada y niveles (15-nov-2026) — lo que hoy se ve en pantalla
+
+> Las secciones de más abajo ("Estado actual", RESERVAR, terreno variable, comparación entre
+> partidas…) describen la **versión clásica** (`js/ui.js`). Sigue en el repo y aporta el arte,
+> pero la pantalla que arranca es la versión lunar (`js/lunar-ui.js`), descrita aquí.
+
+**Por qué se rehízo.** Revisión como jugador nuevo de la versión anterior: 16 botones, 2
+desplegables y unas 300 palabras en la primera pantalla; equipo escondido tras 4 pestañas;
+texto de 9 a 12 px; el informe no cabía sin scroll; dos tutoriales distintos en la cabecera; y
+al aterrizar, la tecla `E` cerraba la misión sin muestras. "Dificultad" eran tres mapas con la
+misma pantalla compleja.
+
+**Qué hay ahora.**
+
+- **Una decisión por pantalla.** Título → niveles → misión → plan paso a paso → despegue →
+  viaje → descenso → superficie → informe. En cada momento hay 2 o 3 opciones grandes y un
+  botón principal (ámbar) que también responde a `Enter`.
+- **La misión se explica antes de pedir nada**: tres pasos (ir, perforar, volver) con una
+  animación en bucle que muestra la barra de energía y la zona "para volver".
+- **Consecuencia en vivo.** Bajo el plan, una barra muestra ida + perforar + vuelta contra la
+  batería: SOBRA en verde rayado o FALTA en rojo. En los niveles 2 y 3 se suman oxígeno, masa,
+  créditos y combustible.
+- **AIDA** habla en una sola línea abajo: dice qué hacer ahora y reacciona a lo elegido.
+- **Superficie.** Vista más cercana, cámara suave, una sola línea guía a la vez (ámbar al
+  cráter, azul de vuelta), flecha con distancia cuando el objetivo queda fuera de pantalla,
+  botones de dirección para quien juega con ratón, y un marco ámbar o rojo cuando el regreso
+  peligra. Antes de perforar se lee «Después te sobrarán / te FALTARÁN X Wh para volver».
+- **Prevención de errores.** `E` al aterrizar no hace nada; volver sin muestra pide
+  confirmación; el botón de la acción que rompe el regreso sale en rojo, no en ámbar; con un
+  solo hueco en el contenedor se avisa de que la muestra extra dejaría fuera al núcleo.
+- **Informe en una pantalla**: rango, dos o tres frases, barra de energía, lección y un consejo.
+  El detalle (tabla plan / real) queda detrás de `DETALLE`.
+
+**Niveles que suman sistemas** (datos en `SITIOS_LUNARES`, reglas en `Lunar.iniciarNivel`):
+
+| | 1 · Básico | 2 · Intermedio | 3 · Avanzado |
+|---|---|---|---|
+| Sitio | Site01 Connecting Ridge | Site04 Shackleton | Site11 Gerlache |
+| Pasos del plan | ruta, batería | + oxígeno | + cohete, extras |
+| Sistemas | energía | + oxígeno, masa, presupuesto | + combustible, escáner, fórmulas |
+| Presupuesto | 1100 (no se muestra) | **950** | **1200** |
+| Ya a bordo | O₂ 100, taladro, contenedor | taladro, contenedor | taladro, contenedor |
+
+- En el básico el oxígeno no se consume (`sistemas.oxigeno = false`) y no existe la muestra
+  extra. Cualquier plan gana con rango S; la batería grande recibe la frase «cargaste más
+  batería, y más peso, de la que hacía falta».
+- En el intermedio, 950 créditos no alcanzan para batería grande + tanque grande. Batería
+  chica por la ruta directa no llega (−5,6 Wh) y con el tanque grande encima deja varado.
+- En el avanzado, sin corregir el descenso solo se llega con 3,6 Wh. Corregir pide 30 de
+  combustible: Halcón + combustible extra (1000 cr) o Titán (1070 cr). El rango S+ pide
+  además escáner y contenedor doble: 1140 cr y 118 de 120 kg. Con Titán el dinero no alcanza
+  para el contenedor doble.
+- `Lunar.nuevo()` sin nivel conserva todos los sistemas activos: las pruebas originales del
+  motor siguen pasando sin cambios.
+
+**Criterios de usabilidad que se comprueban solos** (`tests/browser.test.mjs`, 15 pantallas):
+ningún texto por debajo de 13 px, nada que desborde la pantalla fija 1280×720, y como mucho 10
+botones a la vez. La partida entera se puede jugar solo con teclado o solo con ratón.
+
+**Identidad visual.** Azul oscuro NASA (`#0b1026`), ámbar para la acción principal, verde /
+ámbar / rojo siempre acompañados de icono y cifra. Todas las escenas se mueven: estrellas,
+astronauta, baliza del módulo, rutas, despegue, descenso, polvo al caminar, chispas al perforar
+y el emblema del rango.
+
+## Prueba de usabilidad con personas (guion)
+
+Objetivo: comprobar que alguien que no conoce el juego completa el nivel básico **sin ayuda** y
+entiende por qué ganó o perdió. Con 5 personas se detecta la mayoría de los problemas.
+
+**Antes de cada persona:** `AYUDA → BORRAR PROGRESO`, volver al título, sonido activado. No
+explicar nada; solo decir: «Es un juego. Juega como si estuvieras solo y di en voz alta lo que
+piensas.»
+
+| # | Tarea (sin dar pistas) | Se considera logrado si… |
+|---|---|---|
+| 1 | Empieza una partida | Llega al plan en menos de 1 minuto sin preguntar |
+| 2 | Prepara la misión y lánzala | Elige ruta y batería y lanza sin quedarse atascado |
+| 3 | Trae la muestra | Camina, perfora y vuelve al módulo; entrega con `E` |
+| 4 | «¿Qué te dice esa barra de arriba?» (durante el regreso) | Explica que una parte es lo que necesita para volver |
+| 5 | «¿Por qué obtuviste ese rango?» (en el informe) | Lo dice con sus palabras, citando la energía |
+| 6 | Juega el nivel 2 y, si pierde, vuelve a intentarlo | Cambia una decisión concreta y sabe decir cuál |
+
+**Qué anotar:** dónde duda más de 10 segundos, qué botón pulsa por error, qué palabra no
+entiende, si lee o salta la pantalla "Tu misión", y si usa teclado o ratón.
+
+**Umbrales para darlo por bueno:** 4 de 5 personas completan las tareas 1 a 3 sin ayuda en
+menos de 5 minutos; 4 de 5 responden bien la 4 y la 5; nadie abandona antes del informe.
+Al final, preguntar: «¿Qué fue lo más confuso?» y «¿Jugarías otro nivel?».
+
+## Estado actual de la versión clásica (`js/ui.js`)
 
 - Las 4 pantallas funcionan de punta a punta: hangar → viaje → superficie → informe.
 - Ejemplo canónico implementado y verificado: batería 100 Wh, plan 30+25+35 = 90 Wh,
@@ -254,6 +343,23 @@ Son **dos enlaces**:
 
 > Lo anterior al 14-nov-2026 por la tarde ya está en el commit `d14e2b1`
 > ("feat(juego): calibra el balance, añade [ RESERVAR ] y tooltips de primera vez").
+
+15-nov-2026 — interfaz guiada, niveles y pulido de usabilidad (pendiente de commit):
+
+- `js/lunar-datos.js`: cada sitio trae su nivel (`nivelNombre`, `sistemas`, `presupuesto`,
+  `kit`, `pasos`, `novedades`); `TEXTOS_LUNARES` (misión, pasos, voz de AIDA, frases por
+  final); `SPRITE_AIDA`; sonidos `despegue`, `contacto`, `elegir`, `fallo`.
+- `js/lunar-motor.js`: `iniciarNivel`, `sistemas`; el oxígeno no se gasta si el nivel no lo
+  usa; la muestra extra solo existe con escáner; `evaluar` devuelve `energia` y `cerca` y
+  redacta los avisos en lenguaje llano; `contexto().aviso`; `informe().resumen`
+  (frases + consejo); `s.agotado`.
+- `js/lunar-ui.js`: reescrito. Pantallas guiadas, medidor del plan, escenas animadas, HUD
+  con zona "para volver", cruceta para ratón, navegación por teclado, progreso y rangos.
+- `css/lunar.css`: reescrito para la interfaz nueva.
+- `tests/lunar.test.js`: 738 comprobaciones nuevas de niveles (total 2366).
+- `tests/browser.test.mjs`: reescrito para el flujo nuevo, con las comprobaciones de
+  legibilidad por pantalla.
+- `README.md` y `EQUIPO.md`: esta documentación.
 
 14-nov-2026 — terreno variable (pendiente de commit):
 

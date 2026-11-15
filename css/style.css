@@ -251,6 +251,50 @@ main.hangar {
 .modal h2 { font-size: 16px; }
 .modal hr { border: 1px solid var(--borde); margin: 6px 0; }
 
+.control-resaltado {
+  position: relative;
+  z-index: 6;
+  outline: 3px solid var(--acento) !important;
+  box-shadow: 0 0 12px var(--acento);
+  animation: pulsoTutorial 1.2s infinite alternate ease-in-out;
+}
+
+@keyframes pulsoTutorial {
+  from { box-shadow: 0 0 4px var(--acento); }
+  to { box-shadow: 0 0 16px var(--acento); }
+}
+
+.banner-tutorial {
+  background: #0d1a3a;
+  border-bottom: 3px solid var(--acento);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--texto);
+}
+.banner-tutorial .aida-avatar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: bold;
+  color: var(--acento);
+  white-space: nowrap;
+}
+.banner-tutorial .aida-texto {
+  flex: 1;
+}
+.banner-tutorial .aida-texto b {
+  color: #fff;
+}
+.banner-tutorial .aida-texto em {
+  color: var(--ok);
+  font-style: normal;
+}
+
 .ingenieria { border-left: 3px solid var(--acento); padding: 8px 10px; background: #101a35; font-size: 13px; line-height: 1.45; }
 .ingenieria h3 { color: var(--acento); font-size: 12px; margin-bottom: 6px; }
 .ingenieria ul { padding-left: 18px; }

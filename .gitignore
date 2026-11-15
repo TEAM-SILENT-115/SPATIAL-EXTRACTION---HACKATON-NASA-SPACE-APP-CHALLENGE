@@ -16,3 +16,6 @@ node_modules/
 .claude/
 
 NASA HACKATON.docx
+.qa-edge/
+.tmp-python/
+artifacts/

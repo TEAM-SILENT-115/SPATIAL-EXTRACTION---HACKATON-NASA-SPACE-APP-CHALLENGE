@@ -17,6 +17,13 @@ var UI = (function () {
   var juego, marco;
   var escala = 1;
 
+  // Estado del tutorial interactivo guiado por AIDA
+  var tutorial = {
+    activo: false,
+    paso: 0,
+    estadoGuardado: null // preserva partida en curso si se entra al tutorial
+  };
+
   // Glosario de términos técnicos (textos en datos.js). Cada término se
   // presenta con una burbuja de una línea la primera vez que aparece en
   // pantalla; después queda subrayado y se puede volver a abrir con clic.
@@ -47,19 +54,204 @@ var UI = (function () {
       '<p>Tu reto: entrega la muestra gastando lo mínimo. Cambia una elección y vuelve a probar.</p></div>';
   }
 
-  function animarPaso(desde, hasta) {
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    movimiento = { desde: desde, hasta: hasta, t: 0 };
-    var inicio = null;
-    function cuadro(ahora) {
-      if (!movimiento) return;
-      if (inicio === null) inicio = ahora;
-      movimiento.t = Math.min(1, (ahora - inicio) / 230);
-      dibujarSuperficie();
-      if (movimiento.t < 1) window.requestAnimationFrame(cuadro);
-      else { movimiento = null; dibujarSuperficie(); }
+  var PASOS_TUTORIAL = [
+    {
+      id: 'cohete',
+      selector: '[data-a="cohete"][data-x="halcon"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> ¡Hola! Soy AIDA, tu asistente de vuelo. Tu primer paso como jefe de misión es elegir lanzador. El <em>Halcón ligero</em> es económico y define tu capacidad de masa. Pulsa <b>ELEGIR</b> en Halcón ligero.';
+      },
+      espera: function(a, x) { return a === 'cohete' && x === 'halcon'; }
+    },
+    {
+      id: 'objetivo',
+      selector: '[data-a="objetivo"][data-x="crater_profunda"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> Observa el panel 1 (DESARROLLAR MISIÓN). Elige el objetivo científico <em>1 PROFUNDA</em>. Fíjate en los requisitos que exige debajo: taladro y contenedor.';
+      },
+      espera: function(a, x) { return a === 'objetivo' && x === 'crater_profunda'; }
+    },
+    {
+      id: 'taladro',
+      selector: '[data-a="equipar"][data-x="taladro"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> Sin taladro no podemos perforar el cráter. Pulsa <b>EQUIPAR</b> en el <em>Taladro de núcleo</em>. Mira cómo sube la barra de masa (⚖).';
+      },
+      espera: function(a, x) { return a === 'equipar' && x === 'taladro'; }
+    },
+    {
+      id: 'o2',
+      selector: '[data-a="equipar"][data-x="o2chico"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> El astronauta necesita respirar en superficie. Equipa el <em>Tanque O₂ 100</em>.';
+      },
+      espera: function(a, x) { return a === 'equipar' && x === 'o2chico'; }
+    },
+    {
+      id: 'cont',
+      selector: '[data-a="equipar"][data-x="cont1"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> Necesitamos dónde guardar la muestra. Equipa el <em>Contenedor simple</em>.';
+      },
+      espera: function(a, x) { return a === 'equipar' && x === 'cont1'; }
+    },
+    {
+      id: 'bat100',
+      selector: '[data-a="equipar"][data-x="bat100"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> Equipa la <em>Batería 100 Wh</em> estándar. Observa el panel 3 (RECURSOS): fíjate en el <em>Margen</em> y la <em>Reserva por tramos</em>.';
+      },
+      espera: function(a, x) { return a === 'equipar' && x === 'bat100'; }
+    },
+    {
+      id: 'experimento_bateria',
+      selector: '[data-a="quitar"][data-x="bat100"], [data-a="equipar"][data-x="bat160"]',
+      texto: function() {
+        var t = Motor.totales(estado);
+        var r = Motor.recomendacion(estado);
+        var margen = t.energia - r.normal.energia.total;
+        if (estado.equipo.indexOf('bat160') !== -1) {
+          return '<b>[AIDA]:</b> ¡Fíjate! Con 160 Wh tu margen subió a <em>+' + margen + ' Wh</em> y absorbe terreno rocoso, pero consumiste más masa (35⚖) y presupuesto. Vuelve a poner la <em>Batería 100 Wh</em> para nuestra prueba.';
+        } else if (estado.equipo.indexOf('bat100') === -1) {
+          return '<b>[AIDA]:</b> Has quitado la batería. Ahora equipa la <em>Batería 160 Wh</em> para ver la diferencia.';
+        } else {
+          return '<b>[AIDA]:</b> En ingeniería comparamos opciones. Pulsa <b>QUITAR</b> en la Batería 100 Wh y luego prueba la Batería 160 Wh para ver cómo varía el margen.';
+        }
+      },
+      espera: function(a, x) {
+        // Dejamos que explore cambiar entre bat100 y bat160, y cuando vuelva o tenga una lista coherente avanzamos
+        return (a === 'equipar' && x === 'bat160') || (a === 'equipar' && x === 'bat100' && estado.equipo.indexOf('bat100') !== -1);
+      }
+    },
+    {
+      id: 'combustible',
+      selector: '[data-a="equipar"][data-x="fuelextra"]',
+      texto: function() {
+        var t = Motor.totales(estado);
+        return '<b>[AIDA]:</b> Ahora equipa <em>Combustible extra</em> (▲). Te dará 30 unidades para maniobrar en vuelo si el escaneo detecta terreno peligroso. Llevas ' + t.energia + ' Wh.';
+      },
+      espera: function(a, x) { return a === 'equipar' && x === 'fuelextra'; }
+    },
+    {
+      id: 'probar_diseno',
+      selector: '[data-a="probar"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> Antes de despegar, pulsa <b>REVISAR DISEÑO</b> en el panel 3 para ver el diagnóstico de ingeniería y comparar los escenarios.';
+      },
+      espera: function(a, x) { return a === 'probar'; }
+    },
+    {
+      id: 'cerrar_modal',
+      selector: '[data-a="cerrarmodal"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> En la prueba de ingeniería ves la autonomía en escenario normal vs adverso. Pulsa <b>CERRAR</b> para volver al hangar.';
+      },
+      espera: function(a, x) { return a === 'cerrarmodal'; }
+    },
+    {
+      id: 'lanzar',
+      selector: '[data-a="lanzar"]',
+      texto: function() {
+        if (!estado.cohete) return '<b>[AIDA]:</b> Elige un lanzador para tu nave.';
+        var o = DATOS.objetivos[estado.objetivo];
+        var t = Motor.totales(estado);
+        if (estado.objetivo === 'crater_profunda' && !t.taladro) return '<b>[AIDA]:</b> ¡Alerta! Te falta equipar el <em>Taladro de núcleo</em> para tu objetivo.';
+        if (t.capacidadMuestras < o.espacioMinimo) return '<b>[AIDA]:</b> ¡Alerta! Te falta equipar un <em>Contenedor</em> con espacio para muestras.';
+        if (t.energia === 0) return '<b>[AIDA]:</b> ¡Alerta! Necesitas equipar una <em>Batería</em> antes de lanzar.';
+        if (t.oxigeno === 0) return '<b>[AIDA]:</b> ¡Alerta! Necesitas equipar un <em>Tanque de O₂</em> antes de lanzar.';
+        if (estado.masa.usada > estado.masa.capacidad) return '<b>[AIDA]:</b> Carga útil excedida. Reduce equipo para poder despegar.';
+        if (estado.presupuesto.gastado > estado.presupuesto.total) return '<b>[AIDA]:</b> Presupuesto excedido. Ajusta tu misión.';
+        return '<b>[AIDA]:</b> Todo verificado dentro de presupuesto y masa. Pulsa <b>LANZAR</b>. ¡Buen viaje!';
+      },
+      espera: function(a, x) { return a === 'lanzar' && estado.etapa === 'viaje'; }
+    },
+    {
+      id: 'escanear_viaje',
+      selector: '[data-a="escanearviaje"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> ETAPA 2 (EN VUELO). Pulsa <b>ESCANEAR</b> para analizar las condiciones de la zona de descenso antes de entrar en la atmósfera.';
+      },
+      espera: function(a, x) { return a === 'escanearviaje'; }
+    },
+    {
+      id: 'decision_viaje',
+      selector: '[data-a="mantener"], [data-a="corregir"]',
+      texto: function() {
+        var p = Motor.proyeccionesViaje(estado);
+        if (p.rocoso && p.corregir.posible) {
+          return '<b>[AIDA]:</b> El terreno salió ROCOSO. Como trajimos combustible extra, puedes pulsar <b>CORREGIR</b> para desviarte a una zona más favorable, o <b>MANTENER</b> si asumes el recargo.';
+        }
+        return '<b>[AIDA]:</b> Telemetría lista. Elige <b>MANTENER</b> la trayectoria hacia la superficie.';
+      },
+      espera: function(a, x) { return a === 'mantener' || a === 'corregir'; }
+    },
+    {
+      id: 'descender',
+      selector: '[data-a="descender"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> Órbita fijada. Pulsa <b>DESCENDER</b> para aterrizar en la superficie.';
+      },
+      espera: function(a, x) { return a === 'descender'; }
+    },
+    {
+      id: 'avanzar_superficie',
+      selector: '[data-a="avanzar"]',
+      texto: function() {
+        var pasosRestantes = (estado.sitios ? estado.sitios.length - 1 : 6) - estado.posicion;
+        return '<b>[AIDA]:</b> ETAPA 3 (SUPERFICIE). Te faltan ' + pasosRestantes + ' paso(s) para el cráter. Pulsa <b>AVANZAR ▶</b> (o flecha →) hasta colocarte <em>justo encima</em> del cráter.';
+      },
+      espera: function(a, x) {
+        var s = Motor.sitioActual(estado);
+        return s && s.tipo === 'crater';
+      }
+    },
+    {
+      id: 'perforar_crater',
+      selector: '[data-a="perforar"]',
+      texto: function() {
+        var reg = Motor.costoRegreso(estado);
+        return '<b>[AIDA]:</b> ¡Estás sobre el cráter! Observa arriba el chip "Regreso: ' + reg.energia + ' Wh". Pulsa <b>PERFORAR</b> para extraer la muestra profunda.';
+      },
+      espera: function(a, x) { return a === 'perforar'; }
+    },
+    {
+      id: 'regresar_modulo',
+      selector: '[data-a="regresar"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> ¡Muestra a bordo! Nunca te confíes: pulsa <b>REGRESAR</b> (o flecha ↓) para volver al módulo y asegurar el éxito de la misión.';
+      },
+      espera: function(a, x) { return a === 'regresar'; }
+    },
+    {
+      id: 'fin_tutorial',
+      selector: '[data-a="repetir"], [data-a="nueva"], [data-a="salir_tutorial"]',
+      texto: function() {
+        return '<b>[AIDA]:</b> ¡MISIÓN CUMPLIDA! Has completado el tutorial. En el informe ves el plan previsto vs el consumo real. ¡Ya tienes los fundamentos de ingeniería para diseñar tus propias misiones!';
+      },
+      espera: function(a, x) { return true; }
     }
-    window.requestAnimationFrame(cuadro);
+  ];
+
+  function bannerTutorialHTML() {
+    if (!tutorial.activo) return '';
+    var pasoActual = PASOS_TUTORIAL[tutorial.paso];
+    var textoPaso = pasoActual ? pasoActual.texto() : '';
+    return '<div class="banner-tutorial">' +
+      '<div class="aida-avatar">📡 AIDA (CONTROL DE MISIÓN)</div>' +
+      '<div class="aida-texto">' + textoPaso + '</div>' +
+      '<div class="fila-botones">' +
+      boton('salir_tutorial', 'SALIR DEL TUTORIAL', { clase: 'mini peligro' }) +
+      '</div></div>';
+  }
+
+  function resaltarControlTutorial() {
+    if (!tutorial.activo) return;
+    var ant = juego.querySelectorAll('.control-resaltado');
+    for (var i = 0; i < ant.length; i++) ant[i].classList.remove('control-resaltado');
+    var pasoActual = PASOS_TUTORIAL[tutorial.paso];
+    if (!pasoActual || !pasoActual.selector) return;
+    var el = juego.querySelector(pasoActual.selector);
+    if (el) el.classList.add('control-resaltado');
   }
 
   /* ---------------- paleta y sprites ---------------- */
@@ -457,7 +649,10 @@ var UI = (function () {
       '<p class="subtitulo">NASA Space Apps Challenge · Juego de diseño de misiones</p>' +
       '<p class="pregunta">«' + T.pregunta + '»</p>' +
       '<p class="nota">' + T.ficcion + '</p>' +
-      boton('comenzar', 'COMENZAR', { clase: 'grande' }) +
+      '<div class="fila-botones">' +
+      boton('comenzar', 'JUGAR', { clase: 'grande' }) +
+      boton('tutorial', 'CÓMO JUGAR (TUTORIAL)', { clase: 'grande' }) +
+      '</div>' +
       '</div></div>';
   }
 
@@ -469,7 +664,8 @@ var UI = (function () {
     var pasos = Motor.pasoObjetivo(estado.zonaAterrizaje, estado.objetivo);
     var ev = Motor.evaluarReserva(estado);
 
-    var html = '<header class="cabecera">' +
+    var html = bannerTutorialHTML();
+    html += '<header class="cabecera">' +
       barra('🪙', 'Presupuesto', estado.presupuesto.gastado, estado.presupuesto.total,
         estado.presupuesto.gastado > estado.presupuesto.total ? 'rojo' : '') +
       barra('⚖', termino('cargaUtil', 'Carga útil'), estado.masa.usada, estado.masa.capacidad || 0,
@@ -477,7 +673,9 @@ var UI = (function () {
       '<div class="chips"><span class="chip">⚡ ' + t.energia + ' Wh</span>' +
       '<span class="chip">◍ ' + t.oxigeno + ' O₂</span>' +
       '<span class="chip">▲ ' + t.combustible + ' comb.</span>' +
-      '<span class="chip">▣ ' + t.capacidadMuestras + ' muestras</span></div>' +
+      '<span class="chip">▣ ' + t.capacidadMuestras + ' muestras</span>' +
+      (!tutorial.activo && !intro ? boton('tutorial', '¿CÓMO JUGAR?', { clase: 'mini', title: 'Abrir tutorial guiado' }) : '') +
+      '</div>' +
       '</header>';
 
     html += '<main class="hangar">';
@@ -553,7 +751,8 @@ var UI = (function () {
   }
 
   function htmlViaje() {
-    var html = '<header class="cabecera">' +
+    var html = bannerTutorialHTML();
+    html += '<header class="cabecera">' +
       barra('⚡', 'Energía', estado.recursos.energiaWh, estado.plan.energiaInicial) +
       barra('◍', 'Oxígeno', estado.recursos.oxigeno, estado.plan.oxigenoInicial) +
       barra('▲', 'Combustible', estado.recursos.combustible, estado.plan.combustibleInicial,
@@ -607,7 +806,8 @@ var UI = (function () {
     var s = Motor.sitioActual(estado);
     var libres = Motor.capacidadLibre(estado);
 
-    var html = '<header class="cabecera">' +
+    var html = bannerTutorialHTML();
+    html += '<header class="cabecera">' +
       barra('⚡', 'Energía', estado.recursos.energiaWh, estado.plan.energiaInicial) +
       barra('◍', 'Oxígeno', estado.recursos.oxigeno, estado.plan.oxigenoInicial) +
       '<div class="chips"><span class="chip">▣ ' + estado.muestras.recogidas.length + '/' + t.capacidadMuestras + ' muestras</span>' +
@@ -639,7 +839,8 @@ var UI = (function () {
     var inf = Motor.generarInforme(estado);
     var clase = inf.resultado === 'exito' ? 'ok' : inf.resultado === 'parcial' ? 'ambar' : 'alerta';
 
-    var html = '<div class="centro"><div class="panel informe">' +
+    var html = bannerTutorialHTML();
+    html += '<div class="centro"><div class="panel informe">' +
       '<h1 class="' + clase + '">' + inf.titulo + '</h1>';
 
     inf.causal.forEach(function (fr) { html += '<p class="causal">' + esc(fr) + '</p>'; });
@@ -769,6 +970,78 @@ var UI = (function () {
       '<div class="fila-botones">' + boton('cerrarmodal', 'CERRAR') + '</div></div></div>';
   }
 
+  function iniciarTutorial() {
+    if (tutorial.activo) return;
+    // Guardar partida actual si el usuario ya estaba jugando
+    if (!intro && estado.etapa !== 'hangar' || (estado.cohete || estado.equipo.length > 0)) {
+      tutorial.estadoGuardado = JSON.parse(JSON.stringify(estado));
+    }
+    tutorial.activo = true;
+    tutorial.paso = 0;
+    intro = false;
+    modal = null;
+    estado = Motor.nuevoEstado();
+    mensaje = 'Tutorial guiado iniciado. Sigue las instrucciones de AIDA.';
+  }
+
+  function salirTutorial() {
+    tutorial.activo = false;
+    tutorial.paso = 0;
+    if (tutorial.estadoGuardado) {
+      estado = tutorial.estadoGuardado;
+      tutorial.estadoGuardado = null;
+      mensaje = 'Partida previa restaurada.';
+    } else {
+      mensaje = 'Tutorial finalizado. Estás en el hangar listo para tu misión.';
+    }
+  }
+
+  function avanzarPasoTutorialSiCorresponde(a, x) {
+    if (!tutorial.activo) return;
+    var pasoActual = PASOS_TUTORIAL[tutorial.paso];
+    if (!pasoActual) return;
+    if (pasoActual.espera(a, x)) {
+      if (tutorial.paso < PASOS_TUTORIAL.length - 1) {
+        tutorial.paso++;
+      } else {
+        tutorial.activo = false;
+      }
+    }
+    // Auto-sincronización contextual según la etapa real para evitar desfaces
+    if (tutorial.activo) {
+      var idActual = PASOS_TUTORIAL[tutorial.paso].id;
+      if (estado.etapa === 'viaje') {
+        if (!estado.viaje.escaneado) {
+          fijarPasoTutorialPorId('escanear_viaje');
+        } else if (!estado.viaje.decidido) {
+          fijarPasoTutorialPorId('decision_viaje');
+        } else {
+          fijarPasoTutorialPorId('descender');
+        }
+      } else if (estado.etapa === 'superficie') {
+        var s = Motor.sitioActual(estado);
+        if (estado.muestras.recogidas.length > 0) {
+          fijarPasoTutorialPorId('regresar_modulo');
+        } else if (s && s.tipo === 'crater') {
+          fijarPasoTutorialPorId('perforar_crater');
+        } else {
+          fijarPasoTutorialPorId('avanzar_superficie');
+        }
+      } else if (estado.etapa === 'informe') {
+        fijarPasoTutorialPorId('fin_tutorial');
+      }
+    }
+  }
+
+  function fijarPasoTutorialPorId(id) {
+    for (var i = 0; i < PASOS_TUTORIAL.length; i++) {
+      if (PASOS_TUTORIAL[i].id === id) {
+        tutorial.paso = i;
+        break;
+      }
+    }
+  }
+
   /* ---------------- acciones ---------------- */
 
   function manejar(a, x) {
@@ -786,6 +1059,8 @@ var UI = (function () {
       case 'termino': terminoAbierto = (terminoAbierto === x ? null : x); break;
       case 'entendido': vistos[x] = true; break;
       case 'comenzar': intro = false; break;
+      case 'tutorial': iniciarTutorial(); break;
+      case 'salir_tutorial': salirTutorial(); break;
       case 'zona': r = Motor.fijarZona(estado, x); break;
       case 'objetivo': r = Motor.fijarObjetivo(estado, x); break;
       case 'cohete': r = Motor.elegirCohete(estado, x); break;
@@ -827,6 +1102,7 @@ var UI = (function () {
         break;
     }
     if (r && r.msg) mensaje = r.msg;
+    avanzarPasoTutorialSiCorresponde(a, x);
     render();
     if ((a === 'avanzar' || a === 'retroceder') && estado.etapa === 'superficie' && estado.posicion !== desde) animarPaso(desde, estado.posicion);
   }
@@ -846,6 +1122,7 @@ var UI = (function () {
     dibujarSuperficie();
     colocarGlosario();
     ajustarInforme();
+    resaltarControlTutorial();
   }
 
   // La pantalla es fija (sin scroll): si el informe no cabe, se recorta la
@@ -899,7 +1176,13 @@ var UI = (function () {
     render();
   }
 
-  return { iniciar: iniciar };
+  // Reuse the team's original pixel art in the lunar top-down adapter.
+  return { iniciar: iniciar, arte: { pint: pint, estrellas: estrellas, astro: SPR_ASTRO,
+    modulo: SPR_MODULO, cristal: SPR_CRISTAL, muestra: SPR_MUESTRA,
+    roca: SPR_ROCA, cohete: SPR_COHETE } };
 })();
 
-document.addEventListener('DOMContentLoaded', UI.iniciar);
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof LunarUI !== 'undefined') LunarUI.iniciar();
+  else UI.iniciar();
+});

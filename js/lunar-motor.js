@@ -7,16 +7,8 @@ var Lunar = (function () {
   const map = s => MAPAS_NASA.find(m=>m.id===s.sitio) || MAPAS_NASA[0];
 
   function cargarDesbloqueados() {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const guardado = window.localStorage.getItem('mision_umbral_desbloqueados');
-        if (guardado) {
-          const arr = JSON.parse(guardado);
-          if (Array.isArray(arr) && arr.includes('Site01')) return arr;
-        }
-      }
-    } catch (e) {}
-    return ['Site01'];
+    // Todas las zonas abiertas para la NASA Space Apps Hackathon
+    return ['Site01', 'Site04', 'Site11'];
   }
 
   function guardarDesbloqueados(arr) {
@@ -138,7 +130,8 @@ var Lunar = (function () {
   }
 
   function esDesbloqueado(s, id) {
-    return s.desbloqueados && s.desbloqueados.includes(id);
+    // Todas las zonas libres para la NASA Space Apps Hackathon
+    return true;
   }
 
   function cambiar(s, tipo, id) {
@@ -396,12 +389,7 @@ var Lunar = (function () {
     if (s.resultado !== 'exito' && !s.muestras.entregadas.length) return null;
     const sitioMeta = SITIOS_LUNARES[s.sitio];
     if (sitioMeta && sitioMeta.desbloquea) {
-      const siguiente = sitioMeta.desbloquea;
-      if (!s.desbloqueados.includes(siguiente)) {
-        s.desbloqueados.push(siguiente);
-        guardarDesbloqueados(s.desbloqueados);
-        return siguiente;
-      }
+      return sitioMeta.desbloquea;
     }
     return null;
   }

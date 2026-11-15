@@ -182,7 +182,8 @@ var LunarUI = (function () {
   function hangarHTML() {
     const v = Lunar.evaluar(s), p = v.p, t = v.t;
     const infoSitio = SITIOS_LUNARES[s.sitio] || SITIOS_LUNARES.Site01;
-    const esDesbloqueado = Lunar.esDesbloqueado(s, s.sitio);
+    // Todas las zonas abiertas para la Hackathon
+    const esDesbloqueado = true;
 
     return `<main class="l-hangar">
       <section class="l-panel">
@@ -191,10 +192,9 @@ var LunarUI = (function () {
         <label>Zona de exploración
           <select data-l="site" aria-label="Zona científica">
             ${MAPAS_NASA.map(m => {
-              const meta = SITIOS_LUNARES[m.id] || {nombre: m.name, estrellas: '', dificultad: ''};
-              const desbloq = Lunar.esDesbloqueado(s, m.id);
-              return `<option value="${m.id}" ${s.sitio===m.id?'selected':''} ${!desbloq?'disabled':''}>
-                ${desbloq ? meta.estrellas : '🔒'} ${meta.nombre} (${meta.dificultad})
+              const meta = SITIOS_LUNARES[m.id] || {nombre: m.name, estrellas: '★☆☆', dificultad: 'Fácil'};
+              return `<option value="${m.id}" ${s.sitio===m.id?'selected':''}>
+                ${meta.estrellas} ${meta.nombre} (${meta.dificultad})
               </option>`;
             }).join('')}
           </select>
@@ -202,7 +202,7 @@ var LunarUI = (function () {
         <div class="l-site-badge ${infoSitio.claseDificultad}">
           <b>${infoSitio.estrellas} DIFICULTAD: ${infoSitio.dificultad.toUpperCase()}</b>
           <p>${esc(infoSitio.descripcion)}</p>
-          <small>${esDesbloqueado ? '✓ Certificado para descenso' : '🔒 Requiere completar la misión anterior'}</small>
+          <small>✓ Zona abierta para Hackathon (Certificado para descenso NASA)</small>
         </div>
         <canvas id="l-map" width="400" height="300" aria-label="Mapa lunar"></canvas>
         <div class="l-legend"><span>▣ Módulo</span><span>◇ Núcleo</span><span>··· Directa</span><span>━ Ahorro</span></div>
@@ -248,7 +248,7 @@ var LunarUI = (function () {
           ${btn('formula','VER CÁLCULO')}
         </div>
         ${s.prueba?'<p class="ok">✓ Prueba completada. Revisa el resultado antes de lanzar.</p>':''}
-        ${btn('launch', v.riesgos.length?'LANZAR CON RIESGO':'LANZAR', '', !!v.bloqueos.length||!s.prueba||!esDesbloqueado, 'grande')}
+        ${btn('launch', v.riesgos.length?'LANZAR CON RIESGO':'LANZAR', '', !!v.bloqueos.length||!s.prueba, 'grande')}
       </section>
     </main>`;
   }
@@ -653,6 +653,33 @@ var LunarUI = (function () {
       UI.arte.pint(ctx, UI.arte[name], Math.round(x - UI.arte[name][0].length/2), Math.round(y - UI.arte[name].length/2));
     };
 
+    // Función para renderizar modelos y sprites avanzados de recursos lunares
+    const dibujarSpriteRecurso = (nombre, p, escala = 1) => {
+      const spr = SPRITES_RECURSOS_LUNARES && SPRITES_RECURSOS_LUNARES[nombre];
+      if (!spr) return;
+      const [x, y] = xy(p);
+      const pal = SPRITES_RECURSOS_LUNARES.paleta;
+      const ancho = spr[0].length * escala;
+      const alto = spr.length * escala;
+      const startX = Math.round(x - ancho / 2);
+      const startY = Math.round(y - alto / 2);
+
+      // Sombra en el regolito lunar
+      ctx.fillStyle = 'rgba(10, 16, 30, 0.7)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + alto / 2 + 1, ancho / 2 + 3, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      for (let r = 0; r < spr.length; r++) {
+        for (let c = 0; c < spr[r].length; c++) {
+          const ch = spr[r][c];
+          if (ch === '.') continue;
+          ctx.fillStyle = pal[ch] || '#cbd5e1';
+          ctx.fillRect(startX + c * escala, startY + r * escala, escala, escala);
+        }
+      }
+    };
+
     // Módulo lunar con baliza parpadeante
     sprite('modulo', s.modulo);
     const [mx, my] = xy(s.modulo);
@@ -663,33 +690,49 @@ var LunarUI = (function () {
     ctx.font = 'bold 9px monospace';
     ctx.fillText('M · MÓDULO', mx - 25, my - 16);
 
-    // Marcador de núcleo con pulso de radar
+    // Marcador de núcleo polar con torre científica y pulso holográfico
     const [tx, ty] = xy(m.target);
-    const pulso = Math.sin(Date.now() / 280) * 3;
-    ctx.strokeStyle = '#e2eaf2';
-    ctx.strokeRect(tx - 8 - pulso/2, ty - 8 - pulso/2, 16 + pulso, 16 + pulso);
-    ctx.fillStyle = '#1a2435';
-    ctx.fillRect(tx - 5, ty - 5, 10, 10);
-    if (!s.tomada) sprite('cristal', m.target);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(s.tomada ? '✓ EXTRAÍDO' : '◇ NÚCLEO', tx - 24, ty - 14);
+    const pulso = Math.sin(Date.now() / 250) * 4;
+    ctx.strokeStyle = 'rgba(0, 242, 254, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(tx, ty + 6, 16 + pulso, 6 + pulso / 2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (!s.tomada) {
+      dibujarSpriteRecurso('nucleo', m.target);
+      const luzNucleo = Math.floor(Date.now() / 300) % 2 === 0 ? '#00f2fe' : '#ffffff';
+      ctx.fillStyle = luzNucleo;
+      ctx.fillRect(tx - 1, ty - 9, 3, 3);
+    } else {
+      ctx.fillStyle = '#1c3d2e';
+      ctx.fillRect(tx - 6, ty - 6, 12, 12);
+      ctx.strokeStyle = '#52c785';
+      ctx.strokeRect(tx - 6, ty - 6, 12, 12);
+    }
+    ctx.fillStyle = s.tomada ? '#52c785' : '#00f2fe';
+    ctx.font = 'bold 9px monospace';
+    ctx.fillText(s.tomada ? '✓ EXTRAÍDO' : '◇ NÚCLEO POLAR', tx - 28, ty - 14);
 
     // Marcador extra original
     const [ex, ey] = xy(m.extra);
     if (!s.extraTomada) {
-      sprite(s.revelada ? 'muestra' : 'roca', m.extra);
+      if (s.revelada) {
+        dibujarSpriteRecurso('mineral', m.extra);
+      } else {
+        sprite('roca', m.extra);
+      }
       ctx.fillStyle = '#9fd6ff';
-      ctx.fillText(s.revelada ? 'MUESTRA' : '? ESCANEO', ex - 20, ey - 12);
+      ctx.font = 'bold 8px monospace';
+      ctx.fillText(s.revelada ? 'MUESTRA VETA' : '? ANOMALÍA', ex - 24, ey - 12);
     }
 
     // Puntos de interés y obstáculos geológicos adicionales
     const pois = typeof PUNTOS_INTERES_LUNARES !== 'undefined' ? PUNTOS_INTERES_LUNARES[m.id] : null;
     if (pois && pois.obstaculos) {
       pois.obstaculos.forEach(obs => {
+        dibujarSpriteRecurso('roca_3d', obs);
         const [ox, oy] = xy(obs);
-        ctx.fillStyle = 'rgba(10, 15, 25, 0.6)';
-        ctx.fillRect(ox - 8, oy + 4, 16, 5);
-        UI.arte.pint(ctx, UI.arte.roca, Math.round(ox - UI.arte.roca[0].length/2), Math.round(oy - UI.arte.roca.length/2));
         ctx.fillStyle = '#f0a53b';
         ctx.font = 'bold 8px monospace';
         ctx.fillText('▲ ROCA', ox - 14, oy - 10);
@@ -700,15 +743,22 @@ var LunarUI = (function () {
       pois.escaneos.forEach(poi => {
         const yaEscaneado = s.escaneosExtra && s.escaneosExtra.includes(poi.id);
         const [px, py] = xy(poi.pos);
-        const pulsoPoi = Math.sin(Date.now() / 300) * 2;
-        ctx.strokeStyle = yaEscaneado ? '#52c785' : '#00f2fe';
+        const tipoSprite = poi.tipo || 'sonda';
+
+        // Dibujar modelo gráfico avanzado según el tipo de recurso (hielo, sonda, mineral, escarpe)
+        dibujarSpriteRecurso(tipoSprite, poi.pos);
+
+        // Pulso holográfico de telemetría
+        const pulsoPoi = Math.sin(Date.now() / 280) * 3;
+        ctx.strokeStyle = yaEscaneado ? 'rgba(82, 199, 133, 0.7)' : 'rgba(0, 242, 254, 0.85)';
         ctx.lineWidth = 1;
-        ctx.strokeRect(px - 7 - pulsoPoi/2, py - 7 - pulsoPoi/2, 14 + pulsoPoi, 14 + pulsoPoi);
-        ctx.fillStyle = yaEscaneado ? '#1c3d2e' : '#0c2e47';
-        ctx.fillRect(px - 5, py - 5, 10, 10);
+        ctx.strokeRect(px - 9 - pulsoPoi / 2, py - 9 - pulsoPoi / 2, 18 + pulsoPoi, 18 + pulsoPoi);
+
+        const distMetros = Math.round(Math.hypot(s.pos[0] - poi.pos[0], s.pos[1] - poi.pos[1]) * m.cellMeters);
         ctx.fillStyle = yaEscaneado ? '#52c785' : '#00f2fe';
         ctx.font = 'bold 8px monospace';
-        ctx.fillText(yaEscaneado ? '✓ ' + poi.nombre.slice(0, 10) : '? ' + poi.nombre.slice(0, 10), px - 20, py - 10);
+        const label = (yaEscaneado ? '✓ ' : '? ') + poi.nombre.slice(0, 14) + (distMetros <= 80 ? ` · ${distMetros}m` : '');
+        ctx.fillText(label, px - 28, py - 12);
       });
     }
 

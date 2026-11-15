@@ -64,21 +64,20 @@ for(const m of MAPAS_NASA)for(const route of ['directa','ahorro'])for(const corr
   const c=Lunar.nuevo();land(c);const snapshot=JSON.stringify(c.equipo);Lunar.cambiar(c,'equipo','taladro');check(JSON.stringify(c.equipo)===snapshot,'loadout sealed');
   check(!Lunar.decidir(c,true).ok,'cannot correct again');
 }
-// Progresión de dificultad y desbloqueo de sitios (Connecting Ridge -> Shackleton -> Gerlache)
+// Modo Hackathon: todas las zonas libres y desbloqueadas desde el inicio
 {
   const s=Lunar.nuevo();
-  check(Lunar.esDesbloqueado(s,'Site01'),'Site01 inicial desbloqueado');
-  check(!Lunar.esDesbloqueado(s,'Site11'),'Site11 bloqueado al inicio');
+  check(Lunar.esDesbloqueado(s,'Site01'),'Site01 libre para hackathon');
+  check(Lunar.esDesbloqueado(s,'Site04'),'Site04 libre para hackathon');
+  check(Lunar.esDesbloqueado(s,'Site11'),'Site11 libre para hackathon');
   s.sitio='Site01';
   s.resultado='exito';
   s.muestras.entregadas=['Núcleo'];
   const u1=Lunar.desbloquearSiguiente(s);
-  check(u1==='Site04','Completar Site01 desbloquea Site04');
-  check(Lunar.esDesbloqueado(s,'Site04'),'Site04 ahora desbloqueado');
+  check(u1==='Site04','Referencia a Site04');
   s.sitio='Site04';
   const u2=Lunar.desbloquearSiguiente(s);
-  check(u2==='Site11','Completar Site04 desbloquea Site11');
-  check(Lunar.esDesbloqueado(s,'Site11'),'Site11 ahora desbloqueado');
+  check(u2==='Site11','Referencia a Site11');
 }
 // Evaluación de los 6 finales
 {

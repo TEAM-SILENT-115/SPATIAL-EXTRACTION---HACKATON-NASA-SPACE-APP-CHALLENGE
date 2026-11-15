@@ -28,6 +28,39 @@ var UI = (function () {
   };
   var vistos = {};           // términos cuya burbuja de primera vez ya se cerró
   var terminoAbierto = null; // término reabierto a mano con clic
+  var movimiento = null;
+  var ultimoInforme = null;
+
+  function diagnostico() {
+    var p = Motor.probar(estado), t = p.llevas;
+    var objetivo = DATOS.objetivos[estado.objetivo];
+    var problemas = [];
+    if (!estado.cohete) problemas.push('Elige un lanzador para conocer tu límite de carga.');
+    if (estado.masa.usada > estado.masa.capacidad) problemas.push('Exceso de masa: reduce equipo o cambia de lanzador.');
+    if (estado.presupuesto.gastado > estado.presupuesto.total) problemas.push('Presupuesto excedido: prioriza el equipo que sirve a tu objetivo.');
+    if (estado.objetivo === 'crater_profunda' && !t.taladro) problemas.push('Sin taladro no hay muestra profunda, aunque sobre energía.');
+    if (t.capacidadMuestras < objetivo.espacioMinimo) problemas.push('La ciencia necesita espacio: equipa capacidad para ' + objetivo.espacioMinimo + ' muestras.');
+    if (!p.normal.alcanza) problemas.push('La autonomía no cubre el plan nominal: revisa energía y oxígeno.');
+    else if (!p.adverso.alcanza) problemas.push('El plan nominal cabe, pero el terreno rocoso agota tus reservas.');
+    return '<div class="ingenieria"><h3>CONTROL DE MISIÓN · ' + (problemas.length ? 'REVISA TU DISEÑO' : 'PLAN ROBUSTO') + '</h3>' +
+      (problemas.length ? '<ul>' + problemas.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') : '<p>Equipo, carga y autonomía cubren ambos escenarios previstos. Las acciones extra siguen costando recursos.</p>') +
+      '<p>Tu reto: entrega la muestra gastando lo mínimo. Cambia una elección y vuelve a probar.</p></div>';
+  }
+
+  function animarPaso(desde, hasta) {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    movimiento = { desde: desde, hasta: hasta, t: 0 };
+    var inicio = null;
+    function cuadro(ahora) {
+      if (!movimiento) return;
+      if (inicio === null) inicio = ahora;
+      movimiento.t = Math.min(1, (ahora - inicio) / 230);
+      dibujarSuperficie();
+      if (movimiento.t < 1) window.requestAnimationFrame(cuadro);
+      else { movimiento = null; dibujarSuperficie(); }
+    }
+    window.requestAnimationFrame(cuadro);
+  }
 
   /* ---------------- paleta y sprites ---------------- */
 
@@ -194,7 +227,13 @@ var UI = (function () {
       if (s.tipo === 'modulo') pint(ctx, SPR_MODULO, x - 7, SUELO - 9);
     }
 
-    pint(ctx, SPR_ASTRO, xDe(estado.posicion) - 3, SUELO - 11 - 4);
+    var px = xDe(estado.posicion), salto = 0;
+    if (movimiento) {
+      var t = movimiento.t;
+      px = xDe(movimiento.desde) + (xDe(movimiento.hasta) - xDe(movimiento.desde)) * (t * t * (3 - 2 * t));
+      salto = Math.sin(t * Math.PI * 2) * 1.5;
+    }
+    pint(ctx, SPR_ASTRO, Math.round(px) - 3, Math.round(SUELO - 15 - salto));
   }
 
   function dibujarViaje() {
@@ -444,7 +483,8 @@ var UI = (function () {
     html += '<main class="hangar">';
 
     // --- panel objetivo y mapa ---
-    html += '<section class="panel"><h2>1 · OBJETIVO Y MAPA</h2>' +
+    html += '<section class="panel"><h2>1 · DESARROLLAR MISIÓN</h2>' +
+      '<p class="nota">Eres responsable de ingeniería: convierte un objetivo científico en una misión que pueda volver.</p>' +
       '<canvas id="cv-mapa" width="120" height="70"></canvas>' +
       '<div class="fila-botones">' +
       boton('zona', 'LLANURA', { x: 'llanura', clase: estado.zonaAterrizaje === 'llanura' ? 'activo' : '' }) +
@@ -460,7 +500,7 @@ var UI = (function () {
       '<p class="dato">Exige: ' + esc(o.herramienta) +
       (estado.objetivo === 'crater_profunda' && !t.taladro ? ' <span class="alerta">⚠ sin taladro</span>' : '') +
       (t.capacidadMuestras < o.espacioMinimo ? ' <span class="alerta">⚠ falta espacio</span>' : '') +
-      '</p></section>';
+      '</p><div class="ingenieria"><h3>GEOMETRÍA DE MISIÓN</h3><p>Aterrizar cerca ahorra pasos; el terreno incierto exige reserva. Cambia la zona y compara el costo de ida y vuelta.</p></div></section>';
 
     // --- panel cohete y equipo ---
     html += '<section class="panel"><h2>2 · COHETE Y EQUIPO</h2><div class="lista">';
@@ -474,7 +514,7 @@ var UI = (function () {
     DATOS.objetos.forEach(function (ob) {
       var puesto = estado.equipo.indexOf(ob.id) !== -1;
       html += '<div class="item' + (puesto ? ' elegido' : '') + '" title="' + esc(ob.descripcion) + '">' +
-        '<span class="i-icono">' + ob.icono + '</span><span class="i-nombre">' + ob.nombre + '</span>' +
+        '<span class="i-icono">' + ob.icono + '</span><span class="i-nombre">' + ob.nombre + '<small class="uso-equipo">' + esc(ob.descripcion) + '</small></span>' +
         '<span class="i-datos">' + ob.costo + '🪙 · ' + ob.masa + '⚖</span>' +
         (puesto ? boton('quitar', T.btnQuitar, { x: ob.id, clase: 'mini' })
                 : boton('equipar', T.btnEquipar, { x: ob.id, clase: 'mini' })) + '</div>';
@@ -494,8 +534,9 @@ var UI = (function () {
       margen + ' Wh</b> ' + (margen < 0 ? '✖' : (margen < r.adverso.energia.total - r.normal.energia.total ? '⚠' : '✓')) + '</p>' +
       '<p class="dato">' + termino('reserva', 'Reserva') + ' por tramos' + (ev.manual ? '' : ' (automática: estimación normal, el resto a explorar)') + ':</p>' +
       htmlReserva(ev, t.energia, false) +
+      '<p class="nota">Balance energético: disponible − ida − trabajo − regreso = reserva. Más batería aumenta autonomía, masa y costo.</p>' +
       '<div class="fila-botones">' +
-      boton('vercalculo', T.btnVerCalculo) + boton('reservar', T.btnReservar) + boton('probar', T.btnProbar) +
+      boton('vercalculo', T.btnVerCalculo) + boton('reservar', T.btnReservar) + boton('probar', 'REVISAR DISEÑO') +
       '</div>' +
       (t.energia === 0
         ? '<p class="dato alerta">⚠ Sin batería: no podrás dar ni un paso en superficie.</p>'
@@ -579,6 +620,7 @@ var UI = (function () {
       '</div></header>';
 
     html += '<canvas id="cv-sup" width="320" height="110" class="escena"></canvas>';
+    html += '<p class="controles">← / → Mover · ↑ Escanear · ↓ Regresar y entregar · Cada paso consume energía y O₂</p>';
 
     html += '<div class="banda"><div class="fila-botones">' +
       boton('retroceder', '◀ ' + T.btnRetroceder, { off: estado.posicion === 0, title: 'Un paso hacia el módulo' }) +
@@ -601,6 +643,7 @@ var UI = (function () {
       '<h1 class="' + clase + '">' + inf.titulo + '</h1>';
 
     inf.causal.forEach(function (fr) { html += '<p class="causal">' + esc(fr) + '</p>'; });
+    if (ultimoInforme) html += '<p class="comparacion">TU EXPERIMENTO: batería ' + ultimoInforme.energia + ' → ' + estado.plan.energiaInicial + ' Wh · entregadas ' + ultimoInforme.muestras + ' → ' + inf.entregadas.length + ' · costo ' + ultimoInforme.costo + ' → ' + estado.presupuesto.gastado + '. ¿Qué cambió en tu diseño?</p>';
 
     // Partida anterior contra esta (solo si se llegó con REPETIR).
     var cmp = inf.comparacion;
@@ -690,7 +733,7 @@ var UI = (function () {
           '<p>Oxígeno: ' + ev.desglose.oxigeno.total + ' de ' + pr.llevas.oxigeno + ' <b class="' + (ev.margenOxigeno < 0 ? 'alerta' : 'ok') + '">' + (ev.margenOxigeno < 0 ? '✖' : '✓') + '</b></p>' +
           '</div>';
       }
-      inner = '<h2>PROYECCIÓN EN SECO</h2><div class="comparar">' +
+      inner = '<h2>PRUEBA DE INGENIERÍA</h2>' + diagnostico() + '<div class="comparar">' +
         col('TERRENO DESPEJADO · ' + (100 - pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso)) + ' %', pr.normal, false) +
         col('TERRENO ROCOSO · ' + pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso) + ' %', pr.adverso, true) +
         '</div><p class="nota">El escaneo del viaje dirá cuál de los dos te toca; el porcentaje es el riesgo de la zona elegida. En rojo, el tramo cuya reserva no alcanza. Ninguna de las soluciones es «la correcta»: más batería cuesta masa; aterrizar más cerca es más incierto.</p>';
@@ -729,6 +772,8 @@ var UI = (function () {
   /* ---------------- acciones ---------------- */
 
   function manejar(a, x) {
+    if (movimiento) return;
+    var desde = estado.posicion;
     var r = null;
     // Cualquier acción que no sea abrir un término cierra la burbuja de
     // primera vez que estuviera en pantalla: ya se presentó.
@@ -771,16 +816,19 @@ var UI = (function () {
       case 'perforar': r = Motor.perforar(estado); break;
       case 'regresar': r = Motor.regresar(estado); break;
       case 'repetir':
+        ultimoInforme = { energia: estado.plan.energiaInicial, muestras: estado.muestras.entregadas.length, costo: estado.presupuesto.gastado };
         estado = Motor.repetirConPlan(estado);
         mensaje = 'De vuelta en la agencia: cambia UNA decisión y compara el resultado.';
         break;
       case 'nueva':
+        ultimoInforme = null;
         estado = Motor.nuevoEstado();
         mensaje = 'Misión nueva. Todo por decidir.';
         break;
     }
     if (r && r.msg) mensaje = r.msg;
     render();
+    if ((a === 'avanzar' || a === 'retroceder') && estado.etapa === 'superficie' && estado.posicion !== desde) animarPaso(desde, estado.posicion);
   }
 
   /* ---------------- render raíz ---------------- */
@@ -839,8 +887,12 @@ var UI = (function () {
     });
     window.addEventListener('keydown', function (e) {
       if (estado.etapa !== 'superficie' || modal) return;
-      if (e.key === 'ArrowRight') manejar('avanzar');
-      if (e.key === 'ArrowLeft') manejar('retroceder');
+      if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+      var acciones = { ArrowRight: 'avanzar', ArrowLeft: 'retroceder', ArrowUp: 'escanearsup', ArrowDown: 'regresar' };
+      if (!acciones[e.key]) return;
+      e.preventDefault();
+      if (e.repeat) return;
+      manejar(acciones[e.key]);
     });
     window.addEventListener('resize', ajustarEscala);
     ajustarEscala();

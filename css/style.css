@@ -176,34 +176,34 @@ main.hangar {
 .btn.activo {
   border-color: var(--acento); color: #fff; background: rgba(240, 165, 59, 0.2);
 }
-.btn.grande { font-size: 14px; font-weight: 700; padding: 10px 20px; }
+.btn.grande { font-size: 16px; font-weight: 700; padding: 12px 22px; letter-spacing: 1.5px; }
 .btn.peligro { border-color: var(--rojo); color: #ff9191; background: rgba(232, 85, 85, 0.12); }
 .btn.peligro:hover:not(:disabled) { color: #fff; background: var(--rojo); border-color: var(--rojo); }
-.btn.mini { font-size: 11px; padding: 4px 8px; border-radius: 3px; }
+.btn.mini { font-size: 12px; padding: 5px 10px; border-radius: 3px; }
 
-.fila-botones { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 4px 0; }
+.fila-botones { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 6px 0; }
 
 /* ---------- reserva por tramos ---------- */
 
-.reserva { display: flex; flex-direction: column; gap: 5px; }
-.reserva-fila { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--apagado); }
-.reserva-fila .etq { width: 75px; color: var(--texto); font-weight: 500; }
-.reserva-fila .b-pista { flex: 1; width: auto; height: 6px; }
-.reserva-fila .num { white-space: nowrap; font-size: 11px; }
+.reserva { display: flex; flex-direction: column; gap: 6px; }
+.reserva-fila { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--apagado); }
+.reserva-fila .etq { width: 85px; color: var(--texto); font-weight: 600; }
+.reserva-fila .b-pista { flex: 1; width: auto; height: 8px; }
+.reserva-fila .num { white-space: nowrap; font-size: 13px; font-weight: 600; }
 .reserva-fila.ok .b-relleno { background: var(--ok); }
 .reserva-fila.ambar .b-relleno { background: var(--ambar); }
 .reserva-fila.rojo .b-relleno { background: var(--rojo); }
-.btn.mini.cuadrado { padding: 1px 6px; font-size: 11px; line-height: 1.2; }
+.btn.mini.cuadrado { padding: 2px 8px; font-size: 12px; line-height: 1.2; font-weight: 600; }
 .chip.ok { border-color: var(--ok); color: var(--ok); }
 .chip.ambar { border-color: var(--ambar); color: var(--ambar); }
 
 /* ---------- tablas limpias ---------- */
 
-.tabla { border-collapse: collapse; width: 100%; font-size: 12px; }
+.tabla { border-collapse: collapse; width: 100%; font-size: 14px; }
 .tabla th, .tabla td {
-  border: 1px solid var(--borde-tenue); padding: 5px 8px; text-align: center;
+  border: 1px solid var(--borde-tenue); padding: 6px 10px; text-align: center;
 }
-.tabla th { color: var(--acento); font-weight: 600; font-size: 11px; background: rgba(255, 255, 255, 0.02); }
+.tabla th { color: var(--acento); font-weight: 700; font-size: 13px; background: rgba(255, 255, 255, 0.03); }
 .tabla td:first-child { text-align: left; }
 
 /* ---------- bandas (viaje / superficie) ---------- */

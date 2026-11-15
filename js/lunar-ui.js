@@ -4,6 +4,13 @@ var LunarUI = (function () {
   let s = Lunar.nuevo(), root, intro = true, modal = null, tutorialStep = 0;
   let category = 0, selected = 0, message = 'Diseña el viaje que te traerá de vuelta.', keys = {}, elapsed = 0, last = 0;
   let particles = [];
+  let notif = null, notifTimer = null;
+
+  function mostrarNotif(tipo, badge, titulo, texto, extra) {
+    notif = { tipo, badge, titulo, texto, extra };
+    if (notifTimer) clearTimeout(notifTimer);
+    notifTimer = setTimeout(() => { notif = null; render(); }, 8500);
+  }
 
   const R = REGLAS_LUNARES;
   const n = v => Number(v).toFixed(1);
@@ -185,18 +192,27 @@ var LunarUI = (function () {
         `:`
           <p>Telemetría recibida. Corregir reduce la caminata en regolito pero consume 30 u de combustible.</p>
           <div class="l-options">
-            <article>
+            <article class="l-opt-card">
               <h3>Mantener</h3>
               <p>${normal.distancia} m · ${n(normal.total)} Wh</p>
               <p>Combustible: −0 u<br>Reserva estimada: ${n(s.recursos.energiaWh-normal.total)} Wh</p>
-              ${btn('keep','MANTENER','',s.viaje.decidido)}
+              <div class="l-badge-nominal">✓ Descenso nominal directo</div>
+              ${btn('keep','MANTENER','',s.viaje.decidido, 'grande')}
             </article>
-            <article>
+            <article class="l-opt-card ${s.recursos.combustible<30?'bloqueada':''}">
               <h3>Corregir</h3>
               <p>${near.distancia} m · ${n(near.total)} Wh</p>
               <p>Combustible: −30 u<br>Reserva estimada: ${n(s.recursos.energiaWh-near.total)} Wh</p>
-              ${btn('correct','CORREGIR','',s.viaje.decidido||s.recursos.combustible<30)}
-              ${s.recursos.combustible<30?'<small>Falta combustible de maniobra.</small>':''}
+              ${s.recursos.combustible<30?`
+                <div class="l-alerta-combustible">
+                  <b>⛔ Maniobra no disponible (Falta combustible)</b>
+                  <small>Requiere <b>30 u</b> de combustible para encender propulsores. A bordo llevas <b>${s.recursos.combustible} u</b>.<br>En el Hangar se requería equipar <b>Combustible extra (+30 u)</b> o el cohete <b>Titán</b>.</small>
+                  ${!s.viaje.decidido?`<div style="margin-top:8px">${btn('back_to_hangar','↺ VOLVER AL HANGAR A EQUIPAR','',false,'mini')}</div>`:''}
+                </div>
+              `:`
+                <div class="l-badge-nominal">✓ Propulsores de maniobra listos (−30 u)</div>
+              `}
+              ${btn('correct','CORREGIR','',s.viaje.decidido||s.recursos.combustible<30, 'grande')}
             </article>
           </div>
         `}
@@ -234,6 +250,17 @@ var LunarUI = (function () {
           <span>${esc(Lunar.map(s).name)}</span>
         </div>
         <span class="l-compass">N ↑</span>
+        ${notif ? `
+          <div class="l-notif ${notif.tipo}" role="alert">
+            <div class="l-notif-bar">
+              <span class="l-notif-tag">${notif.badge}</span>
+              <strong class="l-notif-title">${notif.titulo}</strong>
+              <button class="btn mini l-notif-btn-close" data-l="dismiss_notif">✕ CERRAR</button>
+            </div>
+            <p class="l-notif-desc">${notif.texto}</p>
+            ${notif.extra ? `<div class="l-notif-extra">${notif.extra}</div>` : ''}
+          </div>
+        ` : ''}
       </div>
       <div class="l-interaction">
         <div>
@@ -379,11 +406,49 @@ var LunarUI = (function () {
     if (!modal) return '';
     let body = '';
     if (modal === 'tutorial_modal') body = modalTutorialHTML();
-    if (modal === 'inventory') body = `<h2>INVENTARIO · ${s.muestras.recogidas.length}/${Motor.totales(s).capacidadMuestras} muestras</h2>${inventoryHTML(false)}<small>← → categorías · ↑ ↓ objetos · I / Esc cerrar. Pausado.</small>`;
-    if (modal === 'pause') body = `<h2>MISIÓN PAUSADA</h2><p>La telemetría está detenida. No se consumen recursos.</p>${btn('tutorial_modal','CONSULTAR GUÍA DE MISIÓN')}`;
+    if (modal === 'inventory') {
+      const masaTotal = Lunar.masa(s);
+      const maxMasa = s.masa.capacidad;
+      const capacidadMuestras = Motor.totales(s).capacidadMuestras;
+      const muestrasRecogidas = s.muestras.recogidas.length;
+      body = `
+        <div class="l-inv-header">
+          <div class="l-inv-title">
+            <h2>🎒 BAHÍA DE CARGA E INVENTARIO ASTRONÁUTICO</h2>
+            <small>ESTADO DE TELEMETRÍA EN SUPERFICIE · SIMULACIÓN PAUSADA</small>
+          </div>
+          <div class="l-inv-badges">
+            <span class="l-inv-badge">📦 MUESTRAS: <b>${muestrasRecogidas}/${capacidadMuestras}</b></span>
+            <span class="l-inv-badge">⚖ CARGA: <b>${masaTotal}/${maxMasa} kg</b></span>
+            <span class="l-inv-badge">⚡ ENERGÍA: <b>${n(s.recursos.energiaWh)} Wh</b></span>
+            <span class="l-inv-badge">◍ O₂: <b>${n(s.recursos.oxigeno)} u</b></span>
+          </div>
+        </div>
+        ${inventoryHTML(false)}
+        <div class="l-inv-footer">
+          <small>🎮 Controles: [←][→] cambiar categoría · [↑][↓] seleccionar objeto · [I] o [Esc] volver a la superficie</small>
+        </div>
+      `;
+    }
+    if (modal === 'pause') {
+      body = `
+        <div class="l-inv-header">
+          <div class="l-inv-title">
+            <h2>⏸️ MISIÓN LUNAR EN PAUSA</h2>
+            <small>TELEMETRÍA DETENIDA · NO SE CONSUMEN RECURSOS</small>
+          </div>
+        </div>
+        <p style="margin:12px 0 16px;line-height:1.5">La nave y el soporte vital están en modo espera. Puedes consultar los protocolos del manual o reanudar.</p>
+        <div class="fila-botones" style="margin-bottom:12px">
+          ${btn('tutorial_modal','📖 ABRIR TUTORIAL COMPLETO')}
+          ${btn('formula','📐 VER ECUACIONES')}
+          ${btn('credits','ℹ️ CRÉDITOS')}
+        </div>
+      `;
+    }
     if (modal === 'formula') body = `<h2>Ecuación de Navegación y Energía</h2><p>Por cada metro recorrido: distancia × ${R.whMetro} Wh/m × (1 + masa / ${R.masaReferencia} kg) × (1 + pendiente / ${R.pendienteReferencia}°)².</p><p>Acciones: perforar 25 Wh, escanear 5 Wh, recoger 3 Wh. Soporte vital: ${R.oxMetro} u/metro más trabajo. Reserva recomendada: 15% del total.</p>`;
     if (modal === 'credits') body = `<h2>Créditos y Rigor Científico</h2><p>Pendientes reales: NASA Goddard / LRO-LOLA (Barker et al., 2021). Sitios 01, 04 y 11 procesados desde GeoTIFF originales de 5 m/píxel.</p><p>Misión Umbral — Proyecto para el NASA Space Apps Challenge 2026. Arte, código y sonido 100% originales del equipo, sin dependencias externas.</p>`;
-    return `<div class="velo"><section class="panel modal l-modal" role="dialog" aria-modal="true">${body}${btn('close','CERRAR · ESC')}</section></div>`;
+    return `<div class="velo"><section class="panel modal l-modal" role="dialog" aria-modal="true">${body}${btn('close','CERRAR · ESC','',false,'grande')}</section></div>`;
   }
 
   function drawMap(id, mini=false, hero=false) {
@@ -521,12 +586,42 @@ var LunarUI = (function () {
     ctx.fillStyle = '#ffffff';
     ctx.fillText(s.tomada ? '✓ EXTRAÍDO' : '◇ NÚCLEO', tx - 24, ty - 14);
 
-    // Marcador extra
+    // Marcador extra original
     const [ex, ey] = xy(m.extra);
     if (!s.extraTomada) {
       sprite(s.revelada ? 'muestra' : 'roca', m.extra);
       ctx.fillStyle = '#9fd6ff';
       ctx.fillText(s.revelada ? 'MUESTRA' : '? ESCANEO', ex - 20, ey - 12);
+    }
+
+    // Puntos de interés y obstáculos geológicos adicionales
+    const pois = typeof PUNTOS_INTERES_LUNARES !== 'undefined' ? PUNTOS_INTERES_LUNARES[m.id] : null;
+    if (pois && pois.obstaculos) {
+      pois.obstaculos.forEach(obs => {
+        const [ox, oy] = xy(obs);
+        ctx.fillStyle = 'rgba(10, 15, 25, 0.6)';
+        ctx.fillRect(ox - 8, oy + 4, 16, 5);
+        UI.arte.pint(ctx, UI.arte.roca, Math.round(ox - UI.arte.roca[0].length/2), Math.round(oy - UI.arte.roca.length/2));
+        ctx.fillStyle = '#f0a53b';
+        ctx.font = 'bold 8px monospace';
+        ctx.fillText('▲ ROCA', ox - 14, oy - 10);
+      });
+    }
+
+    if (pois && pois.escaneos) {
+      pois.escaneos.forEach(poi => {
+        const yaEscaneado = s.escaneosExtra && s.escaneosExtra.includes(poi.id);
+        const [px, py] = xy(poi.pos);
+        const pulsoPoi = Math.sin(Date.now() / 300) * 2;
+        ctx.strokeStyle = yaEscaneado ? '#52c785' : '#00f2fe';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px - 7 - pulsoPoi/2, py - 7 - pulsoPoi/2, 14 + pulsoPoi, 14 + pulsoPoi);
+        ctx.fillStyle = yaEscaneado ? '#1c3d2e' : '#0c2e47';
+        ctx.fillRect(px - 5, py - 5, 10, 10);
+        ctx.fillStyle = yaEscaneado ? '#52c785' : '#00f2fe';
+        ctx.font = 'bold 8px monospace';
+        ctx.fillText(yaEscaneado ? '✓ ' + poi.nombre.slice(0, 10) : '? ' + poi.nombre.slice(0, 10), px - 20, py - 10);
+      });
     }
 
     // Astronauta con animación de caminata en 4 direcciones
@@ -662,6 +757,18 @@ var LunarUI = (function () {
     if (a === 'scanflight') {
       Lunar.escanearViaje(s);
     }
+    if (a === 'dismiss_notif') {
+      notif = null;
+      render();
+      return;
+    }
+    if (a === 'back_to_hangar') {
+      s.etapa = 'hangar';
+      s.viaje = {escaneado:false, decidido:false, corrigio:false};
+      message = 'Regresaste al Hangar. Equipa Combustible extra (+30 u) o el cohete Titán para habilitar la corrección.';
+      render();
+      return;
+    }
     if (a === 'keep' || a === 'correct') {
       result = Lunar.decidir(s, a === 'correct');
     }
@@ -671,11 +778,48 @@ var LunarUI = (function () {
     }
     if (a === 'interact') {
       const c = Lunar.contexto(s);
-      if (c && c.accion === 'perforar') LunarAudio.perforar();
-      if (c && c.accion === 'entregar') LunarAudio.exito();
-      result = Lunar.interactuar(s);
-      if (s.perforando) {
-        setTimeout(() => { s.perforando = false; render(); }, 350);
+      if (!c) {
+        result = Lunar.interactuar(s);
+      } else {
+        const accionPrevia = c.accion;
+        const poiPrevio = c.poi;
+        if (accionPrevia === 'perforar') LunarAudio.perforar();
+        else if (accionPrevia === 'entregar') LunarAudio.exito();
+        else if (accionPrevia === 'escanear' || accionPrevia === 'escanear_poi') LunarAudio.escanear();
+        else LunarAudio.click();
+
+        result = Lunar.interactuar(s);
+
+        if (result && result.ok) {
+          if (accionPrevia === 'escanear') {
+            mostrarNotif('escaneo', '📡 ESCÁNER VIPER / LOLA', '¡ANOMALÍA ESPECTRAL DETECTADA!',
+              'El sensor identificó una veta de regolito rico en minerales y volátiles a 0.2 m de profundidad.',
+              '✓ <b>Nueva acción disponible:</b> Presiona <b>[E · Recoger]</b> para guardarla en bodega (+1.0 kg, costo 3 Wh).'
+            );
+          } else if (accionPrevia === 'perforar') {
+            mostrarNotif('extraccion', '💎 TALADRO DE NÚCLEO', '¡NÚCLEO CIENTÍFICO EXTRAÍDO!',
+              'Has perforado con éxito el cráter y obtenido la muestra principal (+1.0 kg en bodega).',
+              '⚠️ <b>MISIÓN CRÍTICA:</b> Regresa al <b>MÓDULO LUNAR ▣</b> siguiendo la línea azul de retorno para salvar la misión.'
+            );
+          } else if (accionPrevia === 'recoger') {
+            mostrarNotif('extraccion', '🧪 MUESTRA SECUNDARIA', '¡REGOLITO SUPERFICIAL RECOGIDO!',
+              'Muestra asegurada en tu contenedor (+1.0 kg).',
+              '⚖ <b>Aviso de ingeniería:</b> La masa transportada incrementa el consumo de cada paso hacia el módulo.'
+            );
+          } else if (accionPrevia === 'escanear_poi') {
+            mostrarNotif('escaneo', '🔬 GEOLOGÍA LUNAR NASA', '¡HALLAZGO CIENTÍFICO IDENTIFICADO!',
+              poiPrevio.nombre + ': ' + poiPrevio.hallazgo,
+              '✓ Telemetría registrada en el informe forense (+ ' + poiPrevio.ciencia + ' pts de ciencia).'
+            );
+          }
+        } else if (result && !result.ok) {
+          LunarAudio.alerta();
+          mostrarNotif('obstaculo', '⚠️ ACCIÓN NO POSIBLE', result.msg, null);
+        }
+
+        if (s.perforando) {
+          setTimeout(() => { s.perforando = false; render(); }, 350);
+        }
       }
     }
     if (a === 'next_mission') {
@@ -711,6 +855,16 @@ var LunarUI = (function () {
     const oldEtapa = s.etapa;
     const px = s.pos ? s.pos[0] * 20 + 10 : 0;
     const py = s.pos ? s.pos[1] * 20 + 10 : 0;
+    const m = Lunar.map(s);
+    const targetQ = s.pos ? [s.pos[0] + d[0], s.pos[1] + d[1]] : null;
+
+    if (targetQ && Lunar.esObstaculo && Lunar.esObstaculo(m, targetQ)) {
+      LunarAudio.alerta();
+      mostrarNotif('obstaculo', '⛔ ROCA LUNAR INTRANSITABLE', 'Formación de roca basáltica de 3 metros',
+        'No es posible atravesar este bloque de roca. Debes bordear el obstáculo para continuar.', null);
+      render();
+      return;
+    }
 
     if (Lunar.mover(s, ...d)) {
       LunarAudio.paso();

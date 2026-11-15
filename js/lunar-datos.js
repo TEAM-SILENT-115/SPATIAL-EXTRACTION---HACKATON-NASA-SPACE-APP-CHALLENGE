@@ -443,6 +443,11 @@ var LunarAudio = (function () {
       tono(520, 'square', 0.07, 0.05);
       setTimeout(function () { tono(520, 'square', 0.07, 0.05); }, 110);
     },
+    escanear: function () {
+      [880, 1174, 1760].forEach(function (f, i) {
+        setTimeout(function () { tono(f, 'sine', 0.08, 0.05); }, i * 60);
+      });
+    },
     exito: function () {
       [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) {
         setTimeout(function () { tono(f, 'sine', 0.16, 0.07); }, i * 90);
@@ -456,3 +461,28 @@ var LunarAudio = (function () {
     estaActivo: function () { return activo; }
   };
 })();
+
+/* Puntos de interés y obstáculos geológicos en mapas lunares */
+var PUNTOS_INTERES_LUNARES = {
+  Site01: {
+    obstaculos: [[12, 10], [13, 10], [20, 8], [21, 8], [26, 18], [27, 18]],
+    escaneos: [
+      { id: 'poi_01_a', pos: [15, 6], nombre: 'Cráter Secundario Menor', hallazgo: 'Esferas de vidrio volcánico piroclástico ricas en titanio.', ciencia: 15 },
+      { id: 'poi_01_b', pos: [28, 20], nombre: 'Afloramiento de Ilmenita', hallazgo: 'Concentración de óxidos de hierro y titanio aptos para producción de oxígeno.', ciencia: 20 }
+    ]
+  },
+  Site04: {
+    obstaculos: [[10, 8], [11, 8], [18, 14], [19, 14], [28, 22], [29, 22]],
+    escaneos: [
+      { id: 'poi_04_a', pos: [8, 14], nombre: 'Escarpe de Compresión', hallazgo: 'Falla tectónica reciente con regolito puro no expuesto a meteoritos.', ciencia: 20 },
+      { id: 'poi_04_b', pos: [22, 12], nombre: 'Trampa Térmica de Shackleton', hallazgo: 'Lectura infrarroja a 40 K con firma confirmada de hielo de agua atrapado.', ciencia: 25 }
+    ]
+  },
+  Site11: {
+    obstaculos: [[8, 10], [9, 10], [18, 18], [19, 18], [26, 12], [27, 12]],
+    escaneos: [
+      { id: 'poi_11_a', pos: [12, 8], nombre: 'Brecha de Impacto Anortosítica', hallazgo: 'Roca primordial de las tierras altas lunares generada durante el Gran Bombardeo.', ciencia: 25 },
+      { id: 'poi_11_b', pos: [25, 20], nombre: 'Depósito Volátil de Gerlache', hallazgo: 'Anomalía de neutrones con alta proporción de hidrógeno polar conservado.', ciencia: 30 }
+    ]
+  }
+};

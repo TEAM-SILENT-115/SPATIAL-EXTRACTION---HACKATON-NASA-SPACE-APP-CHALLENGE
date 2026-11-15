@@ -1320,9 +1320,9 @@ var UI = (function() {
 
 document.addEventListener('DOMContentLoaded', function() {
     var params = new URLSearchParams(window.location.search);
-    if (params.get('modo') === 'lunar' && typeof LunarUI !== 'undefined') {
-        LunarUI.iniciar();
-    } else {
+    if (params.get('modo') === 'clasico' || typeof LunarUI === 'undefined') {
         UI.iniciar();
+    } else {
+        LunarUI.iniciar();
     }
 });

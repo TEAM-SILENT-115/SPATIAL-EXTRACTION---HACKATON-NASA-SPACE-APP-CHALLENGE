@@ -5,1184 +5,1324 @@
    código (sprites originales, sin activos de terceros).
    ============================================================ */
 
-var UI = (function () {
+var UI = (function() {
 
-  var T = DATOS.textos;
-  var C = DATOS.costos;
+    var T = DATOS.textos;
+    var C = DATOS.costos;
 
-  var estado = Motor.nuevoEstado();
-  var mensaje = 'Bienvenido a la agencia. Diseña tu misión.';
-  var intro = true;
-  var modal = null; // null | 'calculo' | 'probar' | 'reservar'
-  var juego, marco;
-  var escala = 1;
+    var estado = Motor.nuevoEstado();
+    var mensaje = 'Bienvenido a la agencia. Diseña tu misión.';
+    var intro = true;
+    var modal = null; // null | 'calculo' | 'probar' | 'reservar'
+    var juego, marco;
+    var escala = 1;
 
-  // Estado del tutorial interactivo guiado por AIDA
-  var tutorial = {
-    activo: false,
-    paso: 0,
-    estadoGuardado: null // preserva partida en curso si se entra al tutorial
-  };
+    // Estado del tutorial interactivo guiado por AIDA
+    var tutorial = {
+        activo: false,
+        paso: 0,
+        estadoGuardado: null // preserva partida en curso si se entra al tutorial
+    };
 
-  // Glosario de términos técnicos (textos en datos.js). Cada término se
-  // presenta con una burbuja de una línea la primera vez que aparece en
-  // pantalla; después queda subrayado y se puede volver a abrir con clic.
-  var GLOSARIO = {
-    margen: T.tooltipMargen,
-    cargaUtil: T.tooltipCargaUtil,
-    autonomia: T.tooltipAutonomia,
-    reserva: T.tooltipReserva
-  };
-  var vistos = {};           // términos cuya burbuja de primera vez ya se cerró
-  var terminoAbierto = null; // término reabierto a mano con clic
-  var movimiento = null;
-  var ultimoInforme = null;
+    // Glosario de términos técnicos (textos en datos.js). Cada término se
+    // presenta con una burbuja de una línea la primera vez que aparece en
+    // pantalla; después queda subrayado y se puede volver a abrir con clic.
+    var GLOSARIO = {
+        margen: T.tooltipMargen,
+        cargaUtil: T.tooltipCargaUtil,
+        autonomia: T.tooltipAutonomia,
+        reserva: T.tooltipReserva
+    };
+    var vistos = {}; // términos cuya burbuja de primera vez ya se cerró
+    var terminoAbierto = null; // término reabierto a mano con clic
+    var movimiento = null;
+    var ultimoInforme = null;
 
-  function diagnostico() {
-    var p = Motor.probar(estado), t = p.llevas;
-    var objetivo = DATOS.objetivos[estado.objetivo];
-    var problemas = [];
-    if (!estado.cohete) problemas.push('Elige un lanzador para conocer tu límite de carga.');
-    if (estado.masa.usada > estado.masa.capacidad) problemas.push('Exceso de masa: reduce equipo o cambia de lanzador.');
-    if (estado.presupuesto.gastado > estado.presupuesto.total) problemas.push('Presupuesto excedido: prioriza el equipo que sirve a tu objetivo.');
-    if (estado.objetivo === 'crater_profunda' && !t.taladro) problemas.push('Sin taladro no hay muestra profunda, aunque sobre energía.');
-    if (t.capacidadMuestras < objetivo.espacioMinimo) problemas.push('La ciencia necesita espacio: equipa capacidad para ' + objetivo.espacioMinimo + ' muestras.');
-    if (!p.normal.alcanza) problemas.push('La autonomía no cubre el plan nominal: revisa energía y oxígeno.');
-    else if (!p.adverso.alcanza) problemas.push('El plan nominal cabe, pero el terreno rocoso agota tus reservas.');
-    return '<div class="ingenieria"><h3>CONTROL DE MISIÓN · ' + (problemas.length ? 'REVISA TU DISEÑO' : 'PLAN ROBUSTO') + '</h3>' +
-      (problemas.length ? '<ul>' + problemas.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') : '<p>Equipo, carga y autonomía cubren ambos escenarios previstos. Las acciones extra siguen costando recursos.</p>') +
-      '<p>Tu reto: entrega la muestra gastando lo mínimo. Cambia una elección y vuelve a probar.</p></div>';
-  }
+    function diagnostico() {
+        var p = Motor.probar(estado),
+            t = p.llevas;
+        var objetivo = DATOS.objetivos[estado.objetivo];
+        var problemas = [];
+        if (!estado.cohete) problemas.push('Elige un lanzador para conocer tu límite de carga.');
+        if (estado.masa.usada > estado.masa.capacidad) problemas.push('Exceso de masa: reduce equipo o cambia de lanzador.');
+        if (estado.presupuesto.gastado > estado.presupuesto.total) problemas.push('Presupuesto excedido: prioriza el equipo que sirve a tu objetivo.');
+        if (estado.objetivo === 'crater_profunda' && !t.taladro) problemas.push('Sin taladro no hay muestra profunda, aunque sobre energía.');
+        if (t.capacidadMuestras < objetivo.espacioMinimo) problemas.push('La ciencia necesita espacio: equipa capacidad para ' + objetivo.espacioMinimo + ' muestras.');
+        if (!p.normal.alcanza) problemas.push('La autonomía no cubre el plan nominal: revisa energía y oxígeno.');
+        else if (!p.adverso.alcanza) problemas.push('El plan nominal cabe, pero el terreno rocoso agota tus reservas.');
+        return '<div class="ingenieria"><h3>CONTROL DE MISIÓN · ' + (problemas.length ? 'REVISA TU DISEÑO' : 'PLAN ROBUSTO') + '</h3>' +
+            (problemas.length ? '<ul>' + problemas.map(function(s) { return '<li>' + esc(s) + '</li>'; }).join('') : '<p>Equipo, carga y autonomía cubren ambos escenarios previstos. Las acciones extra siguen costando recursos.</p>') +
+            '<p>Tu reto: entrega la muestra gastando lo mínimo. Cambia una elección y vuelve a probar.</p></div>';
+    }
 
-  var PASOS_TUTORIAL = [
-    {
-      id: 'cohete',
-      selector: '[data-a="cohete"][data-x="halcon"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> ¡Hola! Soy AIDA, tu asistente de vuelo. Tu primer paso como jefe de misión es elegir lanzador. El <em>Halcón ligero</em> es económico y define tu capacidad de masa. Pulsa <b>ELEGIR</b> en Halcón ligero.';
-      },
-      espera: function(a, x) { return a === 'cohete' && x === 'halcon'; }
-    },
-    {
-      id: 'objetivo',
-      selector: '[data-a="objetivo"][data-x="crater_profunda"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> Observa el panel 1 (DESARROLLAR MISIÓN). Elige el objetivo científico <em>1 PROFUNDA</em>. Fíjate en los requisitos que exige debajo: taladro y contenedor.';
-      },
-      espera: function(a, x) { return a === 'objetivo' && x === 'crater_profunda'; }
-    },
-    {
-      id: 'taladro',
-      selector: '[data-a="equipar"][data-x="taladro"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> Sin taladro no podemos perforar el cráter. Pulsa <b>EQUIPAR</b> en el <em>Taladro de núcleo</em>. Mira cómo sube la barra de masa (⚖).';
-      },
-      espera: function(a, x) { return a === 'equipar' && x === 'taladro'; }
-    },
-    {
-      id: 'o2',
-      selector: '[data-a="equipar"][data-x="o2chico"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> El astronauta necesita respirar en superficie. Equipa el <em>Tanque O₂ 100</em>.';
-      },
-      espera: function(a, x) { return a === 'equipar' && x === 'o2chico'; }
-    },
-    {
-      id: 'cont',
-      selector: '[data-a="equipar"][data-x="cont1"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> Necesitamos dónde guardar la muestra. Equipa el <em>Contenedor simple</em>.';
-      },
-      espera: function(a, x) { return a === 'equipar' && x === 'cont1'; }
-    },
-    {
-      id: 'bat100',
-      selector: '[data-a="equipar"][data-x="bat100"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> Equipa la <em>Batería 100 Wh</em> estándar. Observa el panel 3 (RECURSOS): fíjate en el <em>Margen</em> y la <em>Reserva por tramos</em>.';
-      },
-      espera: function(a, x) { return a === 'equipar' && x === 'bat100'; }
-    },
-    {
-      id: 'experimento_bateria',
-      selector: '[data-a="quitar"][data-x="bat100"], [data-a="equipar"][data-x="bat160"]',
-      texto: function() {
+    var PASOS_TUTORIAL = [{
+            id: 'cohete',
+            selector: '[data-a="cohete"][data-x="halcon"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> ¡Hola! Soy AIDA, tu asistente de vuelo. Tu primer paso como jefe de misión es elegir lanzador. El <em>Halcón ligero</em> es económico y define tu capacidad de masa. Pulsa <b>ELEGIR</b> en Halcón ligero.';
+            },
+            espera: function(a, x) { return a === 'cohete' && x === 'halcon'; }
+        },
+        {
+            id: 'objetivo',
+            selector: '[data-a="objetivo"][data-x="crater_profunda"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> Observa el panel 1 (DESARROLLAR MISIÓN). Elige el objetivo científico <em>1 PROFUNDA</em>. Fíjate en los requisitos que exige debajo: taladro y contenedor.';
+            },
+            espera: function(a, x) { return a === 'objetivo' && x === 'crater_profunda'; }
+        },
+        {
+            id: 'taladro',
+            selector: '[data-a="equipar"][data-x="taladro"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> Sin taladro no podemos perforar el cráter. Pulsa <b>EQUIPAR</b> en el <em>Taladro de núcleo</em>. Mira cómo sube la barra de masa (⚖).';
+            },
+            espera: function(a, x) { return a === 'equipar' && x === 'taladro'; }
+        },
+        {
+            id: 'o2',
+            selector: '[data-a="equipar"][data-x="o2chico"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> El astronauta necesita respirar en superficie. Equipa el <em>Tanque O₂ 100</em>.';
+            },
+            espera: function(a, x) { return a === 'equipar' && x === 'o2chico'; }
+        },
+        {
+            id: 'cont',
+            selector: '[data-a="equipar"][data-x="cont1"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> Necesitamos dónde guardar la muestra. Equipa el <em>Contenedor simple</em>.';
+            },
+            espera: function(a, x) { return a === 'equipar' && x === 'cont1'; }
+        },
+        {
+            id: 'bat100',
+            selector: '[data-a="equipar"][data-x="bat100"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> Equipa la <em>Batería 100 Wh</em> estándar. Observa el panel 3 (RECURSOS): fíjate en el <em>Margen</em> y la <em>Reserva por tramos</em>.';
+            },
+            espera: function(a, x) { return a === 'equipar' && x === 'bat100'; }
+        },
+        {
+            id: 'experimento_bateria',
+            selector: '[data-a="quitar"][data-x="bat100"], [data-a="equipar"][data-x="bat160"]',
+            texto: function() {
+                var t = Motor.totales(estado);
+                var r = Motor.recomendacion(estado);
+                var margen = t.energia - r.normal.energia.total;
+                if (estado.equipo.indexOf('bat160') !== -1) {
+                    return '<b>[AIDA]:</b> ¡Fíjate! Con 160 Wh tu margen subió a <em>+' + margen + ' Wh</em> y absorbe terreno rocoso, pero consumiste más masa (35⚖) y presupuesto. Vuelve a poner la <em>Batería 100 Wh</em> para nuestra prueba.';
+                } else if (estado.equipo.indexOf('bat100') === -1) {
+                    return '<b>[AIDA]:</b> Has quitado la batería. Ahora equipa la <em>Batería 160 Wh</em> para ver la diferencia.';
+                } else {
+                    return '<b>[AIDA]:</b> En ingeniería comparamos opciones. Pulsa <b>QUITAR</b> en la Batería 100 Wh y luego prueba la Batería 160 Wh para ver cómo varía el margen.';
+                }
+            },
+            espera: function(a, x) {
+                // Dejamos que explore cambiar entre bat100 y bat160, y cuando vuelva o tenga una lista coherente avanzamos
+                return (a === 'equipar' && x === 'bat160') || (a === 'equipar' && x === 'bat100' && estado.equipo.indexOf('bat100') !== -1);
+            }
+        },
+        {
+            id: 'combustible',
+            selector: '[data-a="equipar"][data-x="fuelextra"]',
+            texto: function() {
+                var t = Motor.totales(estado);
+                return '<b>[AIDA]:</b> Ahora equipa <em>Combustible extra</em> (▲). Te dará 30 unidades para maniobrar en vuelo si el escaneo detecta terreno peligroso. Llevas ' + t.energia + ' Wh.';
+            },
+            espera: function(a, x) { return a === 'equipar' && x === 'fuelextra'; }
+        },
+        {
+            id: 'probar_diseno',
+            selector: '[data-a="probar"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> Antes de despegar, pulsa <b>REVISAR DISEÑO</b> en el panel 3 para ver el diagnóstico de ingeniería y comparar los escenarios.';
+            },
+            espera: function(a, x) { return a === 'probar'; }
+        },
+        {
+            id: 'cerrar_modal',
+            selector: '[data-a="cerrarmodal"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> En la prueba de ingeniería ves la autonomía en escenario normal vs adverso. Pulsa <b>CERRAR</b> para volver al hangar.';
+            },
+            espera: function(a, x) { return a === 'cerrarmodal'; }
+        },
+        {
+            id: 'lanzar',
+            selector: '[data-a="lanzar"]',
+            texto: function() {
+                if (!estado.cohete) return '<b>[AIDA]:</b> Elige un lanzador para tu nave.';
+                var o = DATOS.objetivos[estado.objetivo];
+                var t = Motor.totales(estado);
+                if (estado.objetivo === 'crater_profunda' && !t.taladro) return '<b>[AIDA]:</b> ¡Alerta! Te falta equipar el <em>Taladro de núcleo</em> para tu objetivo.';
+                if (t.capacidadMuestras < o.espacioMinimo) return '<b>[AIDA]:</b> ¡Alerta! Te falta equipar un <em>Contenedor</em> con espacio para muestras.';
+                if (t.energia === 0) return '<b>[AIDA]:</b> ¡Alerta! Necesitas equipar una <em>Batería</em> antes de lanzar.';
+                if (t.oxigeno === 0) return '<b>[AIDA]:</b> ¡Alerta! Necesitas equipar un <em>Tanque de O₂</em> antes de lanzar.';
+                if (estado.masa.usada > estado.masa.capacidad) return '<b>[AIDA]:</b> Carga útil excedida. Reduce equipo para poder despegar.';
+                if (estado.presupuesto.gastado > estado.presupuesto.total) return '<b>[AIDA]:</b> Presupuesto excedido. Ajusta tu misión.';
+                return '<b>[AIDA]:</b> Todo verificado dentro de presupuesto y masa. Pulsa <b>LANZAR</b>. ¡Buen viaje!';
+            },
+            espera: function(a, x) { return a === 'lanzar' && estado.etapa === 'viaje'; }
+        },
+        {
+            id: 'escanear_viaje',
+            selector: '[data-a="escanearviaje"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> ETAPA 2 (EN VUELO). Pulsa <b>ESCANEAR</b> para analizar las condiciones de la zona de descenso antes de entrar en la atmósfera.';
+            },
+            espera: function(a, x) { return a === 'escanearviaje'; }
+        },
+        {
+            id: 'decision_viaje',
+            selector: '[data-a="mantener"], [data-a="corregir"]',
+            texto: function() {
+                var p = Motor.proyeccionesViaje(estado);
+                if (p.rocoso && p.corregir.posible) {
+                    return '<b>[AIDA]:</b> El terreno salió ROCOSO. Como trajimos combustible extra, puedes pulsar <b>CORREGIR</b> para desviarte a una zona más favorable, o <b>MANTENER</b> si asumes el recargo.';
+                }
+                return '<b>[AIDA]:</b> Telemetría lista. Elige <b>MANTENER</b> la trayectoria hacia la superficie.';
+            },
+            espera: function(a, x) { return a === 'mantener' || a === 'corregir'; }
+        },
+        {
+            id: 'descender',
+            selector: '[data-a="descender"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> Órbita fijada. Pulsa <b>DESCENDER</b> para aterrizar en la superficie.';
+            },
+            espera: function(a, x) { return a === 'descender'; }
+        },
+        {
+            id: 'avanzar_superficie',
+            selector: '[data-a="avanzar"]',
+            texto: function() {
+                var pasosRestantes = (estado.sitios ? estado.sitios.length - 1 : 6) - estado.posicion;
+                return '<b>[AIDA]:</b> ETAPA 3 (SUPERFICIE). Te faltan ' + pasosRestantes + ' paso(s) para el cráter. Pulsa <b>AVANZAR ▶</b> (o flecha →) hasta colocarte <em>justo encima</em> del cráter.';
+            },
+            espera: function(a, x) {
+                var s = Motor.sitioActual(estado);
+                return s && s.tipo === 'crater';
+            }
+        },
+        {
+            id: 'perforar_crater',
+            selector: '[data-a="perforar"]',
+            texto: function() {
+                var reg = Motor.costoRegreso(estado);
+                return '<b>[AIDA]:</b> ¡Estás sobre el cráter! Observa arriba el chip "Regreso: ' + reg.energia + ' Wh". Pulsa <b>PERFORAR</b> para extraer la muestra profunda.';
+            },
+            espera: function(a, x) { return a === 'perforar'; }
+        },
+        {
+            id: 'regresar_modulo',
+            selector: '[data-a="regresar"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> ¡Muestra a bordo! Nunca te confíes: pulsa <b>REGRESAR</b> (o flecha ↓) para volver al módulo y asegurar el éxito de la misión.';
+            },
+            espera: function(a, x) { return a === 'regresar'; }
+        },
+        {
+            id: 'fin_tutorial',
+            selector: '[data-a="repetir"], [data-a="nueva"], [data-a="salir_tutorial"]',
+            texto: function() {
+                return '<b>[AIDA]:</b> ¡MISIÓN CUMPLIDA! Has completado el tutorial. En el informe ves el plan previsto vs el consumo real. ¡Ya tienes los fundamentos de ingeniería para diseñar tus propias misiones!';
+            },
+            espera: function(a, x) { return true; }
+        }
+    ];
+
+    function bannerTutorialHTML() {
+        if (!tutorial.activo) return '';
+        var pasoActual = PASOS_TUTORIAL[tutorial.paso];
+        var textoPaso = pasoActual ? pasoActual.texto() : '';
+        return '<div class="banner-tutorial">' +
+            '<div class="aida-avatar">📡 AIDA (CONTROL DE MISIÓN)</div>' +
+            '<div class="aida-texto">' + textoPaso + '</div>' +
+            '<div class="fila-botones">' +
+            boton('salir_tutorial', 'SALIR DEL TUTORIAL', { clase: 'mini peligro' }) +
+            '</div></div>';
+    }
+
+    function resaltarControlTutorial() {
+        if (!tutorial.activo) return;
+        var ant = juego.querySelectorAll('.control-resaltado');
+        for (var i = 0; i < ant.length; i++) ant[i].classList.remove('control-resaltado');
+        var pasoActual = PASOS_TUTORIAL[tutorial.paso];
+        if (!pasoActual || !pasoActual.selector) return;
+        var el = juego.querySelector(pasoActual.selector);
+        if (el) el.classList.add('control-resaltado');
+    }
+
+    /* ---------------- paleta y sprites ---------------- */
+
+    var PAL = {
+        cielo: '#0b1026',
+        cieloBanda: '#121a3e',
+        estrella: '#dce9f8',
+        nieve: '#8fa3cc',
+        nieveClaro: '#cfe0f4',
+        nieveMedio: '#a8b8d8',
+        contorno: '#5a6fa0',
+        pozo: '#232c4e',
+        F: '#f2f5fb',
+        V: '#2e3a5c',
+        A: '#e4a33c', // astronauta
+        B: '#b8893f',
+        D: '#e8d9a8', // módulo
+        W: '#e8f1fb',
+        L: '#9fb6dd',
+        Tt: '#5a6fa0', // cristal
+        R: '#e05c5c',
+        G: '#8fa3cc',
+        g: '#46557e',
+        l: '#8fa3cc',
+        N: '#d8e0ee',
+        f: '#f2b544' // nave, llama
+    };
+
+    var SPR_ASTRO = [
+        '..FFF..',
+        '.FVVVF.',
+        '.FVVVF.',
+        '..FFF..',
+        '.FFFFF.',
+        'FAFFFAF',
+        'F.FFF.F',
+        '..FFF..',
+        '..F.F..',
+        '..F.F..',
+        '.FF.FF.'
+    ];
+
+    var SPR_MODULO = [
+        '....BBBBBB....',
+        '..BBDDDDDDBB..',
+        '.BDDDVVVVDDDB.',
+        '.BDDDVVVVDDDB.',
+        '.BBBBBBBBBBBB.',
+        '..B..BBBB..B..',
+        '..B..B..B..B..',
+        '.BB..B..B..BB.',
+        'B..B.B..B.B..B'
+    ];
+
+    var SPR_CRISTAL = [
+        '...W...',
+        '..WLW..',
+        '..WLW..',
+        '.WLLLW.',
+        '.WLLLW.',
+        'WLLLLLW',
+        'WLLLLLW',
+        '...T...',
+        '...T...'
+    ];
+
+    var SPR_MUESTRA = [
+        'RRRR..',
+        'RRRRR.',
+        'RRRR..',
+        'R.....',
+        'R.....',
+        'R.....',
+        'R.....',
+        'GG.GG.'
+    ];
+
+    var SPR_ROCA = [
+        '..ll..',
+        '.lggl.',
+        'lggggl',
+        'gggggg'
+    ];
+
+    var SPR_COHETE = [
+        '...RR...',
+        '..RNNR..',
+        '..NNNN..',
+        '..NVVN..',
+        '..NVVN..',
+        '..NNNN..',
+        '..NNNN..',
+        '..NNNN..',
+        '..NNNN..',
+        '..NNNN..',
+        '.RNNNNR.',
+        'RRNNNNRR',
+        'RR.NN.RR'
+    ];
+
+    var SPR_LLAMA = [
+        '..ff..',
+        '.ffff.',
+        '..ff..',
+        '...f..'
+    ];
+
+    function pint(ctx, filas, x, y, mapa) {
+        for (var r = 0; r < filas.length; r++) {
+            for (var c = 0; c < filas[r].length; c++) {
+                var ch = filas[r][c];
+                if (ch === '.') continue;
+                var color = (mapa && mapa[ch]) || PAL[ch] || PAL[ch === 'T' ? 'Tt' : ch];
+                if (ch === 'T') color = PAL.Tt;
+                if (ch === 'g') color = PAL.g;
+                if (ch === 'l') color = PAL.l;
+                if (!color) continue;
+                ctx.fillStyle = color;
+                ctx.fillRect(x + c, y + r, 1, 1);
+            }
+        }
+    }
+
+    function estrellas(ctx, ancho, alto, n) {
+        ctx.fillStyle = PAL.estrella;
+        for (var i = 0; i < n; i++) {
+            var x = (i * 53 + 11) % ancho;
+            var y = (i * 37 + 5) % alto;
+            ctx.fillRect(x, y, 1, 1);
+        }
+    }
+
+    /* ---------------- escenas ---------------- */
+
+    function dibujarSuperficie() {
+        var cv = document.getElementById('cv-sup');
+        if (!cv) return;
+        var ctx = cv.getContext('2d');
+        var Wd = cv.width,
+            Hd = cv.height,
+            SUELO = 64;
+
+        ctx.fillStyle = PAL.cielo;
+        ctx.fillRect(0, 0, Wd, SUELO);
+        ctx.fillStyle = PAL.cieloBanda;
+        ctx.fillRect(0, SUELO - 18, Wd, 18);
+        estrellas(ctx, Wd, SUELO - 20, 42);
+
+        ctx.fillStyle = PAL.nieve;
+        ctx.fillRect(0, SUELO, Wd, Hd - SUELO);
+        ctx.fillStyle = PAL.nieveClaro;
+        ctx.fillRect(0, SUELO, Wd, 2);
+        ctx.fillStyle = PAL.nieveMedio;
+        for (var i = 0; i < 60; i++) {
+            ctx.fillRect((i * 41 + 7) % Wd, SUELO + 6 + ((i * 17) % (Hd - SUELO - 10)), 2, 1);
+        }
+
+        // cristales decorativos al fondo
+        [14, 150, 305].forEach(function(x) { pint(ctx, SPR_CRISTAL, x, SUELO - 9); });
+
+        var sitios = estado.sitios || [];
+        var n = sitios.length - 1;
+        if (n < 1) return;
+        var x0 = 26,
+            x1 = 290;
+
+        function xDe(p) { return Math.round(x0 + (x1 - x0) * p / n); }
+
+        for (var p = 0; p <= n; p++) {
+            var s = sitios[p];
+            var x = xDe(p);
+            ctx.fillStyle = PAL.contorno;
+            ctx.fillRect(x, SUELO + 3, 2, 2); // marca del paso
+            if (s.tipo === 'crater') {
+                ctx.fillStyle = PAL.pozo;
+                ctx.fillRect(x - 10, SUELO + 2, 22, 7);
+                ctx.fillRect(x - 7, SUELO + 9, 16, 3);
+                ctx.fillStyle = PAL.nieveClaro;
+                ctx.fillRect(x - 12, SUELO, 4, 2);
+                ctx.fillRect(x + 10, SUELO, 4, 2);
+                if (s.vetaRevelada && !s.vetaExtraida) {
+                    ctx.fillStyle = PAL.A;
+                    ctx.fillRect(x, SUELO + 6, 2, 2);
+                }
+            }
+            if (s.tipo === 'muestra' && !s.recogida) pint(ctx, SPR_MUESTRA, x - 2, SUELO - 8);
+            if (s.rocoso && s.tipo !== 'modulo') pint(ctx, SPR_ROCA, x - 3, SUELO - 4);
+            if (s.tipo === 'modulo') pint(ctx, SPR_MODULO, x - 7, SUELO - 9);
+        }
+
+        var px = xDe(estado.posicion),
+            salto = 0;
+        if (movimiento) {
+            var t = movimiento.t;
+            px = xDe(movimiento.desde) + (xDe(movimiento.hasta) - xDe(movimiento.desde)) * (t * t * (3 - 2 * t));
+            salto = Math.sin(t * Math.PI * 2) * 1.5;
+        }
+        pint(ctx, SPR_ASTRO, Math.round(px) - 3, Math.round(SUELO - 15 - salto));
+    }
+
+    function dibujarViaje() {
+        var cv = document.getElementById('cv-viaje');
+        if (!cv) return;
+        var ctx = cv.getContext('2d');
+        var Wd = cv.width,
+            Hd = cv.height;
+
+        ctx.fillStyle = PAL.cielo;
+        ctx.fillRect(0, 0, Wd, Hd);
+        estrellas(ctx, Wd, Hd, 60);
+
+        // planeta helado
+        var cxp = 262,
+            cyp = 48,
+            rp = 30;
+        ctx.fillStyle = PAL.nieve;
+        for (var y = -rp; y <= rp; y++) {
+            var half = Math.floor(Math.sqrt(rp * rp - y * y));
+            ctx.fillRect(cxp - half, cyp + y, half * 2, 1);
+        }
+        ctx.fillStyle = PAL.nieveClaro;
+        ctx.fillRect(cxp - 18, cyp - 22, 14, 3);
+        ctx.fillRect(cxp - 24, cyp - 14, 8, 2);
+        ctx.fillStyle = PAL.pozo;
+        ctx.fillRect(cxp + 6, cyp + 2, 8, 4);
+        ctx.fillRect(cxp - 8, cyp + 12, 6, 3);
+
+        // trayectorias punteadas
+        function punteada(y2, color) {
+            ctx.fillStyle = color;
+            for (var t = 0; t <= 20; t++) {
+                if (t % 2) continue;
+                var x = 70 + (cxp - 34 - 70) * t / 20;
+                var yy = 50 + (y2 - 50) * t / 20;
+                ctx.fillRect(Math.round(x), Math.round(yy), 2, 1);
+            }
+        }
+        if (estado.viaje.rocoso && !estado.viaje.corrigio) {
+            [
+                [-14, -10],
+                [-4, -17],
+                [-20, 0]
+            ].forEach(function(d) { pint(ctx, SPR_ROCA, cxp + d[0], cyp + d[1]); });
+        }
+        if (estado.viaje.escaneado && !estado.viaje.decidido) {
+            punteada(cyp - 16, PAL.estrella); // mantener (zona actual)
+            punteada(cyp + 16, PAL.A); // corregir (otra zona)
+        } else {
+            punteada(cyp - 16 + (estado.viaje.corrigio ? 32 : 0), PAL.estrella);
+        }
+
+        pint(ctx, SPR_COHETE, 58, 40);
+        pint(ctx, SPR_LLAMA, 48, 44);
+    }
+
+    function dibujarMapa() {
+        var cv = document.getElementById('cv-mapa');
+        if (!cv) return;
+        var ctx = cv.getContext('2d');
+        var Wd = cv.width,
+            Hd = cv.height;
+
+        ctx.fillStyle = PAL.cielo;
+        ctx.fillRect(0, 0, Wd, Hd);
+        estrellas(ctx, Wd, 12, 14);
+
+        // terreno visto desde arriba
+        ctx.fillStyle = PAL.nieve;
+        ctx.fillRect(4, 14, Wd - 8, Hd - 18);
+        ctx.fillStyle = PAL.nieveClaro;
+        ctx.fillRect(4, 14, Wd - 8, 2);
+        ctx.fillStyle = PAL.nieveMedio;
+        for (var i = 0; i < 26; i++) {
+            ctx.fillRect(6 + (i * 29 + 3) % (Wd - 14), 18 + (i * 13) % (Hd - 26), 2, 1);
+        }
+
+        // cráter (este del mapa)
+        var cx = 94,
+            cy = 40;
+        ctx.fillStyle = PAL.pozo;
+        ctx.fillRect(cx - 9, cy - 5, 18, 10);
+        ctx.fillRect(cx - 6, cy - 8, 12, 16);
+        ctx.fillStyle = PAL.nieveClaro;
+        ctx.fillRect(cx - 11, cy - 7, 3, 2);
+        ctx.fillRect(cx + 8, cy + 5, 3, 2);
+
+        // muestras superficiales de la llanura
+        [
+            [40, 34],
+            [58, 46]
+        ].forEach(function(par) {
+            pint(ctx, SPR_MUESTRA, par[0], par[1] - 7);
+        });
+
+        var marcadores = { llanura: [22, 44], crater: [74, 52] };
+        var zona = estado.zonaAterrizaje;
+        var origen = marcadores[zona];
+
+        // ruta punteada hacia el objetivo
+        var destino = estado.objetivo === 'crater_profunda' ? [cx, cy] : [50, 40];
+        ctx.fillStyle = PAL.A;
+        for (var t = 0; t <= 14; t++) {
+            if (t % 2) continue;
+            ctx.fillRect(
+                Math.round(origen[0] + 4 + (destino[0] - origen[0] - 4) * t / 14),
+                Math.round(origen[1] - 2 + (destino[1] - origen[1]) * t / 14), 1, 1);
+        }
+
+        // marcadores de zona (el elegido lleva el cohete)
+        Object.keys(marcadores).forEach(function(z) {
+            var par = marcadores[z];
+            if (z === zona) {
+                pint(ctx, SPR_COHETE, par[0] - 4, par[1] - 13);
+            } else {
+                ctx.fillStyle = PAL.contorno;
+                ctx.fillRect(par[0] - 1, par[1] - 4, 2, 4);
+                ctx.fillRect(par[0] - 3, par[1] - 1, 6, 2);
+            }
+        });
+    }
+
+    /* ---------------- componentes HTML ---------------- */
+
+    function esc(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function barra(icono, etiqueta, valor, max, clase) {
+        var pct = max > 0 ? Math.max(0, Math.min(100, valor / max * 100)) : 0;
+        return '<div class="barra ' + (clase || '') + '">' +
+            '<span class="b-icono">' + icono + '</span>' +
+            '<div class="b-pista"><div class="b-relleno" style="width:' + pct + '%"></div></div>' +
+            '<span class="b-num">' + etiqueta + ' ' + valor + '/' + max + '</span></div>';
+    }
+
+    function boton(accion, texto, opciones) {
+        opciones = opciones || {};
+        return '<button class="btn ' + (opciones.clase || '') + '" data-a="' + accion + '"' +
+            (opciones.x ? ' data-x="' + opciones.x + '"' : '') +
+            (opciones.off ? ' disabled' : '') +
+            (opciones.title ? ' title="' + esc(opciones.title) + '"' : '') +
+            '>[ ' + texto + ' ]</button>';
+    }
+
+    // "6 pasos × 5 Wh + 3 rocosos × 3 Wh + 5 Wh de subida": la fórmula de un
+    // tramo tal como la calcula el motor.
+    function formulaTramo(c) {
+        var partes = [c.pasos + ' paso(s) × ' + C.pasoEnergia + ' Wh'];
+        if (c.recargo) partes.push(c.pasosRocosos + ' rocoso(s) × ' + c.recargoUnitario + ' Wh');
+        if (c.salida) partes.push(c.salida + ' Wh de subida');
+        return partes.join(' + ');
+    }
+
+    function pct(p) { return Math.round(p * 100); }
+
+    // Dado del terreno. Para grabar el video o hacer la demo con un resultado
+    // fijo, abre index.html?terreno=rocoso o index.html?terreno=despejado.
+    function azarTerreno() {
+        var q = /[?&]terreno=(rocoso|despejado)/.exec(window.location.search || '');
+        if (q) return q[1] === 'rocoso' ? 0 : 0.999;
+        return Math.random();
+    }
+
+    // Desglose de una opción del viaje con lo que llevas a bordo.
+    function desgloseOpcion(d) {
+        var e = estado.recursos.energiaWh;
+        var sobra = e - d.energia.total;
+        return '<p class="dato">Ida ' + d.energia.ida + ' (' + formulaTramo(d.componentes.ida) + ') · ' +
+            d.tareaNombre.toLowerCase() + ' ' + d.energia.tarea + ' · regreso ' + d.energia.regreso + ' (' + formulaTramo(d.componentes.regreso) + ')</p>' +
+            '<p class="dato">Llevas ' + e + ' Wh → ' + (sobra >= 0 ? '<b class="ok">sobran ' + sobra + ' ✓</b>' : '<b class="alerta">faltan ' + (-sobra) + ' ✖</b>') +
+            ' · O₂ ' + d.oxigeno.total + ' de ' + estado.recursos.oxigeno + '</p>';
+    }
+
+    function termino(clave, etiqueta) {
+        return '<span class="termino" data-a="termino" data-x="' + clave + '" title="' + esc(GLOSARIO[clave]) + '">' + etiqueta + '</span>';
+    }
+
+    // Coloca la burbuja del glosario: la del término reabierto con clic o, si
+    // no hay, la del primer término en pantalla que aún no se presentó.
+    function colocarGlosario() {
+        var terminos = juego.querySelectorAll('.termino');
+        var objetivo = null;
+        for (var i = 0; i < terminos.length; i++) {
+            var clave = terminos[i].getAttribute('data-x');
+            if (terminoAbierto ? clave === terminoAbierto : !vistos[clave]) { objetivo = terminos[i]; break; }
+        }
+        if (!objetivo) return;
+        var k = objetivo.getAttribute('data-x');
+        var burbuja = document.createElement('div');
+        burbuja.className = 'burbuja';
+        burbuja.setAttribute('role', 'note');
+        burbuja.innerHTML = '<p>ⓘ ' + esc(GLOSARIO[k]) + '</p>' + boton('entendido', T.btnEntendido, { x: k, clase: 'mini' });
+        juego.appendChild(burbuja);
+        // Anclaje: si el término está en la mitad izquierda, la burbuja cuelga
+        // hacia la izquierda (tapa menos botones); si no, hacia la derecha.
+        var rj = juego.getBoundingClientRect();
+        var rt = objetivo.getBoundingClientRect();
+        var ANCHO = 330;
+        var izq = (rt.left - rj.left) / escala;
+        var der = (rt.right - rj.left) / escala;
+        var haciaIzquierda = (izq + der) / 2 < 640;
+        var left = haciaIzquierda ? der - ANCHO : izq;
+        var top = (rt.bottom - rj.top) / escala + 8;
+        left = Math.max(8, Math.min(left, 1280 - ANCHO - 8));
+        if (top > 720 - 110) top = (rt.top - rj.top) / escala - 100;
+        if (haciaIzquierda) burbuja.classList.add('derecha');
+        burbuja.style.left = left + 'px';
+        burbuja.style.top = top + 'px';
+    }
+
+    // Tres barras que se quitan entre sí. Con controles, cada [ + ] toma 5 Wh
+    // de la exploración (o del regreso, si el tramo es la exploración) y cada
+    // [ − ] se los devuelve. Es una convención de la interfaz: el motor solo
+    // sabe mover energía de un tramo a otro.
+    function parReserva(tramo) { return tramo === 'exploracion' ? 'regreso' : 'exploracion'; }
+
+    function htmlReserva(ev, total, controles) {
+        var html = '<div class="reserva" title="' + esc(T.tooltipReserva) + '">';
+        ['ida', 'exploracion', 'regreso'].forEach(function(t) {
+            var f = ev[t];
+            var clase = f.faltaNormal > 0 ? 'rojo' : (f.faltaAdverso > 0 ? 'ambar' : 'ok');
+            var icono = f.faltaNormal > 0 ? '✖' : (f.faltaAdverso > 0 ? '⚠' : '✓');
+            var pct = total > 0 ? Math.round(f.reservado / total * 100) : 0;
+            html += '<div class="reserva-fila ' + clase + '">' +
+                '<span class="etq">' + T.tramos[t] + '</span>' +
+                (controles ? boton('reserva', '−', { x: t + ':-', clase: 'mini cuadrado', off: f.reservado < C.pasoReserva, title: 'Devuelve ' + C.pasoReserva + ' Wh a ' + T.tramos[parReserva(t)].toLowerCase() }) : '') +
+                '<div class="b-pista"><div class="b-relleno" style="width:' + pct + '%"></div></div>' +
+                (controles ? boton('reserva', '+', { x: t + ':+', clase: 'mini cuadrado', off: ev[parReserva(t)].reservado < C.pasoReserva, title: 'Toma ' + C.pasoReserva + ' Wh de ' + T.tramos[parReserva(t)].toLowerCase() }) : '') +
+                '<span class="num"><b>' + f.reservado + '</b> Wh · estima ' + f.normal + ' / rocoso ' + f.adverso + ' ' + icono + '</span></div>';
+        });
+        return html + '</div>';
+    }
+
+    /* ---------------- pantallas ---------------- */
+
+    function htmlIntro() {
+        return '<div class="centro"><div class="panel intro">' +
+            '<h1 class="titulo-grande">' + T.titulo + '</h1>' +
+            '<p class="subtitulo">NASA Space Apps Challenge · Juego de diseño de misiones</p>' +
+            '<p class="pregunta">«' + T.pregunta + '»</p>' +
+            '<p class="nota">' + T.ficcion + '</p>' +
+            '<div class="fila-botones">' +
+            boton('comenzar', 'JUGAR', { clase: 'grande' }) +
+            boton('tutorial', 'CÓMO JUGAR (TUTORIAL)', { clase: 'grande' }) +
+            '</div>' +
+            '</div></div>';
+    }
+
+    function htmlHangar() {
         var t = Motor.totales(estado);
         var r = Motor.recomendacion(estado);
-        var margen = t.energia - r.normal.energia.total;
-        if (estado.equipo.indexOf('bat160') !== -1) {
-          return '<b>[AIDA]:</b> ¡Fíjate! Con 160 Wh tu margen subió a <em>+' + margen + ' Wh</em> y absorbe terreno rocoso, pero consumiste más masa (35⚖) y presupuesto. Vuelve a poner la <em>Batería 100 Wh</em> para nuestra prueba.';
-        } else if (estado.equipo.indexOf('bat100') === -1) {
-          return '<b>[AIDA]:</b> Has quitado la batería. Ahora equipa la <em>Batería 160 Wh</em> para ver la diferencia.';
-        } else {
-          return '<b>[AIDA]:</b> En ingeniería comparamos opciones. Pulsa <b>QUITAR</b> en la Batería 100 Wh y luego prueba la Batería 160 Wh para ver cómo varía el margen.';
-        }
-      },
-      espera: function(a, x) {
-        // Dejamos que explore cambiar entre bat100 y bat160, y cuando vuelva o tenga una lista coherente avanzamos
-        return (a === 'equipar' && x === 'bat160') || (a === 'equipar' && x === 'bat100' && estado.equipo.indexOf('bat100') !== -1);
-      }
-    },
-    {
-      id: 'combustible',
-      selector: '[data-a="equipar"][data-x="fuelextra"]',
-      texto: function() {
-        var t = Motor.totales(estado);
-        return '<b>[AIDA]:</b> Ahora equipa <em>Combustible extra</em> (▲). Te dará 30 unidades para maniobrar en vuelo si el escaneo detecta terreno peligroso. Llevas ' + t.energia + ' Wh.';
-      },
-      espera: function(a, x) { return a === 'equipar' && x === 'fuelextra'; }
-    },
-    {
-      id: 'probar_diseno',
-      selector: '[data-a="probar"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> Antes de despegar, pulsa <b>REVISAR DISEÑO</b> en el panel 3 para ver el diagnóstico de ingeniería y comparar los escenarios.';
-      },
-      espera: function(a, x) { return a === 'probar'; }
-    },
-    {
-      id: 'cerrar_modal',
-      selector: '[data-a="cerrarmodal"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> En la prueba de ingeniería ves la autonomía en escenario normal vs adverso. Pulsa <b>CERRAR</b> para volver al hangar.';
-      },
-      espera: function(a, x) { return a === 'cerrarmodal'; }
-    },
-    {
-      id: 'lanzar',
-      selector: '[data-a="lanzar"]',
-      texto: function() {
-        if (!estado.cohete) return '<b>[AIDA]:</b> Elige un lanzador para tu nave.';
+        var m = DATOS.mapa[estado.zonaAterrizaje];
         var o = DATOS.objetivos[estado.objetivo];
-        var t = Motor.totales(estado);
-        if (estado.objetivo === 'crater_profunda' && !t.taladro) return '<b>[AIDA]:</b> ¡Alerta! Te falta equipar el <em>Taladro de núcleo</em> para tu objetivo.';
-        if (t.capacidadMuestras < o.espacioMinimo) return '<b>[AIDA]:</b> ¡Alerta! Te falta equipar un <em>Contenedor</em> con espacio para muestras.';
-        if (t.energia === 0) return '<b>[AIDA]:</b> ¡Alerta! Necesitas equipar una <em>Batería</em> antes de lanzar.';
-        if (t.oxigeno === 0) return '<b>[AIDA]:</b> ¡Alerta! Necesitas equipar un <em>Tanque de O₂</em> antes de lanzar.';
-        if (estado.masa.usada > estado.masa.capacidad) return '<b>[AIDA]:</b> Carga útil excedida. Reduce equipo para poder despegar.';
-        if (estado.presupuesto.gastado > estado.presupuesto.total) return '<b>[AIDA]:</b> Presupuesto excedido. Ajusta tu misión.';
-        return '<b>[AIDA]:</b> Todo verificado dentro de presupuesto y masa. Pulsa <b>LANZAR</b>. ¡Buen viaje!';
-      },
-      espera: function(a, x) { return a === 'lanzar' && estado.etapa === 'viaje'; }
-    },
-    {
-      id: 'escanear_viaje',
-      selector: '[data-a="escanearviaje"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> ETAPA 2 (EN VUELO). Pulsa <b>ESCANEAR</b> para analizar las condiciones de la zona de descenso antes de entrar en la atmósfera.';
-      },
-      espera: function(a, x) { return a === 'escanearviaje'; }
-    },
-    {
-      id: 'decision_viaje',
-      selector: '[data-a="mantener"], [data-a="corregir"]',
-      texto: function() {
-        var p = Motor.proyeccionesViaje(estado);
-        if (p.rocoso && p.corregir.posible) {
-          return '<b>[AIDA]:</b> El terreno salió ROCOSO. Como trajimos combustible extra, puedes pulsar <b>CORREGIR</b> para desviarte a una zona más favorable, o <b>MANTENER</b> si asumes el recargo.';
-        }
-        return '<b>[AIDA]:</b> Telemetría lista. Elige <b>MANTENER</b> la trayectoria hacia la superficie.';
-      },
-      espera: function(a, x) { return a === 'mantener' || a === 'corregir'; }
-    },
-    {
-      id: 'descender',
-      selector: '[data-a="descender"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> Órbita fijada. Pulsa <b>DESCENDER</b> para aterrizar en la superficie.';
-      },
-      espera: function(a, x) { return a === 'descender'; }
-    },
-    {
-      id: 'avanzar_superficie',
-      selector: '[data-a="avanzar"]',
-      texto: function() {
-        var pasosRestantes = (estado.sitios ? estado.sitios.length - 1 : 6) - estado.posicion;
-        return '<b>[AIDA]:</b> ETAPA 3 (SUPERFICIE). Te faltan ' + pasosRestantes + ' paso(s) para el cráter. Pulsa <b>AVANZAR ▶</b> (o flecha →) hasta colocarte <em>justo encima</em> del cráter.';
-      },
-      espera: function(a, x) {
-        var s = Motor.sitioActual(estado);
-        return s && s.tipo === 'crater';
-      }
-    },
-    {
-      id: 'perforar_crater',
-      selector: '[data-a="perforar"]',
-      texto: function() {
-        var reg = Motor.costoRegreso(estado);
-        return '<b>[AIDA]:</b> ¡Estás sobre el cráter! Observa arriba el chip "Regreso: ' + reg.energia + ' Wh". Pulsa <b>PERFORAR</b> para extraer la muestra profunda.';
-      },
-      espera: function(a, x) { return a === 'perforar'; }
-    },
-    {
-      id: 'regresar_modulo',
-      selector: '[data-a="regresar"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> ¡Muestra a bordo! Nunca te confíes: pulsa <b>REGRESAR</b> (o flecha ↓) para volver al módulo y asegurar el éxito de la misión.';
-      },
-      espera: function(a, x) { return a === 'regresar'; }
-    },
-    {
-      id: 'fin_tutorial',
-      selector: '[data-a="repetir"], [data-a="nueva"], [data-a="salir_tutorial"]',
-      texto: function() {
-        return '<b>[AIDA]:</b> ¡MISIÓN CUMPLIDA! Has completado el tutorial. En el informe ves el plan previsto vs el consumo real. ¡Ya tienes los fundamentos de ingeniería para diseñar tus propias misiones!';
-      },
-      espera: function(a, x) { return true; }
-    }
-  ];
+        var pasos = Motor.pasoObjetivo(estado.zonaAterrizaje, estado.objetivo);
+        var ev = Motor.evaluarReserva(estado);
 
-  function bannerTutorialHTML() {
-    if (!tutorial.activo) return '';
-    var pasoActual = PASOS_TUTORIAL[tutorial.paso];
-    var textoPaso = pasoActual ? pasoActual.texto() : '';
-    return '<div class="banner-tutorial">' +
-      '<div class="aida-avatar">📡 AIDA (CONTROL DE MISIÓN)</div>' +
-      '<div class="aida-texto">' + textoPaso + '</div>' +
-      '<div class="fila-botones">' +
-      boton('salir_tutorial', 'SALIR DEL TUTORIAL', { clase: 'mini peligro' }) +
-      '</div></div>';
-  }
+        var html = bannerTutorialHTML();
+        html += '<header class="cabecera">' +
+            barra('🪙', 'Presupuesto', estado.presupuesto.gastado, estado.presupuesto.total,
+                estado.presupuesto.gastado > estado.presupuesto.total ? 'rojo' : '') +
+            barra('⚖', termino('cargaUtil', 'Carga útil'), estado.masa.usada, estado.masa.capacidad || 0,
+                estado.masa.usada > estado.masa.capacidad ? 'rojo' : '') +
+            '<div class="chips"><span class="chip">⚡ ' + t.energia + ' Wh</span>' +
+            '<span class="chip">◍ ' + t.oxigeno + ' O₂</span>' +
+            '<span class="chip">▲ ' + t.combustible + ' comb.</span>' +
+            '<span class="chip">▣ ' + t.capacidadMuestras + ' muestras</span>' +
+            (!tutorial.activo && !intro ? boton('tutorial', '¿CÓMO JUGAR?', { clase: 'mini', title: 'Abrir tutorial guiado' }) : '') +
+            '</div>' +
+            '</header>';
 
-  function resaltarControlTutorial() {
-    if (!tutorial.activo) return;
-    var ant = juego.querySelectorAll('.control-resaltado');
-    for (var i = 0; i < ant.length; i++) ant[i].classList.remove('control-resaltado');
-    var pasoActual = PASOS_TUTORIAL[tutorial.paso];
-    if (!pasoActual || !pasoActual.selector) return;
-    var el = juego.querySelector(pasoActual.selector);
-    if (el) el.classList.add('control-resaltado');
-  }
+        html += '<main class="hangar">';
 
-  /* ---------------- paleta y sprites ---------------- */
+        // --- panel objetivo y mapa ---
+        html += '<section class="panel"><h2>1 · DESARROLLAR MISIÓN</h2>' +
+            '<p class="nota">Eres responsable de ingeniería: convierte un objetivo científico en una misión que pueda volver.</p>' +
+            '<canvas id="cv-mapa" width="120" height="70"></canvas>' +
+            '<div class="fila-botones">' +
+            boton('zona', 'LLANURA', { x: 'llanura', clase: estado.zonaAterrizaje === 'llanura' ? 'activo' : '' }) +
+            boton('zona', 'CRÁTER', { x: 'crater', clase: estado.zonaAterrizaje === 'crater' ? 'activo' : '' }) +
+            '</div><div class="fila-botones">' +
+            boton('objetivo', '2 SUPERFICIALES', { x: 'llanura_doble', clase: estado.objetivo === 'llanura_doble' ? 'activo' : '' }) +
+            boton('objetivo', '1 PROFUNDA', { x: 'crater_profunda', clase: estado.objetivo === 'crater_profunda' ? 'activo' : '' }) +
+            '</div>' +
+            '<p class="dato">Ida ' + pasos + ' pasos · vuelta ' + pasos + ' pasos</p>' +
+            '<p class="dato">' + esc(m.nota) + '</p>' +
+            '<p class="dato">' + T.riesgoTerreno + ': <b class="ambar">' + pct(m.probRocoso) + ' %</b> · si sale, +' +
+            (r.adverso.energia.total - r.normal.energia.total) + ' Wh</p>' +
+            '<p class="dato">Exige: ' + esc(o.herramienta) +
+            (estado.objetivo === 'crater_profunda' && !t.taladro ? ' <span class="alerta">⚠ sin taladro</span>' : '') +
+            (t.capacidadMuestras < o.espacioMinimo ? ' <span class="alerta">⚠ falta espacio</span>' : '') +
+            '</p><div class="ingenieria"><h3>GEOMETRÍA DE MISIÓN</h3><p>Aterrizar cerca ahorra pasos; el terreno incierto exige reserva. Cambia la zona y compara el costo de ida y vuelta.</p></div></section>';
 
-  var PAL = {
-    cielo: '#0b1026', cieloBanda: '#121a3e', estrella: '#dce9f8',
-    nieve: '#8fa3cc', nieveClaro: '#cfe0f4', nieveMedio: '#a8b8d8',
-    contorno: '#5a6fa0', pozo: '#232c4e',
-    F: '#f2f5fb', V: '#2e3a5c', A: '#e4a33c',          // astronauta
-    B: '#b8893f', D: '#e8d9a8',                         // módulo
-    W: '#e8f1fb', L: '#9fb6dd', Tt: '#5a6fa0',          // cristal
-    R: '#e05c5c', G: '#8fa3cc', g: '#46557e', l: '#8fa3cc',
-    N: '#d8e0ee', f: '#f2b544'                          // nave, llama
-  };
+        // --- panel cohete y equipo ---
+        html += '<section class="panel"><h2>2 · COHETE Y EQUIPO</h2><div class="lista">';
+        DATOS.cohetes.forEach(function(co) {
+            var activo = estado.cohete === co.id;
+            html += '<div class="item' + (activo ? ' elegido' : '') + '" title="' + esc(co.descripcion) + '">' +
+                '<span class="i-icono">🚀</span><span class="i-nombre">' + co.nombre + '</span>' +
+                '<span class="i-datos">' + co.costo + '🪙 · cap ' + co.capacidadMasa + '⚖ · ' + co.combustibleBase + '▲</span>' +
+                boton('cohete', activo ? 'ELEGIDO' : 'ELEGIR', { x: co.id, off: activo, clase: 'mini' }) + '</div>';
+        });
+        DATOS.objetos.forEach(function(ob) {
+            var puesto = estado.equipo.indexOf(ob.id) !== -1;
+            html += '<div class="item' + (puesto ? ' elegido' : '') + '" title="' + esc(ob.descripcion) + '">' +
+                '<span class="i-icono">' + ob.icono + '</span><span class="i-nombre">' + ob.nombre + '<small class="uso-equipo">' + esc(ob.descripcion) + '</small></span>' +
+                '<span class="i-datos">' + ob.costo + '🪙 · ' + ob.masa + '⚖</span>' +
+                (puesto ? boton('quitar', T.btnQuitar, { x: ob.id, clase: 'mini' }) :
+                    boton('equipar', T.btnEquipar, { x: ob.id, clase: 'mini' })) + '</div>';
+        });
+        html += '</div></section>';
 
-  var SPR_ASTRO = [
-    '..FFF..',
-    '.FVVVF.',
-    '.FVVVF.',
-    '..FFF..',
-    '.FFFFF.',
-    'FAFFFAF',
-    'F.FFF.F',
-    '..FFF..',
-    '..F.F..',
-    '..F.F..',
-    '.FF.FF.'
-  ];
+        // --- panel recursos y simulador ---
+        var margen = t.energia - r.normal.energia.total;
+        html += '<section class="panel"><h2>3 · RECURSOS Y SIMULADOR</h2>' +
+            '<p class="dato">' + termino('autonomia', 'Autonomía') + ' en superficie (energía y oxígeno):</p>' +
+            '<table class="tabla"><tr><th></th><th>Llevas</th><th>Estimado</th><th>Recomendado</th></tr>' +
+            '<tr><td>⚡ Energía</td><td>' + t.energia + '</td><td>' + r.normal.energia.total + '</td><td>' + r.energiaRecomendada + '</td></tr>' +
+            '<tr><td>◍ Oxígeno</td><td>' + t.oxigeno + '</td><td>' + r.normal.oxigeno.total + '</td><td>' + r.oxigenoRecomendado + '</td></tr>' +
+            '<tr><td>▲ Comb.</td><td>' + t.combustible + '</td><td>0</td><td>' + C.maniobra + '</td></tr></table>' +
+            '<p class="dato">' + termino('margen', 'Margen') + ' de energía: <b class="' +
+            (margen < 0 ? 'alerta' : (t.energia > 0 && margen < r.adverso.energia.total - r.normal.energia.total ? 'ambar' : 'ok')) + '">' +
+            margen + ' Wh</b> ' + (margen < 0 ? '✖' : (margen < r.adverso.energia.total - r.normal.energia.total ? '⚠' : '✓')) + '</p>' +
+            '<p class="dato">' + termino('reserva', 'Reserva') + ' por tramos' + (ev.manual ? '' : ' (automática: estimación normal, el resto a explorar)') + ':</p>' +
+            htmlReserva(ev, t.energia, false) +
+            '<p class="nota">Balance energético: disponible − ida − trabajo − regreso = reserva. Más batería aumenta autonomía, masa y costo.</p>' +
+            '<div class="fila-botones">' +
+            boton('vercalculo', T.btnVerCalculo) + boton('reservar', T.btnReservar) + boton('probar', 'REVISAR DISEÑO') +
+            '</div>' +
+            (t.energia === 0 ?
+                '<p class="dato alerta">⚠ Sin batería: no podrás dar ni un paso en superficie.</p>' :
+                margen < 0 ?
+                '<p class="dato alerta">⚠ Faltan ' + (-margen) + ' Wh incluso si el terreno sale bien.</p>' :
+                '') +
+            '<div class="fila-botones">' + boton('lanzar', T.btnLanzar, { clase: 'grande peligro' }) + '</div>' +
+            '<p class="nota">' + T.ficcion + '</p>' +
+            '</section>';
 
-  var SPR_MODULO = [
-    '....BBBBBB....',
-    '..BBDDDDDDBB..',
-    '.BDDDVVVVDDDB.',
-    '.BDDDVVVVDDDB.',
-    '.BBBBBBBBBBBB.',
-    '..B..BBBB..B..',
-    '..B..B..B..B..',
-    '.BB..B..B..BB.',
-    'B..B.B..B.B..B'
-  ];
-
-  var SPR_CRISTAL = [
-    '...W...',
-    '..WLW..',
-    '..WLW..',
-    '.WLLLW.',
-    '.WLLLW.',
-    'WLLLLLW',
-    'WLLLLLW',
-    '...T...',
-    '...T...'
-  ];
-
-  var SPR_MUESTRA = [
-    'RRRR..',
-    'RRRRR.',
-    'RRRR..',
-    'R.....',
-    'R.....',
-    'R.....',
-    'R.....',
-    'GG.GG.'
-  ];
-
-  var SPR_ROCA = [
-    '..ll..',
-    '.lggl.',
-    'lggggl',
-    'gggggg'
-  ];
-
-  var SPR_COHETE = [
-    '...RR...',
-    '..RNNR..',
-    '..NNNN..',
-    '..NVVN..',
-    '..NVVN..',
-    '..NNNN..',
-    '..NNNN..',
-    '..NNNN..',
-    '..NNNN..',
-    '..NNNN..',
-    '.RNNNNR.',
-    'RRNNNNRR',
-    'RR.NN.RR'
-  ];
-
-  var SPR_LLAMA = [
-    '..ff..',
-    '.ffff.',
-    '..ff..',
-    '...f..'
-  ];
-
-  function pint(ctx, filas, x, y, mapa) {
-    for (var r = 0; r < filas.length; r++) {
-      for (var c = 0; c < filas[r].length; c++) {
-        var ch = filas[r][c];
-        if (ch === '.') continue;
-        var color = (mapa && mapa[ch]) || PAL[ch] || PAL[ch === 'T' ? 'Tt' : ch];
-        if (ch === 'T') color = PAL.Tt;
-        if (ch === 'g') color = PAL.g;
-        if (ch === 'l') color = PAL.l;
-        if (!color) continue;
-        ctx.fillStyle = color;
-        ctx.fillRect(x + c, y + r, 1, 1);
-      }
-    }
-  }
-
-  function estrellas(ctx, ancho, alto, n) {
-    ctx.fillStyle = PAL.estrella;
-    for (var i = 0; i < n; i++) {
-      var x = (i * 53 + 11) % ancho;
-      var y = (i * 37 + 5) % alto;
-      ctx.fillRect(x, y, 1, 1);
-    }
-  }
-
-  /* ---------------- escenas ---------------- */
-
-  function dibujarSuperficie() {
-    var cv = document.getElementById('cv-sup');
-    if (!cv) return;
-    var ctx = cv.getContext('2d');
-    var Wd = cv.width, Hd = cv.height, SUELO = 64;
-
-    ctx.fillStyle = PAL.cielo; ctx.fillRect(0, 0, Wd, SUELO);
-    ctx.fillStyle = PAL.cieloBanda; ctx.fillRect(0, SUELO - 18, Wd, 18);
-    estrellas(ctx, Wd, SUELO - 20, 42);
-
-    ctx.fillStyle = PAL.nieve; ctx.fillRect(0, SUELO, Wd, Hd - SUELO);
-    ctx.fillStyle = PAL.nieveClaro; ctx.fillRect(0, SUELO, Wd, 2);
-    ctx.fillStyle = PAL.nieveMedio;
-    for (var i = 0; i < 60; i++) {
-      ctx.fillRect((i * 41 + 7) % Wd, SUELO + 6 + ((i * 17) % (Hd - SUELO - 10)), 2, 1);
+        html += '</main>';
+        html += '<footer class="consola">▸ ' + esc(mensaje) + '</footer>';
+        return html;
     }
 
-    // cristales decorativos al fondo
-    [14, 150, 305].forEach(function (x) { pint(ctx, SPR_CRISTAL, x, SUELO - 9); });
+    function htmlViaje() {
+        var html = bannerTutorialHTML();
+        html += '<header class="cabecera">' +
+            barra('⚡', 'Energía', estado.recursos.energiaWh, estado.plan.energiaInicial) +
+            barra('◍', 'Oxígeno', estado.recursos.oxigeno, estado.plan.oxigenoInicial) +
+            barra('▲', 'Combustible', estado.recursos.combustible, estado.plan.combustibleInicial,
+                estado.recursos.combustible < C.maniobra ? 'ambar' : '') +
+            '</header>';
 
-    var sitios = estado.sitios || [];
-    var n = sitios.length - 1;
-    if (n < 1) return;
-    var x0 = 26, x1 = 290;
-    function xDe(p) { return Math.round(x0 + (x1 - x0) * p / n); }
+        // 320×84 a escala 4 = 1280×336: deja sitio a las dos tarjetas del evento
+        // con su desglose y a la consola sin salirse del marco de 720 px.
+        html += '<canvas id="cv-viaje" width="320" height="84" class="escena escena-viaje"></canvas>';
 
-    for (var p = 0; p <= n; p++) {
-      var s = sitios[p];
-      var x = xDe(p);
-      ctx.fillStyle = PAL.contorno;
-      ctx.fillRect(x, SUELO + 3, 2, 2); // marca del paso
-      if (s.tipo === 'crater') {
-        ctx.fillStyle = PAL.pozo;
-        ctx.fillRect(x - 10, SUELO + 2, 22, 7);
-        ctx.fillRect(x - 7, SUELO + 9, 16, 3);
-        ctx.fillStyle = PAL.nieveClaro;
-        ctx.fillRect(x - 12, SUELO, 4, 2); ctx.fillRect(x + 10, SUELO, 4, 2);
-        if (s.vetaRevelada && !s.vetaExtraida) {
-          ctx.fillStyle = PAL.A; ctx.fillRect(x, SUELO + 6, 2, 2);
-        }
-      }
-      if (s.tipo === 'muestra' && !s.recogida) pint(ctx, SPR_MUESTRA, x - 2, SUELO - 8);
-      if (s.rocoso && s.tipo !== 'modulo') pint(ctx, SPR_ROCA, x - 3, SUELO - 4);
-      if (s.tipo === 'modulo') pint(ctx, SPR_MODULO, x - 7, SUELO - 9);
-    }
-
-    var px = xDe(estado.posicion), salto = 0;
-    if (movimiento) {
-      var t = movimiento.t;
-      px = xDe(movimiento.desde) + (xDe(movimiento.hasta) - xDe(movimiento.desde)) * (t * t * (3 - 2 * t));
-      salto = Math.sin(t * Math.PI * 2) * 1.5;
-    }
-    pint(ctx, SPR_ASTRO, Math.round(px) - 3, Math.round(SUELO - 15 - salto));
-  }
-
-  function dibujarViaje() {
-    var cv = document.getElementById('cv-viaje');
-    if (!cv) return;
-    var ctx = cv.getContext('2d');
-    var Wd = cv.width, Hd = cv.height;
-
-    ctx.fillStyle = PAL.cielo; ctx.fillRect(0, 0, Wd, Hd);
-    estrellas(ctx, Wd, Hd, 60);
-
-    // planeta helado
-    var cxp = 262, cyp = 48, rp = 30;
-    ctx.fillStyle = PAL.nieve;
-    for (var y = -rp; y <= rp; y++) {
-      var half = Math.floor(Math.sqrt(rp * rp - y * y));
-      ctx.fillRect(cxp - half, cyp + y, half * 2, 1);
-    }
-    ctx.fillStyle = PAL.nieveClaro;
-    ctx.fillRect(cxp - 18, cyp - 22, 14, 3); ctx.fillRect(cxp - 24, cyp - 14, 8, 2);
-    ctx.fillStyle = PAL.pozo;
-    ctx.fillRect(cxp + 6, cyp + 2, 8, 4); ctx.fillRect(cxp - 8, cyp + 12, 6, 3);
-
-    // trayectorias punteadas
-    function punteada(y2, color) {
-      ctx.fillStyle = color;
-      for (var t = 0; t <= 20; t++) {
-        if (t % 2) continue;
-        var x = 70 + (cxp - 34 - 70) * t / 20;
-        var yy = 50 + (y2 - 50) * t / 20;
-        ctx.fillRect(Math.round(x), Math.round(yy), 2, 1);
-      }
-    }
-    if (estado.viaje.rocoso && !estado.viaje.corrigio) {
-      [[-14, -10], [-4, -17], [-20, 0]].forEach(function (d) { pint(ctx, SPR_ROCA, cxp + d[0], cyp + d[1]); });
-    }
-    if (estado.viaje.escaneado && !estado.viaje.decidido) {
-      punteada(cyp - 16, PAL.estrella); // mantener (zona actual)
-      punteada(cyp + 16, PAL.A);        // corregir (otra zona)
-    } else {
-      punteada(cyp - 16 + (estado.viaje.corrigio ? 32 : 0), PAL.estrella);
-    }
-
-    pint(ctx, SPR_COHETE, 58, 40);
-    pint(ctx, SPR_LLAMA, 48, 44);
-  }
-
-  function dibujarMapa() {
-    var cv = document.getElementById('cv-mapa');
-    if (!cv) return;
-    var ctx = cv.getContext('2d');
-    var Wd = cv.width, Hd = cv.height;
-
-    ctx.fillStyle = PAL.cielo; ctx.fillRect(0, 0, Wd, Hd);
-    estrellas(ctx, Wd, 12, 14);
-
-    // terreno visto desde arriba
-    ctx.fillStyle = PAL.nieve; ctx.fillRect(4, 14, Wd - 8, Hd - 18);
-    ctx.fillStyle = PAL.nieveClaro; ctx.fillRect(4, 14, Wd - 8, 2);
-    ctx.fillStyle = PAL.nieveMedio;
-    for (var i = 0; i < 26; i++) {
-      ctx.fillRect(6 + (i * 29 + 3) % (Wd - 14), 18 + (i * 13) % (Hd - 26), 2, 1);
-    }
-
-    // cráter (este del mapa)
-    var cx = 94, cy = 40;
-    ctx.fillStyle = PAL.pozo;
-    ctx.fillRect(cx - 9, cy - 5, 18, 10); ctx.fillRect(cx - 6, cy - 8, 12, 16);
-    ctx.fillStyle = PAL.nieveClaro;
-    ctx.fillRect(cx - 11, cy - 7, 3, 2); ctx.fillRect(cx + 8, cy + 5, 3, 2);
-
-    // muestras superficiales de la llanura
-    [[40, 34], [58, 46]].forEach(function (par) {
-      pint(ctx, SPR_MUESTRA, par[0], par[1] - 7);
-    });
-
-    var marcadores = { llanura: [22, 44], crater: [74, 52] };
-    var zona = estado.zonaAterrizaje;
-    var origen = marcadores[zona];
-
-    // ruta punteada hacia el objetivo
-    var destino = estado.objetivo === 'crater_profunda' ? [cx, cy] : [50, 40];
-    ctx.fillStyle = PAL.A;
-    for (var t = 0; t <= 14; t++) {
-      if (t % 2) continue;
-      ctx.fillRect(
-        Math.round(origen[0] + 4 + (destino[0] - origen[0] - 4) * t / 14),
-        Math.round(origen[1] - 2 + (destino[1] - origen[1]) * t / 14), 1, 1);
-    }
-
-    // marcadores de zona (el elegido lleva el cohete)
-    Object.keys(marcadores).forEach(function (z) {
-      var par = marcadores[z];
-      if (z === zona) {
-        pint(ctx, SPR_COHETE, par[0] - 4, par[1] - 13);
-      } else {
-        ctx.fillStyle = PAL.contorno;
-        ctx.fillRect(par[0] - 1, par[1] - 4, 2, 4);
-        ctx.fillRect(par[0] - 3, par[1] - 1, 6, 2);
-      }
-    });
-  }
-
-  /* ---------------- componentes HTML ---------------- */
-
-  function esc(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  function barra(icono, etiqueta, valor, max, clase) {
-    var pct = max > 0 ? Math.max(0, Math.min(100, valor / max * 100)) : 0;
-    return '<div class="barra ' + (clase || '') + '">' +
-      '<span class="b-icono">' + icono + '</span>' +
-      '<div class="b-pista"><div class="b-relleno" style="width:' + pct + '%"></div></div>' +
-      '<span class="b-num">' + etiqueta + ' ' + valor + '/' + max + '</span></div>';
-  }
-
-  function boton(accion, texto, opciones) {
-    opciones = opciones || {};
-    return '<button class="btn ' + (opciones.clase || '') + '" data-a="' + accion + '"' +
-      (opciones.x ? ' data-x="' + opciones.x + '"' : '') +
-      (opciones.off ? ' disabled' : '') +
-      (opciones.title ? ' title="' + esc(opciones.title) + '"' : '') +
-      '>[ ' + texto + ' ]</button>';
-  }
-
-  // "6 pasos × 5 Wh + 3 rocosos × 3 Wh + 5 Wh de subida": la fórmula de un
-  // tramo tal como la calcula el motor.
-  function formulaTramo(c) {
-    var partes = [c.pasos + ' paso(s) × ' + C.pasoEnergia + ' Wh'];
-    if (c.recargo) partes.push(c.pasosRocosos + ' rocoso(s) × ' + c.recargoUnitario + ' Wh');
-    if (c.salida) partes.push(c.salida + ' Wh de subida');
-    return partes.join(' + ');
-  }
-
-  function pct(p) { return Math.round(p * 100); }
-
-  // Dado del terreno. Para grabar el video o hacer la demo con un resultado
-  // fijo, abre index.html?terreno=rocoso o index.html?terreno=despejado.
-  function azarTerreno() {
-    var q = /[?&]terreno=(rocoso|despejado)/.exec(window.location.search || '');
-    if (q) return q[1] === 'rocoso' ? 0 : 0.999;
-    return Math.random();
-  }
-
-  // Desglose de una opción del viaje con lo que llevas a bordo.
-  function desgloseOpcion(d) {
-    var e = estado.recursos.energiaWh;
-    var sobra = e - d.energia.total;
-    return '<p class="dato">Ida ' + d.energia.ida + ' (' + formulaTramo(d.componentes.ida) + ') · ' +
-      d.tareaNombre.toLowerCase() + ' ' + d.energia.tarea + ' · regreso ' + d.energia.regreso + ' (' + formulaTramo(d.componentes.regreso) + ')</p>' +
-      '<p class="dato">Llevas ' + e + ' Wh → ' + (sobra >= 0 ? '<b class="ok">sobran ' + sobra + ' ✓</b>' : '<b class="alerta">faltan ' + (-sobra) + ' ✖</b>') +
-      ' · O₂ ' + d.oxigeno.total + ' de ' + estado.recursos.oxigeno + '</p>';
-  }
-
-  function termino(clave, etiqueta) {
-    return '<span class="termino" data-a="termino" data-x="' + clave + '" title="' + esc(GLOSARIO[clave]) + '">' + etiqueta + '</span>';
-  }
-
-  // Coloca la burbuja del glosario: la del término reabierto con clic o, si
-  // no hay, la del primer término en pantalla que aún no se presentó.
-  function colocarGlosario() {
-    var terminos = juego.querySelectorAll('.termino');
-    var objetivo = null;
-    for (var i = 0; i < terminos.length; i++) {
-      var clave = terminos[i].getAttribute('data-x');
-      if (terminoAbierto ? clave === terminoAbierto : !vistos[clave]) { objetivo = terminos[i]; break; }
-    }
-    if (!objetivo) return;
-    var k = objetivo.getAttribute('data-x');
-    var burbuja = document.createElement('div');
-    burbuja.className = 'burbuja';
-    burbuja.setAttribute('role', 'note');
-    burbuja.innerHTML = '<p>ⓘ ' + esc(GLOSARIO[k]) + '</p>' + boton('entendido', T.btnEntendido, { x: k, clase: 'mini' });
-    juego.appendChild(burbuja);
-    // Anclaje: si el término está en la mitad izquierda, la burbuja cuelga
-    // hacia la izquierda (tapa menos botones); si no, hacia la derecha.
-    var rj = juego.getBoundingClientRect();
-    var rt = objetivo.getBoundingClientRect();
-    var ANCHO = 330;
-    var izq = (rt.left - rj.left) / escala;
-    var der = (rt.right - rj.left) / escala;
-    var haciaIzquierda = (izq + der) / 2 < 640;
-    var left = haciaIzquierda ? der - ANCHO : izq;
-    var top = (rt.bottom - rj.top) / escala + 8;
-    left = Math.max(8, Math.min(left, 1280 - ANCHO - 8));
-    if (top > 720 - 110) top = (rt.top - rj.top) / escala - 100;
-    if (haciaIzquierda) burbuja.classList.add('derecha');
-    burbuja.style.left = left + 'px';
-    burbuja.style.top = top + 'px';
-  }
-
-  // Tres barras que se quitan entre sí. Con controles, cada [ + ] toma 5 Wh
-  // de la exploración (o del regreso, si el tramo es la exploración) y cada
-  // [ − ] se los devuelve. Es una convención de la interfaz: el motor solo
-  // sabe mover energía de un tramo a otro.
-  function parReserva(tramo) { return tramo === 'exploracion' ? 'regreso' : 'exploracion'; }
-
-  function htmlReserva(ev, total, controles) {
-    var html = '<div class="reserva" title="' + esc(T.tooltipReserva) + '">';
-    ['ida', 'exploracion', 'regreso'].forEach(function (t) {
-      var f = ev[t];
-      var clase = f.faltaNormal > 0 ? 'rojo' : (f.faltaAdverso > 0 ? 'ambar' : 'ok');
-      var icono = f.faltaNormal > 0 ? '✖' : (f.faltaAdverso > 0 ? '⚠' : '✓');
-      var pct = total > 0 ? Math.round(f.reservado / total * 100) : 0;
-      html += '<div class="reserva-fila ' + clase + '">' +
-        '<span class="etq">' + T.tramos[t] + '</span>' +
-        (controles ? boton('reserva', '−', { x: t + ':-', clase: 'mini cuadrado', off: f.reservado < C.pasoReserva, title: 'Devuelve ' + C.pasoReserva + ' Wh a ' + T.tramos[parReserva(t)].toLowerCase() }) : '') +
-        '<div class="b-pista"><div class="b-relleno" style="width:' + pct + '%"></div></div>' +
-        (controles ? boton('reserva', '+', { x: t + ':+', clase: 'mini cuadrado', off: ev[parReserva(t)].reservado < C.pasoReserva, title: 'Toma ' + C.pasoReserva + ' Wh de ' + T.tramos[parReserva(t)].toLowerCase() }) : '') +
-        '<span class="num"><b>' + f.reservado + '</b> Wh · estima ' + f.normal + ' / rocoso ' + f.adverso + ' ' + icono + '</span></div>';
-    });
-    return html + '</div>';
-  }
-
-  /* ---------------- pantallas ---------------- */
-
-  function htmlIntro() {
-    return '<div class="centro"><div class="panel intro">' +
-      '<h1 class="titulo-grande">' + T.titulo + '</h1>' +
-      '<p class="subtitulo">NASA Space Apps Challenge · Juego de diseño de misiones</p>' +
-      '<p class="pregunta">«' + T.pregunta + '»</p>' +
-      '<p class="nota">' + T.ficcion + '</p>' +
-      '<div class="fila-botones">' +
-      boton('comenzar', 'JUGAR', { clase: 'grande' }) +
-      boton('tutorial', 'CÓMO JUGAR (TUTORIAL)', { clase: 'grande' }) +
-      '</div>' +
-      '</div></div>';
-  }
-
-  function htmlHangar() {
-    var t = Motor.totales(estado);
-    var r = Motor.recomendacion(estado);
-    var m = DATOS.mapa[estado.zonaAterrizaje];
-    var o = DATOS.objetivos[estado.objetivo];
-    var pasos = Motor.pasoObjetivo(estado.zonaAterrizaje, estado.objetivo);
-    var ev = Motor.evaluarReserva(estado);
-
-    var html = bannerTutorialHTML();
-    html += '<header class="cabecera">' +
-      barra('🪙', 'Presupuesto', estado.presupuesto.gastado, estado.presupuesto.total,
-        estado.presupuesto.gastado > estado.presupuesto.total ? 'rojo' : '') +
-      barra('⚖', termino('cargaUtil', 'Carga útil'), estado.masa.usada, estado.masa.capacidad || 0,
-        estado.masa.usada > estado.masa.capacidad ? 'rojo' : '') +
-      '<div class="chips"><span class="chip">⚡ ' + t.energia + ' Wh</span>' +
-      '<span class="chip">◍ ' + t.oxigeno + ' O₂</span>' +
-      '<span class="chip">▲ ' + t.combustible + ' comb.</span>' +
-      '<span class="chip">▣ ' + t.capacidadMuestras + ' muestras</span>' +
-      (!tutorial.activo && !intro ? boton('tutorial', '¿CÓMO JUGAR?', { clase: 'mini', title: 'Abrir tutorial guiado' }) : '') +
-      '</div>' +
-      '</header>';
-
-    html += '<main class="hangar">';
-
-    // --- panel objetivo y mapa ---
-    html += '<section class="panel"><h2>1 · DESARROLLAR MISIÓN</h2>' +
-      '<p class="nota">Eres responsable de ingeniería: convierte un objetivo científico en una misión que pueda volver.</p>' +
-      '<canvas id="cv-mapa" width="120" height="70"></canvas>' +
-      '<div class="fila-botones">' +
-      boton('zona', 'LLANURA', { x: 'llanura', clase: estado.zonaAterrizaje === 'llanura' ? 'activo' : '' }) +
-      boton('zona', 'CRÁTER', { x: 'crater', clase: estado.zonaAterrizaje === 'crater' ? 'activo' : '' }) +
-      '</div><div class="fila-botones">' +
-      boton('objetivo', '2 SUPERFICIALES', { x: 'llanura_doble', clase: estado.objetivo === 'llanura_doble' ? 'activo' : '' }) +
-      boton('objetivo', '1 PROFUNDA', { x: 'crater_profunda', clase: estado.objetivo === 'crater_profunda' ? 'activo' : '' }) +
-      '</div>' +
-      '<p class="dato">Ida ' + pasos + ' pasos · vuelta ' + pasos + ' pasos</p>' +
-      '<p class="dato">' + esc(m.nota) + '</p>' +
-      '<p class="dato">' + T.riesgoTerreno + ': <b class="ambar">' + pct(m.probRocoso) + ' %</b> · si sale, +' +
-      (r.adverso.energia.total - r.normal.energia.total) + ' Wh</p>' +
-      '<p class="dato">Exige: ' + esc(o.herramienta) +
-      (estado.objetivo === 'crater_profunda' && !t.taladro ? ' <span class="alerta">⚠ sin taladro</span>' : '') +
-      (t.capacidadMuestras < o.espacioMinimo ? ' <span class="alerta">⚠ falta espacio</span>' : '') +
-      '</p><div class="ingenieria"><h3>GEOMETRÍA DE MISIÓN</h3><p>Aterrizar cerca ahorra pasos; el terreno incierto exige reserva. Cambia la zona y compara el costo de ida y vuelta.</p></div></section>';
-
-    // --- panel cohete y equipo ---
-    html += '<section class="panel"><h2>2 · COHETE Y EQUIPO</h2><div class="lista">';
-    DATOS.cohetes.forEach(function (co) {
-      var activo = estado.cohete === co.id;
-      html += '<div class="item' + (activo ? ' elegido' : '') + '" title="' + esc(co.descripcion) + '">' +
-        '<span class="i-icono">🚀</span><span class="i-nombre">' + co.nombre + '</span>' +
-        '<span class="i-datos">' + co.costo + '🪙 · cap ' + co.capacidadMasa + '⚖ · ' + co.combustibleBase + '▲</span>' +
-        boton('cohete', activo ? 'ELEGIDO' : 'ELEGIR', { x: co.id, off: activo, clase: 'mini' }) + '</div>';
-    });
-    DATOS.objetos.forEach(function (ob) {
-      var puesto = estado.equipo.indexOf(ob.id) !== -1;
-      html += '<div class="item' + (puesto ? ' elegido' : '') + '" title="' + esc(ob.descripcion) + '">' +
-        '<span class="i-icono">' + ob.icono + '</span><span class="i-nombre">' + ob.nombre + '<small class="uso-equipo">' + esc(ob.descripcion) + '</small></span>' +
-        '<span class="i-datos">' + ob.costo + '🪙 · ' + ob.masa + '⚖</span>' +
-        (puesto ? boton('quitar', T.btnQuitar, { x: ob.id, clase: 'mini' })
-                : boton('equipar', T.btnEquipar, { x: ob.id, clase: 'mini' })) + '</div>';
-    });
-    html += '</div></section>';
-
-    // --- panel recursos y simulador ---
-    var margen = t.energia - r.normal.energia.total;
-    html += '<section class="panel"><h2>3 · RECURSOS Y SIMULADOR</h2>' +
-      '<p class="dato">' + termino('autonomia', 'Autonomía') + ' en superficie (energía y oxígeno):</p>' +
-      '<table class="tabla"><tr><th></th><th>Llevas</th><th>Estimado</th><th>Recomendado</th></tr>' +
-      '<tr><td>⚡ Energía</td><td>' + t.energia + '</td><td>' + r.normal.energia.total + '</td><td>' + r.energiaRecomendada + '</td></tr>' +
-      '<tr><td>◍ Oxígeno</td><td>' + t.oxigeno + '</td><td>' + r.normal.oxigeno.total + '</td><td>' + r.oxigenoRecomendado + '</td></tr>' +
-      '<tr><td>▲ Comb.</td><td>' + t.combustible + '</td><td>0</td><td>' + C.maniobra + '</td></tr></table>' +
-      '<p class="dato">' + termino('margen', 'Margen') + ' de energía: <b class="' +
-      (margen < 0 ? 'alerta' : (t.energia > 0 && margen < r.adverso.energia.total - r.normal.energia.total ? 'ambar' : 'ok')) + '">' +
-      margen + ' Wh</b> ' + (margen < 0 ? '✖' : (margen < r.adverso.energia.total - r.normal.energia.total ? '⚠' : '✓')) + '</p>' +
-      '<p class="dato">' + termino('reserva', 'Reserva') + ' por tramos' + (ev.manual ? '' : ' (automática: estimación normal, el resto a explorar)') + ':</p>' +
-      htmlReserva(ev, t.energia, false) +
-      '<p class="nota">Balance energético: disponible − ida − trabajo − regreso = reserva. Más batería aumenta autonomía, masa y costo.</p>' +
-      '<div class="fila-botones">' +
-      boton('vercalculo', T.btnVerCalculo) + boton('reservar', T.btnReservar) + boton('probar', 'REVISAR DISEÑO') +
-      '</div>' +
-      (t.energia === 0
-        ? '<p class="dato alerta">⚠ Sin batería: no podrás dar ni un paso en superficie.</p>'
-        : margen < 0
-          ? '<p class="dato alerta">⚠ Faltan ' + (-margen) + ' Wh incluso si el terreno sale bien.</p>'
-          : '') +
-      '<div class="fila-botones">' + boton('lanzar', T.btnLanzar, { clase: 'grande peligro' }) + '</div>' +
-      '<p class="nota">' + T.ficcion + '</p>' +
-      '</section>';
-
-    html += '</main>';
-    html += '<footer class="consola">▸ ' + esc(mensaje) + '</footer>';
-    return html;
-  }
-
-  function htmlViaje() {
-    var html = bannerTutorialHTML();
-    html += '<header class="cabecera">' +
-      barra('⚡', 'Energía', estado.recursos.energiaWh, estado.plan.energiaInicial) +
-      barra('◍', 'Oxígeno', estado.recursos.oxigeno, estado.plan.oxigenoInicial) +
-      barra('▲', 'Combustible', estado.recursos.combustible, estado.plan.combustibleInicial,
-        estado.recursos.combustible < C.maniobra ? 'ambar' : '') +
-      '</header>';
-
-    // 320×84 a escala 4 = 1280×336: deja sitio a las dos tarjetas del evento
-    // con su desglose y a la consola sin salirse del marco de 720 px.
-    html += '<canvas id="cv-viaje" width="320" height="84" class="escena escena-viaje"></canvas>';
-
-    if (!estado.viaje.escaneado) {
-      html += '<div class="banda"><p>En ruta hacia el planeta. El protocolo pide un último escaneo antes del descenso.</p>' +
-        '<p class="dato">' + T.riesgoTerreno + ' en ' + DATOS.mapa[estado.zonaAterrizaje].nombre + ': <b class="ambar">' +
-        pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso) + ' %</b>. El escaneo dirá qué te tocó.</p>' +
-        '<div class="fila-botones">' + boton('escanearviaje', T.btnEscanear, { clase: 'grande' }) + '</div></div>';
-    } else if (!estado.viaje.decidido) {
-      var p = Motor.proyeccionesViaje(estado);
-      html += '<div class="banda evento' + (p.rocoso ? '' : ' despejado') + '"><p>' +
-        (p.rocoso ? '⚠ ' + T.eventoViaje : '✓ ' + T.eventoViajeDespejado) + '</p><div class="comparar">' +
-        '<div class="opcion"><h3>MANTENER · ' + DATOS.mapa[p.mantener.zona].nombre + '</h3>' +
-        '<p>Recorrido con terreno ' + (p.rocoso ? 'rocoso' : 'despejado') + ': <b>' + p.mantener.d.energia.total + ' Wh</b></p>' +
-        desgloseOpcion(p.mantener.d) +
-        '<p>Combustible: se conserva</p>' +
-        boton('mantener', T.btnMantener) + '</div>' +
-        '<div class="opcion"><h3>CORREGIR · ' + DATOS.mapa[p.corregir.zona].nombre + '</h3>' +
-        '<p>Recorrido estimado: <b>' + p.corregir.d.energia.total + ' Wh</b></p>' +
-        desgloseOpcion(p.corregir.d) +
-        '<p>Combustible: −' + p.corregir.combustible + ' (tienes ' + estado.recursos.combustible + ')</p>' +
-        boton('corregir', T.btnCorregir, p.corregir.posible ? {} : { off: true, title: 'Sin combustible suficiente: no reservaste margen para esta maniobra.' }) +
-        (p.corregir.posible ? '' : '<p class="alerta">✖ No disponible: falta combustible</p>') +
-        '</div></div></div>';
-    } else {
-      html += '<div class="banda"><p>Trayectoria decidida hacia ' + DATOS.mapa[estado.zonaAterrizaje].nombre + '.</p>' +
-        '<div class="fila-botones">' + boton('descender', T.btnDescender, { clase: 'grande' }) + '</div></div>';
-    }
-    html += '<footer class="consola">▸ ' + esc(mensaje) + '</footer>';
-    return html;
-  }
-
-  function htmlSuperficie() {
-    var t = Motor.totales(estado);
-    var reg = Motor.costoRegreso(estado);
-    var okE = estado.recursos.energiaWh >= reg.energia;
-    var okO = estado.recursos.oxigeno >= reg.oxigeno;
-    var margenE = estado.recursos.energiaWh - reg.energia;
-    var ambar = okE && okO && (margenE < Math.max(1, estado.recursos.energiaWh) * C.umbralAmbar ||
-      (estado.recursos.oxigeno - reg.oxigeno) < estado.recursos.oxigeno * C.umbralAmbar);
-    var claseReg = (!okE || !okO) ? 'rojo' : (ambar ? 'ambar' : 'ok');
-    var iconoReg = (!okE || !okO) ? '✖' : (ambar ? '⚠' : '✓');
-
-    var s = Motor.sitioActual(estado);
-    var libres = Motor.capacidadLibre(estado);
-
-    var html = bannerTutorialHTML();
-    html += '<header class="cabecera">' +
-      barra('⚡', 'Energía', estado.recursos.energiaWh, estado.plan.energiaInicial) +
-      barra('◍', 'Oxígeno', estado.recursos.oxigeno, estado.plan.oxigenoInicial) +
-      '<div class="chips"><span class="chip">▣ ' + estado.muestras.recogidas.length + '/' + t.capacidadMuestras + ' muestras</span>' +
-      '<span class="chip chip-reg clicable ' + claseReg + '" data-a="verregreso" title="' + esc(T.regresoEstimado) + '. Clic para ver de dónde sale.">' + iconoReg + ' Regreso: ' +
-      reg.energia + ' Wh · ' + reg.oxigeno + ' O₂ ⓘ</span>' +
-      (estado.plan.reserva
-        ? '<span class="chip ' + (estado.recursos.energiaWh >= estado.plan.reserva.regreso ? 'ok' : 'ambar') + '" title="' + esc(T.tooltipReserva) + '">' +
-          (estado.recursos.energiaWh >= estado.plan.reserva.regreso ? '✓' : '⚠') + ' Reserva regreso ' + estado.plan.reserva.regreso + ' Wh</span>'
-        : '') +
-      '</div></header>';
-
-    html += '<canvas id="cv-sup" width="320" height="110" class="escena"></canvas>';
-    html += '<p class="controles">← / → Mover · ↑ Escanear · ↓ Regresar y entregar · Cada paso consume energía y O₂</p>';
-
-    html += '<div class="banda"><div class="fila-botones">' +
-      boton('retroceder', '◀ ' + T.btnRetroceder, { off: estado.posicion === 0, title: 'Un paso hacia el módulo' }) +
-      boton('avanzar', T.btnAvanzar + ' ▶', { off: estado.posicion >= estado.sitios.length - 1, title: 'Un paso explorando (sube el costo de regreso)' }) +
-      boton('escanearsup', T.btnEscanear, t.escaner ? { title: C.escanearSup + ' Wh' } : { off: true, title: 'No llevas escáner de terreno' }) +
-      boton('recoger', T.btnRecoger, (s.tipo === 'muestra' && !s.recogida && libres > 0) ? { title: C.recoger + ' Wh' } : { off: true, title: 'Necesitas estar sobre una muestra y tener espacio' }) +
-      boton('perforar', T.btnPerforar, (s.tipo === 'crater' && t.taladro && (!s.perforada || (s.vetaRevelada && !s.vetaExtraida)) && libres > 0) ? { title: (s.perforada ? C.veta : C.perforar) + ' Wh' } : { off: true, title: 'Exige estar en el cráter, llevar taladro y tener espacio' }) +
-      boton('regresar', T.btnRegresar, { clase: 'peligro', title: 'Vuelve al módulo y entrega las muestras' }) +
-      '</div></div>';
-
-    html += '<footer class="consola">▸ ' + esc(mensaje) + '</footer>';
-    return html;
-  }
-
-  function htmlInforme() {
-    var inf = Motor.generarInforme(estado);
-    var clase = inf.resultado === 'exito' ? 'ok' : inf.resultado === 'parcial' ? 'ambar' : 'alerta';
-
-    var html = bannerTutorialHTML();
-    html += '<div class="centro"><div class="panel informe">' +
-      '<h1 class="' + clase + '">' + inf.titulo + '</h1>';
-
-    inf.causal.forEach(function (fr) { html += '<p class="causal">' + esc(fr) + '</p>'; });
-    if (ultimoInforme) html += '<p class="comparacion">TU EXPERIMENTO: batería ' + ultimoInforme.energia + ' → ' + estado.plan.energiaInicial + ' Wh · entregadas ' + ultimoInforme.muestras + ' → ' + inf.entregadas.length + ' · costo ' + ultimoInforme.costo + ' → ' + estado.presupuesto.gastado + '. ¿Qué cambió en tu diseño?</p>';
-
-    // Partida anterior contra esta (solo si se llegó con REPETIR).
-    var cmp = inf.comparacion;
-    var htmlCmp = '';
-    if (cmp) {
-      html += '<p class="causal comparacion">⇄ ' + esc(cmp.frase) + '</p>';
-      htmlCmp = '<h3>ANTES vs AHORA</h3><table class="tabla"><tr><th></th><th>Antes</th><th>Ahora</th></tr>' +
-        // Como mucho 3 filas: con más cambios la lección es "aísla uno", y la
-        // tabla entera empujaría los botones fuera de la pantalla fija.
-        cmp.cambios.slice(0, cmp.cambios.length > 3 ? 2 : 3).map(function (c) {
-          return '<tr><td>' + esc(c.etiqueta) + '</td><td>' + esc(c.antes) + '</td><td><b>' + esc(c.ahora) + '</b></td></tr>';
-        }).join('') +
-        (cmp.cambios.length > 3
-          ? '<tr><td colspan="3">… y ' + (cmp.cambios.length - 2) + ' cambios más (' +
-            esc(cmp.cambios.slice(2).map(function (c) { return c.etiqueta.toLowerCase(); }).join(', ')) + ')</td></tr>'
-          : '') +
-        (cmp.terrenoCambio
-          ? '<tr><td>Terreno (azar)</td><td>' + esc(cmp.terrenoCambio.antes) + '</td><td><b>' + esc(cmp.terrenoCambio.ahora) + '</b></td></tr>'
-          : '') +
-        '<tr><td>Resultado</td><td>' + esc(cmp.antes.textoResultado) + '</td><td class="' + clase + '">' + esc(cmp.ahora.textoResultado) + '</td></tr></table>';
-    }
-
-    html += '<div class="dos-columnas"><div><h3>PLAN vs REAL (energía)</h3><table class="tabla">' +
-      '<tr><th></th><th>Plan</th><th>Real</th></tr>' +
-      '<tr><td>Total Wh</td><td>' + inf.plan.totalPrevisto + '</td><td>' + inf.consumido.energiaWh + '</td></tr>' +
-      '<tr><td>Margen</td><td>' + inf.plan.margenReservado + '</td><td>' + (inf.plan.energiaInicial - inf.consumido.energiaWh) + '</td></tr>' +
-      '<tr><td>O₂ usado</td><td>—</td><td>' + inf.consumido.oxigeno + '</td></tr>' +
-      '<tr><td>Comb. usado</td><td>—</td><td>' + inf.consumido.combustible + '</td></tr></table>' +
-      (inf.reserva
-        ? '<h3>POR TRAMO (Wh)</h3><table class="tabla"><tr><th></th><th>Reservado</th><th>Real</th></tr>' +
-          ['ida', 'exploracion', 'regreso'].map(function (t) {
-            var sobre = inf.porTramo[t] > inf.reserva[t];
-            return '<tr><td>' + T.tramos[t] + '</td><td>' + inf.reserva[t] + '</td><td class="' + (sobre ? 'alerta' : '') + '">' + inf.porTramo[t] + (sobre ? ' ✖' : '') + '</td></tr>';
-          }).join('') + '</table>'
-        : '') +
-      '</div><div>' + htmlCmp +
-      '<h3>MUESTRAS ENTREGADAS</h3>' +
-      (inf.entregadas.length
-        ? '<ul>' + inf.entregadas.map(function (x) { return '<li>▣ ' + esc(x.nombre) + '</li>'; }).join('') + '</ul>'
-        : '<p class="alerta">Ninguna' + (inf.recogidasNoEntregadas.length ? ' (las ' + inf.recogidasNoEntregadas.length + ' recogidas se quedaron en el terreno)' : '') + '.</p>') +
-      '<h3>CADENA DE DECISIONES</h3><ul class="historial">';
-
-    // Se pintan las 8 últimas; ajustarInforme() recorta las que no quepan.
-    inf.historial.slice(-8).forEach(function (h) {
-      html += '<li><b>' + esc(h.decision) + '</b><br>→ ' + esc(h.efecto) + '</li>';
-    });
-
-    html += '</ul></div></div><div class="fila-botones">' +
-      boton('repetir', T.btnRepetir, { clase: 'grande' }) +
-      boton('nueva', T.btnNueva) +
-      '</div></div></div>';
-    return html;
-  }
-
-  /* ---------------- modales ---------------- */
-
-  function htmlModal() {
-    if (!modal) return '';
-    var inner = '';
-    if (modal === 'calculo') {
-      var n = Motor.desglose(estado.zonaAterrizaje, estado.objetivo, false);
-      var a = Motor.desglose(estado.zonaAterrizaje, estado.objetivo, true);
-      var r = Motor.recomendacion(estado);
-      inner = '<h2>DE DÓNDE SALE LA RECOMENDACIÓN</h2>' +
-        '<p>Ida: ' + formulaTramo(n.componentes.ida) + ' = <b>' + n.energia.ida + ' Wh</b></p>' +
-        '<p>Tarea (' + n.tareaNombre + '): <b>' + n.energia.tarea + ' Wh</b></p>' +
-        '<p>Regreso: ' + formulaTramo(n.componentes.regreso) + ' = <b>' + n.energia.regreso + ' Wh</b></p>' +
-        '<p>Total previsto: <b>' + n.energia.total + ' Wh</b></p><hr>' +
-        '<p>Si el terreno resulta rocoso (' + pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso) + ' % de riesgo): ida +' + a.componentes.ida.recargo + ' (' + a.componentes.ida.pasosRocosos + ' rocoso(s) × ' + a.componentes.ida.recargoUnitario + ' Wh) · regreso +' +
-        a.componentes.regreso.recargo + ' (' + a.componentes.regreso.pasosRocosos + ' × ' + a.componentes.regreso.recargoUnitario + ' Wh) → <b>' + a.energia.total + ' Wh</b></p>' +
-        '<p>Recomendación: ' + a.energia.total + ' + ' + Math.round(C.margenRecomendado * 100) + ' % de margen = <b>' + r.energiaRecomendada + ' Wh</b></p>' +
-        '<p class="nota">Oxígeno: ' + n.oxigeno.total + ' O₂ previsto · recomendado ' + r.oxigenoRecomendado + ' O₂</p>';
-    } else if (modal === 'probar') {
-      var pr = Motor.probar(estado);
-      var evp = Motor.evaluarReserva(estado);
-      function col(nombre, ev, adverso) {
-        var filas = ['ida', 'exploracion', 'regreso'].map(function (t) {
-          var f = evp[t];
-          var necesita = adverso ? f.adverso : f.normal;
-          var falta = adverso ? f.faltaAdverso : f.faltaNormal;
-          return '<p class="' + (falta > 0 ? 'alerta' : '') + '">' + T.tramos[t] + ': reserva ' + f.reservado + ' · necesita ' + necesita +
-            (falta > 0 ? ' ✖ faltan ' + falta : ' ✓') + '</p>';
-        }).join('');
-        return '<div class="opcion"><h3>' + nombre + '</h3>' + filas +
-          '<p>Total: necesitas <b>' + ev.desglose.energia.total + ' Wh</b> · llevas ' + pr.llevas.energia + ' Wh</p>' +
-          '<p>Margen: <b class="' + (ev.margenEnergia < 0 ? 'alerta' : 'ok') + '">' + ev.margenEnergia + ' Wh ' + (ev.margenEnergia < 0 ? '✖ falta' : '✓') + '</b></p>' +
-          '<p>Oxígeno: ' + ev.desglose.oxigeno.total + ' de ' + pr.llevas.oxigeno + ' <b class="' + (ev.margenOxigeno < 0 ? 'alerta' : 'ok') + '">' + (ev.margenOxigeno < 0 ? '✖' : '✓') + '</b></p>' +
-          '</div>';
-      }
-      inner = '<h2>PRUEBA DE INGENIERÍA</h2>' + diagnostico() + '<div class="comparar">' +
-        col('TERRENO DESPEJADO · ' + (100 - pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso)) + ' %', pr.normal, false) +
-        col('TERRENO ROCOSO · ' + pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso) + ' %', pr.adverso, true) +
-        '</div><p class="nota">El escaneo del viaje dirá cuál de los dos te toca; el porcentaje es el riesgo de la zona elegida. En rojo, el tramo cuya reserva no alcanza. Ninguna de las soluciones es «la correcta»: más batería cuesta masa; aterrizar más cerca es más incierto.</p>';
-    } else if (modal === 'regreso') {
-      var dr = Motor.desgloseRegreso(estado);
-      var ce = dr.energia;
-      function veredicto(sobra, unidad) {
-        return '<b class="' + (sobra < 0 ? 'alerta' : 'ok') + '">' + (sobra < 0 ? 'faltan ' + (-sobra) + ' ' + unidad + ' ✖' : 'sobran ' + sobra + ' ' + unidad + ' ✓') + '</b>';
-      }
-      inner = '<h2>DE DÓNDE SALE EL REGRESO</h2>';
-      if (ce.pasos === 0) {
-        inner += '<p>Estás en el módulo: volver no cuesta nada. Pulsa REGRESAR para entregar las muestras.</p>';
-      } else {
-        inner += '<p>Del paso ' + dr.desde + ' al módulo: ' + ce.pasos + ' paso(s) × ' + C.pasoEnergia + ' Wh = <b>' + ce.base + ' Wh</b></p>' +
-          (ce.pasosRocosos
-            ? '<p>Terreno rocoso: ' + ce.pasosRocosos + ' paso(s) × +' + ce.recargoUnitario + ' Wh = <b>+' + ce.recargo + ' Wh</b></p>'
-            : (dr.rocoso ? '<p>Terreno rocoso: ningún paso rocoso queda en este tramo.</p>' : '')) +
-          (ce.salida ? '<p>Salir del cráter (subida): <b>+' + ce.salida + ' Wh</b></p>' : '') +
-          '<p>Total: <b>' + ce.total + ' Wh</b> · tienes ' + dr.tienes.energia + ' Wh → ' + veredicto(dr.sobra.energia, 'Wh') + '</p><hr>' +
-          '<p>Oxígeno: ' + dr.oxigeno.pasos + ' paso(s) × ' + dr.oxigeno.unitario + ' = <b>' + dr.oxigeno.total + ' O₂</b> · tienes ' + dr.tienes.oxigeno + ' → ' + veredicto(dr.sobra.oxigeno, 'O₂') + '</p>';
-      }
-      inner += '<p class="nota">El indicador se recalcula tras cada acción. Lo que sobra es lo que puedes gastar en seguir explorando sin quedarte varado.</p>';
-    } else if (modal === 'reservar') {
-      var evr = Motor.evaluarReserva(estado);
-      inner = '<h2>REPARTE LA ENERGÍA POR TRAMOS</h2>' +
-        '<p>Llevas <b>' + evr.total + ' Wh</b>. Lo que no apartes para la ida o el regreso queda para explorar. ' +
-        'Cada botón mueve ' + C.pasoReserva + ' Wh entre ese tramo y la exploración (la exploración los intercambia con el regreso).</p>' +
-        htmlReserva(evr, evr.total, true) +
-        '<div class="fila-botones">' + boton('reservarecomendado', T.btnRecomendado, { title: 'Reparte según el escenario adverso: primero el regreso, luego la ida, el resto a explorar.' }) + '</div>' +
-        '<p class="nota">La reserva no bloquea nada en superficie: el juego avisa cuando entras en la de regreso y el informe compara lo reservado con lo consumido. LANZAR nunca se bloquea por reservar poco.</p>';
-    }
-    return '<div class="velo" data-a="cerrarmodal"><div class="panel modal">' + inner +
-      '<div class="fila-botones">' + boton('cerrarmodal', 'CERRAR') + '</div></div></div>';
-  }
-
-  function iniciarTutorial() {
-    if (tutorial.activo) return;
-    // Guardar partida actual si el usuario ya estaba jugando
-    if (!intro && estado.etapa !== 'hangar' || (estado.cohete || estado.equipo.length > 0)) {
-      tutorial.estadoGuardado = JSON.parse(JSON.stringify(estado));
-    }
-    tutorial.activo = true;
-    tutorial.paso = 0;
-    intro = false;
-    modal = null;
-    estado = Motor.nuevoEstado();
-    mensaje = 'Tutorial guiado iniciado. Sigue las instrucciones de AIDA.';
-  }
-
-  function salirTutorial() {
-    tutorial.activo = false;
-    tutorial.paso = 0;
-    if (tutorial.estadoGuardado) {
-      estado = tutorial.estadoGuardado;
-      tutorial.estadoGuardado = null;
-      mensaje = 'Partida previa restaurada.';
-    } else {
-      mensaje = 'Tutorial finalizado. Estás en el hangar listo para tu misión.';
-    }
-  }
-
-  function avanzarPasoTutorialSiCorresponde(a, x) {
-    if (!tutorial.activo) return;
-    var pasoActual = PASOS_TUTORIAL[tutorial.paso];
-    if (!pasoActual) return;
-    if (pasoActual.espera(a, x)) {
-      if (tutorial.paso < PASOS_TUTORIAL.length - 1) {
-        tutorial.paso++;
-      } else {
-        tutorial.activo = false;
-      }
-    }
-    // Auto-sincronización contextual según la etapa real para evitar desfaces
-    if (tutorial.activo) {
-      var idActual = PASOS_TUTORIAL[tutorial.paso].id;
-      if (estado.etapa === 'viaje') {
         if (!estado.viaje.escaneado) {
-          fijarPasoTutorialPorId('escanear_viaje');
+            html += '<div class="banda"><p>En ruta hacia el planeta. El protocolo pide un último escaneo antes del descenso.</p>' +
+                '<p class="dato">' + T.riesgoTerreno + ' en ' + DATOS.mapa[estado.zonaAterrizaje].nombre + ': <b class="ambar">' +
+                pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso) + ' %</b>. El escaneo dirá qué te tocó.</p>' +
+                '<div class="fila-botones">' + boton('escanearviaje', T.btnEscanear, { clase: 'grande' }) + '</div></div>';
         } else if (!estado.viaje.decidido) {
-          fijarPasoTutorialPorId('decision_viaje');
+            var p = Motor.proyeccionesViaje(estado);
+            html += '<div class="banda evento' + (p.rocoso ? '' : ' despejado') + '"><p>' +
+                (p.rocoso ? '⚠ ' + T.eventoViaje : '✓ ' + T.eventoViajeDespejado) + '</p><div class="comparar">' +
+                '<div class="opcion"><h3>MANTENER · ' + DATOS.mapa[p.mantener.zona].nombre + '</h3>' +
+                '<p>Recorrido con terreno ' + (p.rocoso ? 'rocoso' : 'despejado') + ': <b>' + p.mantener.d.energia.total + ' Wh</b></p>' +
+                desgloseOpcion(p.mantener.d) +
+                '<p>Combustible: se conserva</p>' +
+                boton('mantener', T.btnMantener) + '</div>' +
+                '<div class="opcion"><h3>CORREGIR · ' + DATOS.mapa[p.corregir.zona].nombre + '</h3>' +
+                '<p>Recorrido estimado: <b>' + p.corregir.d.energia.total + ' Wh</b></p>' +
+                desgloseOpcion(p.corregir.d) +
+                '<p>Combustible: −' + p.corregir.combustible + ' (tienes ' + estado.recursos.combustible + ')</p>' +
+                boton('corregir', T.btnCorregir, p.corregir.posible ? {} : { off: true, title: 'Sin combustible suficiente: no reservaste margen para esta maniobra.' }) +
+                (p.corregir.posible ? '' : '<p class="alerta">✖ No disponible: falta combustible</p>') +
+                '</div></div></div>';
         } else {
-          fijarPasoTutorialPorId('descender');
+            html += '<div class="banda"><p>Trayectoria decidida hacia ' + DATOS.mapa[estado.zonaAterrizaje].nombre + '.</p>' +
+                '<div class="fila-botones">' + boton('descender', T.btnDescender, { clase: 'grande' }) + '</div></div>';
         }
-      } else if (estado.etapa === 'superficie') {
+        html += '<footer class="consola">▸ ' + esc(mensaje) + '</footer>';
+        return html;
+    }
+
+    function htmlSuperficie() {
+        var t = Motor.totales(estado);
+        var reg = Motor.costoRegreso(estado);
+        var okE = estado.recursos.energiaWh >= reg.energia;
+        var okO = estado.recursos.oxigeno >= reg.oxigeno;
+        var margenE = estado.recursos.energiaWh - reg.energia;
+        var ambar = okE && okO && (margenE < Math.max(1, estado.recursos.energiaWh) * C.umbralAmbar ||
+            (estado.recursos.oxigeno - reg.oxigeno) < estado.recursos.oxigeno * C.umbralAmbar);
+        var claseReg = (!okE || !okO) ? 'rojo' : (ambar ? 'ambar' : 'ok');
+        var iconoReg = (!okE || !okO) ? '✖' : (ambar ? '⚠' : '✓');
+
         var s = Motor.sitioActual(estado);
-        if (estado.muestras.recogidas.length > 0) {
-          fijarPasoTutorialPorId('regresar_modulo');
-        } else if (s && s.tipo === 'crater') {
-          fijarPasoTutorialPorId('perforar_crater');
-        } else {
-          fijarPasoTutorialPorId('avanzar_superficie');
+        var libres = Motor.capacidadLibre(estado);
+
+        var html = bannerTutorialHTML();
+        html += '<header class="cabecera">' +
+            barra('⚡', 'Energía', estado.recursos.energiaWh, estado.plan.energiaInicial) +
+            barra('◍', 'Oxígeno', estado.recursos.oxigeno, estado.plan.oxigenoInicial) +
+            '<div class="chips"><span class="chip">▣ ' + estado.muestras.recogidas.length + '/' + t.capacidadMuestras + ' muestras</span>' +
+            '<span class="chip chip-reg clicable ' + claseReg + '" data-a="verregreso" title="' + esc(T.regresoEstimado) + '. Clic para ver de dónde sale.">' + iconoReg + ' Regreso: ' +
+            reg.energia + ' Wh · ' + reg.oxigeno + ' O₂ ⓘ</span>' +
+            (estado.plan.reserva ?
+                '<span class="chip ' + (estado.recursos.energiaWh >= estado.plan.reserva.regreso ? 'ok' : 'ambar') + '" title="' + esc(T.tooltipReserva) + '">' +
+                (estado.recursos.energiaWh >= estado.plan.reserva.regreso ? '✓' : '⚠') + ' Reserva regreso ' + estado.plan.reserva.regreso + ' Wh</span>' :
+                '') +
+            '</div></header>';
+
+        html += '<canvas id="cv-sup" width="320" height="110" class="escena"></canvas>';
+        html += '<p class="controles">← / → Mover · ↑ Escanear · ↓ Regresar y entregar · Cada paso consume energía y O₂</p>';
+
+        html += '<div class="banda"><div class="fila-botones">' +
+            boton('retroceder', '◀ ' + T.btnRetroceder, { off: estado.posicion === 0, title: 'Un paso hacia el módulo' }) +
+            boton('avanzar', T.btnAvanzar + ' ▶', { off: estado.posicion >= estado.sitios.length - 1, title: 'Un paso explorando (sube el costo de regreso)' }) +
+            boton('escanearsup', T.btnEscanear, t.escaner ? { title: C.escanearSup + ' Wh' } : { off: true, title: 'No llevas escáner de terreno' }) +
+            boton('recoger', T.btnRecoger, (s.tipo === 'muestra' && !s.recogida && libres > 0) ? { title: C.recoger + ' Wh' } : { off: true, title: 'Necesitas estar sobre una muestra y tener espacio' }) +
+            boton('perforar', T.btnPerforar, (s.tipo === 'crater' && t.taladro && (!s.perforada || (s.vetaRevelada && !s.vetaExtraida)) && libres > 0) ? { title: (s.perforada ? C.veta : C.perforar) + ' Wh' } : { off: true, title: 'Exige estar en el cráter, llevar taladro y tener espacio' }) +
+            boton('regresar', T.btnRegresar, { clase: 'peligro', title: 'Vuelve al módulo y entrega las muestras' }) +
+            '</div></div>';
+
+        html += '<footer class="consola">▸ ' + esc(mensaje) + '</footer>';
+        return html;
+    }
+
+    function htmlInforme() {
+        var inf = Motor.generarInforme(estado);
+        var clase = inf.resultado === 'exito' ? 'ok' : inf.resultado === 'parcial' ? 'ambar' : 'alerta';
+
+        var html = bannerTutorialHTML();
+        html += '<div class="centro"><div class="panel informe">' +
+            '<h1 class="' + clase + '">' + inf.titulo + '</h1>';
+
+        inf.causal.forEach(function(fr) { html += '<p class="causal">' + esc(fr) + '</p>'; });
+        if (ultimoInforme) html += '<p class="comparacion">TU EXPERIMENTO: batería ' + ultimoInforme.energia + ' → ' + estado.plan.energiaInicial + ' Wh · entregadas ' + ultimoInforme.muestras + ' → ' + inf.entregadas.length + ' · costo ' + ultimoInforme.costo + ' → ' + estado.presupuesto.gastado + '. ¿Qué cambió en tu diseño?</p>';
+
+        // Partida anterior contra esta (solo si se llegó con REPETIR).
+        var cmp = inf.comparacion;
+        var htmlCmp = '';
+        if (cmp) {
+            html += '<p class="causal comparacion">⇄ ' + esc(cmp.frase) + '</p>';
+            htmlCmp = '<h3>ANTES vs AHORA</h3><table class="tabla"><tr><th></th><th>Antes</th><th>Ahora</th></tr>' +
+                // Como mucho 3 filas: con más cambios la lección es "aísla uno", y la
+                // tabla entera empujaría los botones fuera de la pantalla fija.
+                cmp.cambios.slice(0, cmp.cambios.length > 3 ? 2 : 3).map(function(c) {
+                    return '<tr><td>' + esc(c.etiqueta) + '</td><td>' + esc(c.antes) + '</td><td><b>' + esc(c.ahora) + '</b></td></tr>';
+                }).join('') +
+                (cmp.cambios.length > 3 ?
+                    '<tr><td colspan="3">… y ' + (cmp.cambios.length - 2) + ' cambios más (' +
+                    esc(cmp.cambios.slice(2).map(function(c) { return c.etiqueta.toLowerCase(); }).join(', ')) + ')</td></tr>' :
+                    '') +
+                (cmp.terrenoCambio ?
+                    '<tr><td>Terreno (azar)</td><td>' + esc(cmp.terrenoCambio.antes) + '</td><td><b>' + esc(cmp.terrenoCambio.ahora) + '</b></td></tr>' :
+                    '') +
+                '<tr><td>Resultado</td><td>' + esc(cmp.antes.textoResultado) + '</td><td class="' + clase + '">' + esc(cmp.ahora.textoResultado) + '</td></tr></table>';
         }
-      } else if (estado.etapa === 'informe') {
-        fijarPasoTutorialPorId('fin_tutorial');
-      }
-    }
-  }
 
-  function fijarPasoTutorialPorId(id) {
-    for (var i = 0; i < PASOS_TUTORIAL.length; i++) {
-      if (PASOS_TUTORIAL[i].id === id) {
-        tutorial.paso = i;
-        break;
-      }
-    }
-  }
+        html += '<div class="dos-columnas"><div><h3>PLAN vs REAL (energía)</h3><table class="tabla">' +
+            '<tr><th></th><th>Plan</th><th>Real</th></tr>' +
+            '<tr><td>Total Wh</td><td>' + inf.plan.totalPrevisto + '</td><td>' + inf.consumido.energiaWh + '</td></tr>' +
+            '<tr><td>Margen</td><td>' + inf.plan.margenReservado + '</td><td>' + (inf.plan.energiaInicial - inf.consumido.energiaWh) + '</td></tr>' +
+            '<tr><td>O₂ usado</td><td>—</td><td>' + inf.consumido.oxigeno + '</td></tr>' +
+            '<tr><td>Comb. usado</td><td>—</td><td>' + inf.consumido.combustible + '</td></tr></table>' +
+            (inf.reserva ?
+                '<h3>POR TRAMO (Wh)</h3><table class="tabla"><tr><th></th><th>Reservado</th><th>Real</th></tr>' + ['ida', 'exploracion', 'regreso'].map(function(t) {
+                    var sobre = inf.porTramo[t] > inf.reserva[t];
+                    return '<tr><td>' + T.tramos[t] + '</td><td>' + inf.reserva[t] + '</td><td class="' + (sobre ? 'alerta' : '') + '">' + inf.porTramo[t] + (sobre ? ' ✖' : '') + '</td></tr>';
+                }).join('') + '</table>' :
+                '') +
+            '</div><div>' + htmlCmp +
+            '<h3>MUESTRAS ENTREGADAS</h3>' +
+            (inf.entregadas.length ?
+                '<ul>' + inf.entregadas.map(function(x) { return '<li>▣ ' + esc(x.nombre) + '</li>'; }).join('') + '</ul>' :
+                '<p class="alerta">Ninguna' + (inf.recogidasNoEntregadas.length ? ' (las ' + inf.recogidasNoEntregadas.length + ' recogidas se quedaron en el terreno)' : '') + '.</p>') +
+            '<h3>CADENA DE DECISIONES</h3><ul class="historial">';
 
-  /* ---------------- acciones ---------------- */
+        // Se pintan las 8 últimas; ajustarInforme() recorta las que no quepan.
+        inf.historial.slice(-8).forEach(function(h) {
+            html += '<li><b>' + esc(h.decision) + '</b><br>→ ' + esc(h.efecto) + '</li>';
+        });
 
-  function manejar(a, x) {
-    if (movimiento) return;
-    var desde = estado.posicion;
-    var r = null;
-    // Cualquier acción que no sea abrir un término cierra la burbuja de
-    // primera vez que estuviera en pantalla: ya se presentó.
-    if (a !== 'termino') {
-      var abierta = juego.querySelector('.burbuja [data-a="entendido"]');
-      if (abierta) vistos[abierta.getAttribute('data-x')] = true;
-      terminoAbierto = null;
+        html += '</ul></div></div><div class="fila-botones">' +
+            boton('repetir', T.btnRepetir, { clase: 'grande' }) +
+            boton('nueva', T.btnNueva) +
+            '</div></div></div>';
+        return html;
     }
-    switch (a) {
-      case 'termino': terminoAbierto = (terminoAbierto === x ? null : x); break;
-      case 'entendido': vistos[x] = true; break;
-      case 'comenzar': intro = false; break;
-      case 'tutorial': iniciarTutorial(); break;
-      case 'salir_tutorial': salirTutorial(); break;
-      case 'zona': r = Motor.fijarZona(estado, x); break;
-      case 'objetivo': r = Motor.fijarObjetivo(estado, x); break;
-      case 'cohete': r = Motor.elegirCohete(estado, x); break;
-      case 'equipar': r = Motor.equipar(estado, x); break;
-      case 'quitar': r = Motor.quitar(estado, x); break;
-      case 'vercalculo': modal = 'calculo'; break;
-      case 'probar': modal = 'probar'; break;
-      case 'reservar': modal = 'reservar'; break;
-      case 'verregreso': modal = 'regreso'; break;
-      case 'reserva': {
-        var partes = (x || '').split(':');
-        var tramo = partes[0], signo = partes[1];
-        r = signo === '+' ? Motor.moverReserva(estado, parReserva(tramo), tramo)
-                          : Motor.moverReserva(estado, tramo, parReserva(tramo));
-        break;
-      }
-      case 'reservarecomendado': r = Motor.reservarRecomendado(estado); break;
-      case 'cerrarmodal': modal = null; break;
-      case 'lanzar': r = Motor.lanzar(estado); break;
-      case 'escanearviaje': r = Motor.escanearViaje(estado, azarTerreno()); break;
-      case 'corregir': r = Motor.corregir(estado); break;
-      case 'mantener': r = Motor.mantener(estado); break;
-      case 'descender': r = Motor.descender(estado); break;
-      case 'avanzar': r = Motor.avanzar(estado, 1); break;
-      case 'retroceder': r = Motor.avanzar(estado, -1); break;
-      case 'escanearsup': r = Motor.escanearSuperficie(estado); break;
-      case 'recoger': r = Motor.recoger(estado); break;
-      case 'perforar': r = Motor.perforar(estado); break;
-      case 'regresar': r = Motor.regresar(estado); break;
-      case 'repetir':
-        ultimoInforme = { energia: estado.plan.energiaInicial, muestras: estado.muestras.entregadas.length, costo: estado.presupuesto.gastado };
-        estado = Motor.repetirConPlan(estado);
-        mensaje = 'De vuelta en la agencia: cambia UNA decisión y compara el resultado.';
-        break;
-      case 'nueva':
-        ultimoInforme = null;
+
+    /* ---------------- modales ---------------- */
+
+    function htmlModal() {
+        if (!modal) return '';
+        var inner = '';
+        if (modal === 'calculo') {
+            var n = Motor.desglose(estado.zonaAterrizaje, estado.objetivo, false);
+            var a = Motor.desglose(estado.zonaAterrizaje, estado.objetivo, true);
+            var r = Motor.recomendacion(estado);
+            inner = '<h2>DE DÓNDE SALE LA RECOMENDACIÓN</h2>' +
+                '<p>Ida: ' + formulaTramo(n.componentes.ida) + ' = <b>' + n.energia.ida + ' Wh</b></p>' +
+                '<p>Tarea (' + n.tareaNombre + '): <b>' + n.energia.tarea + ' Wh</b></p>' +
+                '<p>Regreso: ' + formulaTramo(n.componentes.regreso) + ' = <b>' + n.energia.regreso + ' Wh</b></p>' +
+                '<p>Total previsto: <b>' + n.energia.total + ' Wh</b></p><hr>' +
+                '<p>Si el terreno resulta rocoso (' + pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso) + ' % de riesgo): ida +' + a.componentes.ida.recargo + ' (' + a.componentes.ida.pasosRocosos + ' rocoso(s) × ' + a.componentes.ida.recargoUnitario + ' Wh) · regreso +' +
+                a.componentes.regreso.recargo + ' (' + a.componentes.regreso.pasosRocosos + ' × ' + a.componentes.regreso.recargoUnitario + ' Wh) → <b>' + a.energia.total + ' Wh</b></p>' +
+                '<p>Recomendación: ' + a.energia.total + ' + ' + Math.round(C.margenRecomendado * 100) + ' % de margen = <b>' + r.energiaRecomendada + ' Wh</b></p>' +
+                '<p class="nota">Oxígeno: ' + n.oxigeno.total + ' O₂ previsto · recomendado ' + r.oxigenoRecomendado + ' O₂</p>';
+        } else if (modal === 'probar') {
+            var pr = Motor.probar(estado);
+            var evp = Motor.evaluarReserva(estado);
+
+            function col(nombre, ev, adverso) {
+                var filas = ['ida', 'exploracion', 'regreso'].map(function(t) {
+                    var f = evp[t];
+                    var necesita = adverso ? f.adverso : f.normal;
+                    var falta = adverso ? f.faltaAdverso : f.faltaNormal;
+                    return '<p class="' + (falta > 0 ? 'alerta' : '') + '">' + T.tramos[t] + ': reserva ' + f.reservado + ' · necesita ' + necesita +
+                        (falta > 0 ? ' ✖ faltan ' + falta : ' ✓') + '</p>';
+                }).join('');
+                return '<div class="opcion"><h3>' + nombre + '</h3>' + filas +
+                    '<p>Total: necesitas <b>' + ev.desglose.energia.total + ' Wh</b> · llevas ' + pr.llevas.energia + ' Wh</p>' +
+                    '<p>Margen: <b class="' + (ev.margenEnergia < 0 ? 'alerta' : 'ok') + '">' + ev.margenEnergia + ' Wh ' + (ev.margenEnergia < 0 ? '✖ falta' : '✓') + '</b></p>' +
+                    '<p>Oxígeno: ' + ev.desglose.oxigeno.total + ' de ' + pr.llevas.oxigeno + ' <b class="' + (ev.margenOxigeno < 0 ? 'alerta' : 'ok') + '">' + (ev.margenOxigeno < 0 ? '✖' : '✓') + '</b></p>' +
+                    '</div>';
+            }
+            inner = '<h2>PRUEBA DE INGENIERÍA</h2>' + diagnostico() + '<div class="comparar">' +
+                col('TERRENO DESPEJADO · ' + (100 - pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso)) + ' %', pr.normal, false) +
+                col('TERRENO ROCOSO · ' + pct(DATOS.mapa[estado.zonaAterrizaje].probRocoso) + ' %', pr.adverso, true) +
+                '</div><p class="nota">El escaneo del viaje dirá cuál de los dos te toca; el porcentaje es el riesgo de la zona elegida. En rojo, el tramo cuya reserva no alcanza. Ninguna de las soluciones es «la correcta»: más batería cuesta masa; aterrizar más cerca es más incierto.</p>';
+        } else if (modal === 'regreso') {
+            var dr = Motor.desgloseRegreso(estado);
+            var ce = dr.energia;
+
+            function veredicto(sobra, unidad) {
+                return '<b class="' + (sobra < 0 ? 'alerta' : 'ok') + '">' + (sobra < 0 ? 'faltan ' + (-sobra) + ' ' + unidad + ' ✖' : 'sobran ' + sobra + ' ' + unidad + ' ✓') + '</b>';
+            }
+            inner = '<h2>DE DÓNDE SALE EL REGRESO</h2>';
+            if (ce.pasos === 0) {
+                inner += '<p>Estás en el módulo: volver no cuesta nada. Pulsa REGRESAR para entregar las muestras.</p>';
+            } else {
+                inner += '<p>Del paso ' + dr.desde + ' al módulo: ' + ce.pasos + ' paso(s) × ' + C.pasoEnergia + ' Wh = <b>' + ce.base + ' Wh</b></p>' +
+                    (ce.pasosRocosos ?
+                        '<p>Terreno rocoso: ' + ce.pasosRocosos + ' paso(s) × +' + ce.recargoUnitario + ' Wh = <b>+' + ce.recargo + ' Wh</b></p>' :
+                        (dr.rocoso ? '<p>Terreno rocoso: ningún paso rocoso queda en este tramo.</p>' : '')) +
+                    (ce.salida ? '<p>Salir del cráter (subida): <b>+' + ce.salida + ' Wh</b></p>' : '') +
+                    '<p>Total: <b>' + ce.total + ' Wh</b> · tienes ' + dr.tienes.energia + ' Wh → ' + veredicto(dr.sobra.energia, 'Wh') + '</p><hr>' +
+                    '<p>Oxígeno: ' + dr.oxigeno.pasos + ' paso(s) × ' + dr.oxigeno.unitario + ' = <b>' + dr.oxigeno.total + ' O₂</b> · tienes ' + dr.tienes.oxigeno + ' → ' + veredicto(dr.sobra.oxigeno, 'O₂') + '</p>';
+            }
+            inner += '<p class="nota">El indicador se recalcula tras cada acción. Lo que sobra es lo que puedes gastar en seguir explorando sin quedarte varado.</p>';
+        } else if (modal === 'reservar') {
+            var evr = Motor.evaluarReserva(estado);
+            inner = '<h2>REPARTE LA ENERGÍA POR TRAMOS</h2>' +
+                '<p>Llevas <b>' + evr.total + ' Wh</b>. Lo que no apartes para la ida o el regreso queda para explorar. ' +
+                'Cada botón mueve ' + C.pasoReserva + ' Wh entre ese tramo y la exploración (la exploración los intercambia con el regreso).</p>' +
+                htmlReserva(evr, evr.total, true) +
+                '<div class="fila-botones">' + boton('reservarecomendado', T.btnRecomendado, { title: 'Reparte según el escenario adverso: primero el regreso, luego la ida, el resto a explorar.' }) + '</div>' +
+                '<p class="nota">La reserva no bloquea nada en superficie: el juego avisa cuando entras en la de regreso y el informe compara lo reservado con lo consumido. LANZAR nunca se bloquea por reservar poco.</p>';
+        }
+        return '<div class="velo" data-a="cerrarmodal"><div class="panel modal">' + inner +
+            '<div class="fila-botones">' + boton('cerrarmodal', 'CERRAR') + '</div></div></div>';
+    }
+
+    function iniciarTutorial() {
+        if (tutorial.activo) return;
+        // Guardar partida actual si el usuario ya estaba jugando
+        if (!intro && estado.etapa !== 'hangar' || (estado.cohete || estado.equipo.length > 0)) {
+            tutorial.estadoGuardado = JSON.parse(JSON.stringify(estado));
+        }
+        tutorial.activo = true;
+        tutorial.paso = 0;
+        intro = false;
+        modal = null;
         estado = Motor.nuevoEstado();
-        mensaje = 'Misión nueva. Todo por decidir.';
-        break;
+        mensaje = 'Tutorial guiado iniciado. Sigue las instrucciones de AIDA.';
     }
-    if (r && r.msg) mensaje = r.msg;
-    avanzarPasoTutorialSiCorresponde(a, x);
-    render();
-    if ((a === 'avanzar' || a === 'retroceder') && estado.etapa === 'superficie' && estado.posicion !== desde) animarPaso(desde, estado.posicion);
-  }
 
-  /* ---------------- render raíz ---------------- */
-
-  function render() {
-    var html;
-    if (intro) html = htmlIntro();
-    else if (estado.etapa === 'hangar') html = htmlHangar();
-    else if (estado.etapa === 'viaje') html = htmlViaje();
-    else if (estado.etapa === 'superficie') html = htmlSuperficie();
-    else html = htmlInforme();
-    juego.innerHTML = html + htmlModal();
-    dibujarMapa();
-    dibujarViaje();
-    dibujarSuperficie();
-    colocarGlosario();
-    ajustarInforme();
-    resaltarControlTutorial();
-  }
-
-  // La pantalla es fija (sin scroll): si el informe no cabe, se recorta la
-  // cadena de decisiones por el principio hasta que los botones vuelvan a
-  // verse. Las frases causales y las tablas nunca se quitan.
-  function ajustarInforme() {
-    var inf = juego.querySelector('.informe');
-    if (!inf) return;
-    var lista = inf.querySelector('.historial');
-    var todas = Array.prototype.slice.call(lista.querySelectorAll('li'));
-    function desborda() { return inf.scrollHeight > inf.clientHeight; }
-    function recortar() {
-      while (lista.children.length > 1 && desborda()) lista.removeChild(lista.firstChild);
+    function salirTutorial() {
+        tutorial.activo = false;
+        tutorial.paso = 0;
+        if (tutorial.estadoGuardado) {
+            estado = tutorial.estadoGuardado;
+            tutorial.estadoGuardado = null;
+            mensaje = 'Partida previa restaurada.';
+        } else {
+            mensaje = 'Tutorial finalizado. Estás en el hangar listo para tu misión.';
+        }
     }
-    recortar();
-    if (desborda()) {
-      // Ni con una sola entrada cabe: letra más compacta en las frases y se
-      // vuelve a intentar con la cadena entera.
-      inf.classList.add('compacto');
-      lista.innerHTML = '';
-      todas.forEach(function (li) { lista.appendChild(li); });
-      recortar();
+
+    function avanzarPasoTutorialSiCorresponde(a, x) {
+        if (!tutorial.activo) return;
+        var pasoActual = PASOS_TUTORIAL[tutorial.paso];
+        if (!pasoActual) return;
+        if (pasoActual.espera(a, x)) {
+            if (tutorial.paso < PASOS_TUTORIAL.length - 1) {
+                tutorial.paso++;
+            } else {
+                tutorial.activo = false;
+            }
+        }
+        // Auto-sincronización contextual según la etapa real para evitar desfaces
+        if (tutorial.activo) {
+            var idActual = PASOS_TUTORIAL[tutorial.paso].id;
+            if (estado.etapa === 'viaje') {
+                if (!estado.viaje.escaneado) {
+                    fijarPasoTutorialPorId('escanear_viaje');
+                } else if (!estado.viaje.decidido) {
+                    fijarPasoTutorialPorId('decision_viaje');
+                } else {
+                    fijarPasoTutorialPorId('descender');
+                }
+            } else if (estado.etapa === 'superficie') {
+                var s = Motor.sitioActual(estado);
+                if (estado.muestras.recogidas.length > 0) {
+                    fijarPasoTutorialPorId('regresar_modulo');
+                } else if (s && s.tipo === 'crater') {
+                    fijarPasoTutorialPorId('perforar_crater');
+                } else {
+                    fijarPasoTutorialPorId('avanzar_superficie');
+                }
+            } else if (estado.etapa === 'informe') {
+                fijarPasoTutorialPorId('fin_tutorial');
+            }
+        }
     }
-  }
 
-  function ajustarEscala() {
-    escala = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
-    juego.style.transform = 'scale(' + escala + ')';
-  }
+    function fijarPasoTutorialPorId(id) {
+        for (var i = 0; i < PASOS_TUTORIAL.length; i++) {
+            if (PASOS_TUTORIAL[i].id === id) {
+                tutorial.paso = i;
+                break;
+            }
+        }
+    }
 
-  function iniciar() {
-    juego = document.getElementById('juego');
-    marco = document.getElementById('marco');
-    juego.addEventListener('click', function (e) {
-      var b = e.target.closest('[data-a]');
-      if (!b || b.disabled) return;
-      if (b.classList.contains('velo') && e.target !== b) return;
-      manejar(b.getAttribute('data-a'), b.getAttribute('data-x'));
-    });
-    window.addEventListener('keydown', function (e) {
-      if (estado.etapa !== 'superficie' || modal) return;
-      if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-      var acciones = { ArrowRight: 'avanzar', ArrowLeft: 'retroceder', ArrowUp: 'escanearsup', ArrowDown: 'regresar' };
-      if (!acciones[e.key]) return;
-      e.preventDefault();
-      if (e.repeat) return;
-      manejar(acciones[e.key]);
-    });
-    window.addEventListener('resize', ajustarEscala);
-    ajustarEscala();
-    render();
-  }
+    /* ---------------- acciones ---------------- */
 
-  // Reuse the team's original pixel art in the lunar top-down adapter.
-  return { iniciar: iniciar, arte: { pint: pint, estrellas: estrellas, astro: SPR_ASTRO,
-    modulo: SPR_MODULO, cristal: SPR_CRISTAL, muestra: SPR_MUESTRA,
-    roca: SPR_ROCA, cohete: SPR_COHETE } };
+    function manejar(a, x) {
+        if (movimiento) return;
+        var desde = estado.posicion;
+        var r = null;
+        // Cualquier acción que no sea abrir un término cierra la burbuja de
+        // primera vez que estuviera en pantalla: ya se presentó.
+        if (a !== 'termino') {
+            var abierta = juego.querySelector('.burbuja [data-a="entendido"]');
+            if (abierta) vistos[abierta.getAttribute('data-x')] = true;
+            terminoAbierto = null;
+        }
+        switch (a) {
+            case 'termino':
+                terminoAbierto = (terminoAbierto === x ? null : x);
+                break;
+            case 'entendido':
+                vistos[x] = true;
+                break;
+            case 'comenzar':
+                intro = false;
+                break;
+            case 'tutorial':
+                iniciarTutorial();
+                break;
+            case 'salir_tutorial':
+                salirTutorial();
+                break;
+            case 'zona':
+                r = Motor.fijarZona(estado, x);
+                break;
+            case 'objetivo':
+                r = Motor.fijarObjetivo(estado, x);
+                break;
+            case 'cohete':
+                r = Motor.elegirCohete(estado, x);
+                break;
+            case 'equipar':
+                r = Motor.equipar(estado, x);
+                break;
+            case 'quitar':
+                r = Motor.quitar(estado, x);
+                break;
+            case 'vercalculo':
+                modal = 'calculo';
+                break;
+            case 'probar':
+                modal = 'probar';
+                break;
+            case 'reservar':
+                modal = 'reservar';
+                break;
+            case 'verregreso':
+                modal = 'regreso';
+                break;
+            case 'reserva':
+                {
+                    var partes = (x || '').split(':');
+                    var tramo = partes[0],
+                        signo = partes[1];
+                    r = signo === '+' ? Motor.moverReserva(estado, parReserva(tramo), tramo) : Motor.moverReserva(estado, tramo, parReserva(tramo));
+                    break;
+                }
+            case 'reservarecomendado':
+                r = Motor.reservarRecomendado(estado);
+                break;
+            case 'cerrarmodal':
+                modal = null;
+                break;
+            case 'lanzar':
+                r = Motor.lanzar(estado);
+                break;
+            case 'escanearviaje':
+                r = Motor.escanearViaje(estado, azarTerreno());
+                break;
+            case 'corregir':
+                r = Motor.corregir(estado);
+                break;
+            case 'mantener':
+                r = Motor.mantener(estado);
+                break;
+            case 'descender':
+                r = Motor.descender(estado);
+                break;
+            case 'avanzar':
+                r = Motor.avanzar(estado, 1);
+                break;
+            case 'retroceder':
+                r = Motor.avanzar(estado, -1);
+                break;
+            case 'escanearsup':
+                r = Motor.escanearSuperficie(estado);
+                break;
+            case 'recoger':
+                r = Motor.recoger(estado);
+                break;
+            case 'perforar':
+                r = Motor.perforar(estado);
+                break;
+            case 'regresar':
+                r = Motor.regresar(estado);
+                break;
+            case 'repetir':
+                ultimoInforme = { energia: estado.plan.energiaInicial, muestras: estado.muestras.entregadas.length, costo: estado.presupuesto.gastado };
+                estado = Motor.repetirConPlan(estado);
+                mensaje = 'De vuelta en la agencia: cambia UNA decisión y compara el resultado.';
+                break;
+            case 'nueva':
+                ultimoInforme = null;
+                estado = Motor.nuevoEstado();
+                mensaje = 'Misión nueva. Todo por decidir.';
+                break;
+        }
+        if (r && r.msg) mensaje = r.msg;
+        avanzarPasoTutorialSiCorresponde(a, x);
+        render();
+        if ((a === 'avanzar' || a === 'retroceder') && estado.etapa === 'superficie' && estado.posicion !== desde) animarPaso(desde, estado.posicion);
+    }
+
+    /* ---------------- render raíz ---------------- */
+
+    function render() {
+        var html;
+        if (intro) html = htmlIntro();
+        else if (estado.etapa === 'hangar') html = htmlHangar();
+        else if (estado.etapa === 'viaje') html = htmlViaje();
+        else if (estado.etapa === 'superficie') html = htmlSuperficie();
+        else html = htmlInforme();
+        juego.innerHTML = html + htmlModal();
+        dibujarMapa();
+        dibujarViaje();
+        dibujarSuperficie();
+        colocarGlosario();
+        ajustarInforme();
+        resaltarControlTutorial();
+    }
+
+    // La pantalla es fija (sin scroll): si el informe no cabe, se recorta la
+    // cadena de decisiones por el principio hasta que los botones vuelvan a
+    // verse. Las frases causales y las tablas nunca se quitan.
+    function ajustarInforme() {
+        var inf = juego.querySelector('.informe');
+        if (!inf) return;
+        var lista = inf.querySelector('.historial');
+        var todas = Array.prototype.slice.call(lista.querySelectorAll('li'));
+
+        function desborda() { return inf.scrollHeight > inf.clientHeight; }
+
+        function recortar() {
+            while (lista.children.length > 1 && desborda()) lista.removeChild(lista.firstChild);
+        }
+        recortar();
+        if (desborda()) {
+            // Ni con una sola entrada cabe: letra más compacta en las frases y se
+            // vuelve a intentar con la cadena entera.
+            inf.classList.add('compacto');
+            lista.innerHTML = '';
+            todas.forEach(function(li) { lista.appendChild(li); });
+            recortar();
+        }
+    }
+
+    function ajustarEscala() {
+        escala = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+        juego.style.transform = 'scale(' + escala + ')';
+    }
+
+    // Anima el desplazamiento del astronauta entre dos posiciones en 180 ms.
+    // Usa el objeto `movimiento` que dibujarSuperficie() ya consulta en las
+    // líneas 423-428: { desde, hasta, t }  donde t va de 0 a 1 con ease in/out.
+    function animarPaso(desde, hasta) {
+        var duracion = 180; // ms
+        var inicio = null;
+        movimiento = { desde: desde, hasta: hasta, t: 0 };
+
+        function paso(ts) {
+            if (!inicio) inicio = ts;
+            var t = Math.min(1, (ts - inicio) / duracion);
+            movimiento.t = t;
+            dibujarSuperficie();
+            if (t < 1) {
+                requestAnimationFrame(paso);
+            } else {
+                movimiento = null;
+                render();
+            }
+        }
+        requestAnimationFrame(paso);
+    }
+
+    function iniciar() {
+        juego = document.getElementById('juego');
+        marco = document.getElementById('marco');
+        juego.addEventListener('click', function(e) {
+            var b = e.target.closest('[data-a]');
+            if (!b || b.disabled) return;
+            if (b.classList.contains('velo') && e.target !== b) return;
+            manejar(b.getAttribute('data-a'), b.getAttribute('data-x'));
+        });
+        window.addEventListener('keydown', function(e) {
+            if (estado.etapa !== 'superficie' || modal) return;
+            if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+            var acciones = { ArrowRight: 'avanzar', ArrowLeft: 'retroceder', ArrowUp: 'escanearsup', ArrowDown: 'regresar' };
+            if (!acciones[e.key]) return;
+            e.preventDefault();
+            if (e.repeat) return;
+            manejar(acciones[e.key]);
+        });
+        window.addEventListener('resize', ajustarEscala);
+        ajustarEscala();
+        render();
+    }
+
+    // Reuse the team's original pixel art in the lunar top-down adapter.
+    return {
+        iniciar: iniciar,
+        arte: {
+            pint: pint,
+            estrellas: estrellas,
+            astro: SPR_ASTRO,
+            modulo: SPR_MODULO,
+            cristal: SPR_CRISTAL,
+            muestra: SPR_MUESTRA,
+            roca: SPR_ROCA,
+            cohete: SPR_COHETE
+        }
+    };
 })();
 
-document.addEventListener('DOMContentLoaded', function () {
-  if (typeof LunarUI !== 'undefined') LunarUI.iniciar();
-  else UI.iniciar();
+document.addEventListener('DOMContentLoaded', function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('modo') === 'lunar' && typeof LunarUI !== 'undefined') {
+        LunarUI.iniciar();
+    } else {
+        UI.iniciar();
+    }
 });

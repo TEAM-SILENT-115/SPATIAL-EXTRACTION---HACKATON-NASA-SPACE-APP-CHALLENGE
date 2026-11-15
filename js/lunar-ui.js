@@ -37,11 +37,14 @@ var LunarUI = (function () {
 
   function tutorial() {
     if (!s.tutorial.activo) return '';
-    const texto = esc(Lunar.guia(s)).replace(/^AIDA:\s*/, '');
+    const p = Lunar.guiaPaso(s);
     return `<aside class="banner-tutorial" role="region" aria-label="Tutorial AIDA">
-      <div class="aida-badge" data-l="tutorial_modal" title="Haz clic para abrir el tutorial">🚀 TUTORIAL AIDA</div>
+      <div class="aida-badge" data-l="tutorial_modal" title="Haz clic para abrir el tutorial interactivo">
+        🚀 ${esc(p.badge)}
+      </div>
       <div class="aida-info">
-        <p class="aida-instruccion">${texto}</p>
+        <span class="aida-fase-tag">${esc(p.fase)}</span>
+        <p class="aida-instruccion">${esc(p.texto)}</p>
       </div>
       <div class="aida-acciones">
         ${btn('tutorial_modal', '📖 VER TUTORIAL ▶', '', false, 'btn-tutorial-open')}
@@ -177,37 +180,41 @@ var LunarUI = (function () {
   function travelHTML() {
     const normal = Lunar.proyectar(s), near = Lunar.proyectar(s, s.ruta, Lunar.map(s).nearModule);
     return `<main class="l-travel">
-      <section>
+      <section class="l-travel-side">
         <p class="l-kicker">EN VUELO / ${esc(Lunar.map(s).name)}</p>
         <h1>Una decisión antes<br>de tocar la Luna.</h1>
         <p>Tu diseño de carga y la ruta ${names[s.ruta].toLowerCase()} van a bordo.</p>
-        <canvas id="l-ship" width="400" height="150"></canvas>
-        <p>Combustible: <b>${s.recursos.combustible} u</b> · Batería: <b>${s.recursos.energiaWh} Wh</b> · O₂: <b>${s.recursos.oxigeno} u</b></p>
+        <canvas id="l-ship" width="380" height="110"></canvas>
+        <div class="l-telemetria-resumen">
+          <span>Combustible: <b>${s.recursos.combustible} u</b></span> · 
+          <span>Batería: <b>${s.recursos.energiaWh} Wh</b></span> · 
+          <span>O₂: <b>${s.recursos.oxigeno} u</b></span>
+        </div>
       </section>
-      <section class="l-panel">
+      <section class="l-panel l-travel-panel">
         <h2>Reconocimiento del descenso</h2>
         ${!s.viaje.escaneado?`
           <p>Escanea la telemetría del punto de descenso para evaluar la plataforma más cercana al objetivo.</p>
-          ${btn('scanflight','ESCANEAR DESCENSO')}
+          <div style="margin-top:10px">${btn('scanflight','ESCANEAR DESCENSO','',false,'grande')}</div>
         `:`
           <p>Telemetría recibida. Corregir reduce la caminata en regolito pero consume 30 u de combustible.</p>
           <div class="l-options">
-            <article class="l-opt-card">
+            <article class="l-opt-card ${s.viaje.decidido && !s.viaje.corrigio ? 'seleccionada' : ''}">
               <h3>Mantener</h3>
               <p>${normal.distancia} m · ${n(normal.total)} Wh</p>
               <p>Combustible: −0 u<br>Reserva estimada: ${n(s.recursos.energiaWh-normal.total)} Wh</p>
               <div class="l-badge-nominal">✓ Descenso nominal directo</div>
               ${btn('keep','MANTENER','',s.viaje.decidido, 'grande')}
             </article>
-            <article class="l-opt-card ${s.recursos.combustible<30?'bloqueada':''}">
+            <article class="l-opt-card ${s.recursos.combustible<30?'bloqueada':''} ${s.viaje.decidido && s.viaje.corrigio ? 'seleccionada' : ''}">
               <h3>Corregir</h3>
               <p>${near.distancia} m · ${n(near.total)} Wh</p>
               <p>Combustible: −30 u<br>Reserva estimada: ${n(s.recursos.energiaWh-near.total)} Wh</p>
               ${s.recursos.combustible<30?`
                 <div class="l-alerta-combustible">
                   <b>⛔ Maniobra no disponible (Falta combustible)</b>
-                  <small>Requiere <b>30 u</b> de combustible para encender propulsores. A bordo llevas <b>${s.recursos.combustible} u</b>.<br>En el Hangar se requería equipar <b>Combustible extra (+30 u)</b> o el cohete <b>Titán</b>.</small>
-                  ${!s.viaje.decidido?`<div style="margin-top:8px">${btn('back_to_hangar','↺ VOLVER AL HANGAR A EQUIPAR','',false,'mini')}</div>`:''}
+                  <small>Requiere <b>30 u</b> de combustible. Llevas <b>${s.recursos.combustible} u</b>.<br>En el Hangar se requería equipar <b>Combustible extra (+30 u)</b> o el cohete <b>Titán</b>.</small>
+                  ${!s.viaje.decidido?`<div style="margin-top:6px">${btn('back_to_hangar','↺ VOLVER AL HANGAR A EQUIPAR','',false,'mini')}</div>`:''}
                 </div>
               `:`
                 <div class="l-badge-nominal">✓ Propulsores de maniobra listos (−30 u)</div>
@@ -216,7 +223,12 @@ var LunarUI = (function () {
             </article>
           </div>
         `}
-        ${s.viaje.decidido?`<p class="ok">✓ ${s.viaje.corrigio?'Corrección':'Trayectoria original'} sellada.</p>${btn('land','DESCENDER A SUPERFICIE','','','grande')}`:''}
+        ${s.viaje.decidido?`
+          <div class="l-descenso-box">
+            <div class="l-descenso-msg">✓ ${s.viaje.corrigio?'Corrección de órbita':'Trayectoria original'} sellada para el descenso.</div>
+            ${btn('land','🚀 DESCENDER A SUPERFICIE','',false,'grande btn-descenso-pulso')}
+          </div>
+        `:''}
       </section>
     </main>`;
   }
@@ -679,6 +691,27 @@ var LunarUI = (function () {
     ctx.restore();
   }
 
+  function aplicarResaltadoTutorial() {
+    const prev = root.querySelectorAll('.control-resaltado, .l-foco-paso');
+    for (let i = 0; i < prev.length; i++) {
+      prev[i].classList.remove('control-resaltado', 'l-foco-paso');
+    }
+
+    if (!s.tutorial.activo) return;
+    const p = Lunar.guiaPaso(s);
+    if (!p || !p.selector) return;
+
+    try {
+      const target = root.querySelector(p.selector);
+      if (target) {
+        target.classList.add('control-resaltado', 'l-foco-paso');
+        if (s.etapa === 'hangar' || s.etapa === 'viaje') {
+          target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+    } catch (e) {}
+  }
+
   function render() {
     const focus = document.activeElement?.dataset;
     const focusAction = focus?.l, focusX = focus?.x;
@@ -700,6 +733,8 @@ var LunarUI = (function () {
       const el = Array.from(root.querySelectorAll('[data-l]')).find(e => e.dataset.l===focusAction && e.dataset.x===focusX);
       if (el) el.focus({preventScroll:true});
     }
+
+    aplicarResaltadoTutorial();
   }
 
   function act(a, x) {
@@ -756,6 +791,12 @@ var LunarUI = (function () {
     }
     if (a === 'scanflight') {
       Lunar.escanearViaje(s);
+      setTimeout(() => {
+        const btnKeep = root.querySelector('[data-l="keep"]');
+        if (btnKeep) {
+          btnKeep.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 50);
     }
     if (a === 'dismiss_notif') {
       notif = null;
@@ -771,6 +812,13 @@ var LunarUI = (function () {
     }
     if (a === 'keep' || a === 'correct') {
       result = Lunar.decidir(s, a === 'correct');
+      setTimeout(() => {
+        const btnLand = root.querySelector('[data-l="land"]');
+        if (btnLand) {
+          btnLand.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          btnLand.focus({ preventScroll: false });
+        }
+      }, 60);
     }
     if (a === 'land') {
       Lunar.descender(s);

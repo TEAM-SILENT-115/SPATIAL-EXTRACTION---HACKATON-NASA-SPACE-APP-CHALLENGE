@@ -445,33 +445,126 @@ var Lunar = (function () {
     };
   }
 
-  function guia(s) {
+  function guiaPaso(s) {
     if (s.etapa === 'hangar') {
-      if (!s.tutorial.comparado) return 'AIDA: Ve a la Sección 01 (SITIO Y RUTA) o Sección 02 (EQUIPO): elige otra opción y compara el consumo en la Sección 03.';
-      if (!s.prueba) return 'AIDA: Has modificado el plan. Ahora ve a la Sección 03 (PROBAR EL PLAN) y pulsa PROBAR PLAN para calcular consumos.';
-      return 'AIDA: Todo validado con éxito. En la Sección 03 pulsa LANZAR para comenzar el descenso lunar.';
+      if (!s.tutorial.comparado) {
+        return {
+          paso: 1,
+          total: 3,
+          fase: '01 / SITIO Y RUTA',
+          selector: 'button[data-l="ruta"][data-x="directa"]',
+          badge: 'PASO 1 DE 3',
+          texto: 'Haz clic en [ RUTA DIRECTA ] en la Sección 01 para trazar el camino más corto.',
+          detalle: 'Observa cómo la distancia y las pendientes modifican el consumo previsto.'
+        };
+      }
+      if (!s.prueba) {
+        return {
+          paso: 2,
+          total: 3,
+          fase: '03 / PROBAR EL PLAN',
+          selector: 'button[data-l="test"]',
+          badge: 'PASO 2 DE 3',
+          texto: 'Haz clic en [ PROBAR PLAN ] en la Sección 03 para calcular telemetría y balance de energía.',
+          detalle: 'La simulación calcula si tu batería y oxígeno soportan la ruta elegida.'
+        };
+      }
+      return {
+        paso: 3,
+        total: 3,
+        fase: '03 / AUTORIZAR DESPEGUE',
+        selector: 'button[data-l="launch"]',
+        badge: 'PASO 3 DE 3',
+        texto: '¡Telemetría validada! Haz clic en [ LANZAR ] en la Sección 03 para despegar hacia la Luna.',
+        detalle: 'Tu nave viajará a la órbita lunar con la configuración ensayada.'
+      };
     }
     if (s.etapa === 'viaje') {
-      return !s.viaje.escaneado ?
-        'AIDA: Pulsa ESCANEAR DESCENSO para evaluar la distancia y telemetría al objetivo.' :
-        !s.viaje.decidido ?
-        'AIDA: Pulsa MANTENER para el descenso nominal previsto (o CORREGIR si equipaste 30 u de combustible).' :
-        'AIDA: Pulsa DESCENDER para iniciar las operaciones en la superficie lunar.';
+      if (!s.viaje.escaneado) {
+        return {
+          paso: 1,
+          total: 2,
+          fase: 'EN VUELO · TELEMETRÍA',
+          selector: 'button[data-l="scanflight"]',
+          badge: 'PASO 1 DE 2',
+          texto: 'Haz clic en [ ESCANEAR DESCENSO ] para evaluar la plataforma más cercana al objetivo.',
+          detalle: 'Los sensores en órbita calculan la distancia exacta al cráter objetivo.'
+        };
+      }
+      if (!s.viaje.decidido) {
+        return {
+          paso: 2,
+          total: 2,
+          fase: 'EN VUELO · TRAYECTORIA',
+          selector: 'button[data-l="keep"]',
+          badge: 'PASO 2 DE 2',
+          texto: 'Haz clic en [ MANTENER ] para confirmar el descenso nominal directo.',
+          detalle: 'O elige Corregir si tienes 30 u de combustible para acercar el módulo.'
+        };
+      }
+      return {
+        paso: 2,
+        total: 2,
+        fase: 'DESCENSO AUTORIZADO',
+        selector: 'button[data-l="land"]',
+        badge: 'LISTO',
+        texto: 'Trayectoria sellada. Haz clic en [ DESCENDER A SUPERFICIE ] para comenzar a jugar.',
+        detalle: 'La nave iniciará el aterrizaje suave en el Polo Sur Lunar.'
+      };
     }
     if (s.etapa === 'superficie') {
-      return !s.tutorial.movido ?
-        'AIDA: Usa WASD o flechas para caminar. Sigue la línea ámbar hacia el núcleo ◇ o explora anomalías ? con el escáner.' :
-        !s.tomada ?
-        'AIDA: Llega al marcador ◇ y pulsa E para perforar el núcleo del cráter. Cuidado con los bloques de roca ▲.' :
-        'AIDA: ¡Núcleo asegurado! Sigue la línea azul de regreso al módulo ▣ y pulsa E para entregar y ganar.';
+      if (!s.tutorial.movido) {
+        return {
+          paso: 1,
+          total: 3,
+          fase: 'SUPERFICIE LUNAR · MOVIMIENTO',
+          selector: '#l-field',
+          badge: 'PASO 1 DE 3',
+          texto: 'Usa las teclas WASD o las FLECHAS del teclado para mover a tu astronauta en el terreno.',
+          detalle: 'Cada metro consume energía Wh y oxígeno. Evita las rocas oscuras ▲.'
+        };
+      }
+      if (!s.tomada) {
+        return {
+          paso: 2,
+          total: 3,
+          fase: 'SUPERFICIE LUNAR · EXTRACCIÓN',
+          selector: '#l-field',
+          badge: 'PASO 2 DE 3',
+          texto: 'Sigue la línea ámbar hasta el cráter ◇ y pulsa la tecla [ E ] para perforar el núcleo.',
+          detalle: 'Extracción científica requerida para el éxito de la misión.'
+        };
+      }
+      return {
+        paso: 3,
+        total: 3,
+        fase: 'SUPERFICIE LUNAR · RETORNO',
+        selector: '#l-field',
+        badge: 'PASO 3 DE 3',
+        texto: '¡Núcleo a bordo! Sigue la línea azul de regreso al módulo ▣ y pulsa [ E ] para entregar y ganar.',
+        detalle: 'Debes llegar con energía y oxígeno antes de agotar los recursos.'
+      };
     }
-    return 'AIDA: Misión finalizada. Revisa la causa raíz y tu rango de ingeniería en el informe.';
+    return {
+      paso: 1,
+      total: 1,
+      fase: 'INFORME DE MISIÓN',
+      selector: 'button[data-l="repeat"], button[data-l="new"]',
+      badge: 'FIN MISIÓN',
+      texto: 'Revisa tu balance de ingeniería y presiona [ NUEVA MISIÓN ] para el siguiente reto.',
+      detalle: ''
+    };
+  }
+
+  function guia(s) {
+    const p = guiaPaso(s);
+    return 'AIDA: ' + p.texto;
   }
 
   return {
     nuevo, map, masa, costo, transitable, camino, medir, proyectar, evaluar,
     cambiar, probar, lanzar, escanearViaje, decidir, descender, mover,
-    contexto, interactuar, preverAccion, informe, guia, eq, esObstaculo,
+    contexto, interactuar, preverAccion, informe, guia, guiaPaso, eq, esObstaculo,
     evaluarFinal, esDesbloqueado, desbloquearSiguiente
   };
 })();

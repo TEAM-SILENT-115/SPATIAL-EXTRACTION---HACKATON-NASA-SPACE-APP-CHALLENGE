@@ -132,4 +132,42 @@ for(const m of MAPAS_NASA)for(const route of ['directa','ahorro'])for(const corr
   LunarAudio.exito();
   check(true,'LunarAudio llamadas seguras sin entorno DOM');
 }
+// Tutorial enfocado paso a paso
+{
+  const s = Lunar.nuevo();
+  s.tutorial.activo = true;
+  // Paso 1 Hangar: Ruta Directa
+  let g = Lunar.guiaPaso(s);
+  check(g.paso === 1, 'tutorial paso 1');
+  check(g.selector.includes('directa'), 'foco en ruta directa');
+  Lunar.cambiar(s, 'ruta', 'directa');
+  // Paso 2 Hangar: Probar plan
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 2, 'tutorial paso 2');
+  check(g.selector.includes('test'), 'foco en probar plan');
+  Lunar.probar(s);
+  // Paso 3 Hangar: Lanzar
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 3, 'tutorial paso 3');
+  check(g.selector.includes('launch'), 'foco en lanzar');
+  Lunar.lanzar(s);
+  // Paso 1 Viaje: Escaneo
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 1, 'viaje paso 1');
+  check(g.selector.includes('scanflight'), 'foco en scanflight');
+  Lunar.escanearViaje(s);
+  // Paso 2 Viaje: Mantener
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 2, 'viaje paso 2');
+  check(g.selector.includes('keep'), 'foco en keep');
+  Lunar.decidir(s, false);
+  // Descenso listo
+  g = Lunar.guiaPaso(s);
+  check(g.selector.includes('land'), 'foco en land');
+  Lunar.descender(s);
+  // Superficie: Movimiento
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 1, 'superficie paso 1 movimiento');
+  check(g.selector.includes('field'), 'foco en canvas');
+}
 console.log('Lunar: '+checks+' comprobaciones pasaron (12 misiones completas, progresión, 6 finales y audio).');

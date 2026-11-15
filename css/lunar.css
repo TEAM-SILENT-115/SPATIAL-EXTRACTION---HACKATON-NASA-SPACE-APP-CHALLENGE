@@ -41,3 +41,33 @@
 .l-hangar .l-kicker {margin-bottom:4px}
 .l-hangar .l-panel>p {font-size:12px;line-height:1.4}
 .l-hangar .l-panel:last-child>button[data-l="launch"] {position:sticky;bottom:0;background:#25314a;flex-shrink:0;margin-top:auto}
+
+/* Elementos añadidos: Dificultad, Finales múltiples, Audio y Onboarding */
+.l-site-badge { padding: 8px 10px; border-radius: 4px; font-size: 11px; line-height: 1.4; border-left: 3px solid; margin: 4px 0; }
+.l-site-badge.facil { background: #122931; border-color: #6dd6cf; color: #a5f3eb; }
+.l-site-badge.medio { background: #2f2518; border-color: #e6bd6a; color: #f9e2ab; }
+.l-site-badge.dificil { background: #351a23; border-color: #ff7785; color: #ffb8c0; }
+.l-site-badge b { display: block; margin-bottom: 3px; font-size: 11px; letter-spacing: 1px; }
+
+.btn-sound { background: #1b283d!important; border-color: #4f6482!important; color: #e1ebf7!important; font-size: 11px!important; }
+.btn-sound.muted { color: #8397b2!important; opacity: 0.7; }
+
+.l-ending-card { border: 2px solid; border-radius: 6px; padding: 18px; margin: 16px 0; background: #101c30; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.l-ending-header { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.l-rank-badge { font-size: 34px; font-weight: 900; line-height: 1; padding: 8px 16px; border-radius: 6px; border: 2px solid; text-shadow: 0 0 10px currentColor; font-family: 'Courier New', monospace; }
+.l-ending-titles h2 { font-size: 18px; margin: 0 0 4px; letter-spacing: 1px; }
+.l-ending-titles small { font-size: 12px; color: #a8bad0; letter-spacing: 0.5px; }
+.l-ending-epilogo { font-style: italic; line-height: 1.55; color: #d6e2f0; background: #0c1524; padding: 12px; border-left: 3px solid #6dd6cf; margin: 10px 0; font-size: 13px; }
+.l-ending-leccion { font-size: 12px; line-height: 1.5; color: #ffdfa9; background: #262218; padding: 10px; border-left: 3px solid #e6bd6a; margin-top: 8px; }
+.l-unlock-banner { background: #133332; border: 2px solid #52e5cf; padding: 14px; border-radius: 6px; margin: 16px 0; text-align: center; }
+.l-unlock-banner strong { font-size: 14px; color: #6dd6cf; display: block; margin-bottom: 6px; letter-spacing: 1px; }
+.l-unlock-banner p { font-size: 12px; color: #d6e8e6; margin-bottom: 12px; }
+
+.l-tutorial-box { display: flex; flex-direction: column; gap: 14px; }
+.l-tutorial-nav { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3c4d65; padding-bottom: 8px; }
+.l-tutorial-nav span { font-size: 12px; color: #e6bd6a; font-weight: bold; }
+.l-tutorial-content { font-size: 13px; line-height: 1.6; min-height: 170px; }
+.l-tutorial-content h3 { font-size: 16px; color: #6dd6cf; margin-bottom: 8px; }
+.l-tutorial-content ul { padding-left: 18px; margin: 8px 0; }
+.l-tutorial-content li { margin-bottom: 6px; }
+.l-tutorial-actions { display: flex; justify-content: space-between; margin-top: 14px; }

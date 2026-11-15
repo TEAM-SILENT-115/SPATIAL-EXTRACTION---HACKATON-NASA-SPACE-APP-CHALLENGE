@@ -43,7 +43,7 @@ for(const m of MAPAS_NASA)for(const route of ['directa','ahorro'])for(const corr
   check(s.muestras.entregadas.length===2,'both samples secured');
 }
 {
-  const s=Lunar.nuevo();Lunar.cambiar(s,'equipo','bat100');const p=Lunar.proyectar(s);
+  const s=Lunar.nuevo();Lunar.cambiar(s,'sitio','Site04');Lunar.cambiar(s,'equipo','bat100');const p=Lunar.proyectar(s);
   check(p.margen<p.reserva,'small battery risk');land(s);
   walk(s,s.aterrizaje.ida);Lunar.interactuar(s);
   // Keep moving until insufficient energy for any adjacent edge.
@@ -64,4 +64,72 @@ for(const m of MAPAS_NASA)for(const route of ['directa','ahorro'])for(const corr
   const c=Lunar.nuevo();land(c);const snapshot=JSON.stringify(c.equipo);Lunar.cambiar(c,'equipo','taladro');check(JSON.stringify(c.equipo)===snapshot,'loadout sealed');
   check(!Lunar.decidir(c,true).ok,'cannot correct again');
 }
-console.log('Lunar: '+checks+' comprobaciones pasaron (12 misiones completas y casos de riesgo).');
+// Progresión de dificultad y desbloqueo de sitios (Connecting Ridge -> Shackleton -> Gerlache)
+{
+  const s=Lunar.nuevo();
+  check(Lunar.esDesbloqueado(s,'Site01'),'Site01 inicial desbloqueado');
+  check(!Lunar.esDesbloqueado(s,'Site11'),'Site11 bloqueado al inicio');
+  s.sitio='Site01';
+  s.resultado='exito';
+  s.muestras.entregadas=['Núcleo'];
+  const u1=Lunar.desbloquearSiguiente(s);
+  check(u1==='Site04','Completar Site01 desbloquea Site04');
+  check(Lunar.esDesbloqueado(s,'Site04'),'Site04 ahora desbloqueado');
+  s.sitio='Site04';
+  const u2=Lunar.desbloquearSiguiente(s);
+  check(u2==='Site11','Completar Site04 desbloquea Site11');
+  check(Lunar.esDesbloqueado(s,'Site11'),'Site11 ahora desbloqueado');
+}
+// Evaluación de los 6 finales
+{
+  const s=Lunar.nuevo();
+  s.plan={reserva:15,energia:100};
+  s.resultado='varado';
+  check(Lunar.evaluarFinal(s).id==='forense','final forense al varar');
+
+  s.resultado='parcial';
+  s.tomada=false;
+  s.muestras.entregadas=['Regolito'];
+  check(Lunar.evaluarFinal(s).id==='tactico','final tactico sin nucleo');
+
+  s.resultado='exito';
+  s.tomada=true;
+  s.muestras.entregadas=['Núcleo','Muestra'];
+  s.recursos.energiaWh=30;
+  check(Lunar.evaluarFinal(s).id==='pionero','final pionero con dos muestras y reserva');
+
+  s.muestras.entregadas=['Núcleo'];
+  s.recursos.energiaWh=20;
+  s.sitio='Site01';
+  check(Lunar.evaluarFinal(s).id==='maestro','final maestro con plan equilibrado');
+
+  s.recursos.energiaWh=4;
+  check(Lunar.evaluarFinal(s).id==='in_extremis','final in_extremis con energia critica');
+
+  s.sitio='Site04';
+  s.revelada=true;
+  s.recursos.energiaWh=15;
+  check(Lunar.evaluarFinal(s).id==='revolucion','final revolucion en cráter desafiante');
+}
+// Animación y dirección de paso
+{
+  const s=Lunar.nuevo();
+  land(s);
+  check(s.direccion==='down','direccion inicial');
+  Lunar.mover(s,1,0);
+  check(s.direccion==='right','orientacion a la derecha');
+  check(s.animFrame>0,'ciclo de animacion avanza');
+  Lunar.mover(s,0,1);
+  check(s.direccion==='down','orientacion hacia abajo');
+}
+// Audio sintético seguro en Node
+{
+  check(typeof LunarAudio.estaActivo()==='boolean','LunarAudio expone estado');
+  LunarAudio.click();
+  LunarAudio.paso();
+  LunarAudio.perforar();
+  LunarAudio.alerta();
+  LunarAudio.exito();
+  check(true,'LunarAudio llamadas seguras sin entorno DOM');
+}
+console.log('Lunar: '+checks+' comprobaciones pasaron (12 misiones completas, progresión, 6 finales y audio).');

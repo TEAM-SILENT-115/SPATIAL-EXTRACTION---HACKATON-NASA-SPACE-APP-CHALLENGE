@@ -23,14 +23,24 @@ var LunarUI = (function () {
         ${['hangar','viaje','superficie','informe'].map((x,i)=>`<span class="${s.etapa===x?'active':''}">${'0'+(i+1)} ${['PLANEAR','VIAJAR','EXPLORAR','APRENDER'][i]}</span>`).join('')}
       </nav>
       ${btn('sound', audioOn ? '🔊 AUDIO' : '🔇 MUDO', '', false, 'btn-sound' + (audioOn ? '' : ' muted'))}
-      ${btn('tutorial_modal', 'CÓMO JUGAR', '', false, 'mini')}
-      ${btn('help', 'TUTORIAL AIDA', '', false, 'mini')}
+      ${btn('tutorial_modal', '🚀 TUTORIAL INTERACTIVO', '', false, 'btn-tutorial-header mini')}
       ${btn('credits', 'CRÉDITOS', '', false, 'mini')}
     </header>`;
   }
 
   function tutorial() {
-    return s.tutorial.activo ? `<aside class="banner-tutorial"><b class="aida-avatar">✦ AIDA</b><p>${esc(Lunar.guia(s))}</p>${btn('skip','SALTAR GUÍA','','','mini')}</aside>` : '';
+    if (!s.tutorial.activo) return '';
+    const texto = esc(Lunar.guia(s)).replace(/^AIDA:\s*/, '');
+    return `<aside class="banner-tutorial" role="region" aria-label="Tutorial AIDA">
+      <div class="aida-badge" data-l="tutorial_modal" title="Haz clic para abrir el tutorial">🚀 TUTORIAL AIDA</div>
+      <div class="aida-info">
+        <p class="aida-instruccion">${texto}</p>
+      </div>
+      <div class="aida-acciones">
+        ${btn('tutorial_modal', '📖 VER TUTORIAL ▶', '', false, 'btn-tutorial-open')}
+        ${btn('skip', '✕ CERRAR', '', false, 'btn-tutorial-close mini')}
+      </div>
+    </aside>`;
   }
 
   function introHTML() {
@@ -350,7 +360,7 @@ var LunarUI = (function () {
     const actual = slides[tutorialStep] || slides[0];
     return `<div class="l-tutorial-box">
       <div class="l-tutorial-nav">
-        <span>GUÍA AIDA · PASO ${tutorialStep + 1} DE ${slides.length}</span>
+        <span>TUTORIAL DE MISIÓN ESPACIAL · PASO ${tutorialStep + 1} DE ${slides.length}</span>
         <small>${esc(actual.titulo)}</small>
       </div>
       <div class="l-tutorial-content">

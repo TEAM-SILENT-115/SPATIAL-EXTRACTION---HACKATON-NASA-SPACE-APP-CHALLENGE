@@ -26,7 +26,37 @@ button, input, select, textarea {
 
 html, body {
   height: 100%;
-  background: #050711;
+  background-color: #03050e;
+  background-image:
+    /* Nebulosas cosmicas profundas */
+    radial-gradient(ellipse 80% 50% at 20% 15%, rgba(14, 45, 88, 0.45) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 85% 25%, rgba(46, 20, 68, 0.4) 0%, transparent 65%),
+    radial-gradient(ellipse 70% 50% at 50% 85%, rgba(12, 36, 68, 0.4) 0%, transparent 70%),
+    /* Capa 1: estrellas distantes de fondo */
+    radial-gradient(1px 1px at 25px 35px, #ffffff 100%, transparent 0),
+    radial-gradient(1px 1px at 85px 120px, #a8d5ff 100%, transparent 0),
+    radial-gradient(1.5px 1.5px at 155px 45px, #ffdf9e 100%, transparent 0),
+    radial-gradient(1px 1px at 210px 185px, #ffffff 100%, transparent 0),
+    radial-gradient(1px 1px at 275px 95px, #a8d5ff 100%, transparent 0),
+    radial-gradient(1.5px 1.5px at 340px 160px, #ffffff 100%, transparent 0),
+    radial-gradient(1px 1px at 380px 240px, #ffffff 100%, transparent 0),
+    /* Capa 2: estrellas medianas */
+    radial-gradient(2px 2px at 60px 220px, #00e5ff 100%, transparent 0),
+    radial-gradient(1.5px 1.5px at 190px 310px, #ffffff 100%, transparent 0),
+    radial-gradient(2px 2px at 310px 70px, #f0a53b 100%, transparent 0),
+    radial-gradient(1.5px 1.5px at 430px 180px, #ffffff 100%, transparent 0),
+    radial-gradient(2px 2px at 490px 290px, #a8d5ff 100%, transparent 0),
+    /* Capa 3: estrellas brillantes con brillo pixelado */
+    radial-gradient(2.5px 2.5px at 110px 150px, #ffffff 100%, transparent 0),
+    radial-gradient(2px 2px at 280px 380px, #ffffff 100%, transparent 0),
+    radial-gradient(2.5px 2.5px at 450px 80px, #6dd6cf 100%, transparent 0),
+    radial-gradient(2px 2px at 580px 220px, #ffde8a 100%, transparent 0);
+  background-size:
+    100% 100%, 100% 100%, 100% 100%,
+    400px 300px, 400px 300px, 400px 300px, 400px 300px, 400px 300px, 400px 300px, 400px 300px,
+    550px 420px, 550px 420px, 550px 420px, 550px 420px, 550px 420px,
+    700px 540px, 700px 540px, 700px 540px, 700px 540px;
+  background-repeat: repeat;
   overflow: hidden;
   font-family: 'VT323', 'Courier New', Consolas, monospace;
   font-size: 16px;
@@ -39,6 +69,7 @@ html, body {
 #marco {
   width: 100vw; height: 100vh;
   display: flex; align-items: center; justify-content: center;
+  position: relative;
 }
 
 #juego {
@@ -47,9 +78,9 @@ html, body {
   background: var(--fondo);
   transform-origin: center center;
   display: flex; flex-direction: column;
-  border: 1px solid var(--borde);
+  border: 1px solid #2a3a5e;
   border-radius: var(--radio);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 35px rgba(0, 180, 255, 0.18), 0 25px 70px rgba(0, 0, 0, 0.9);
   image-rendering: pixelated;
   position: relative;
   overflow: hidden;
@@ -311,30 +342,44 @@ main.hangar {
 }
 
 .banner-tutorial {
-  background: #0d162e;
-  border-bottom: 1px solid var(--acento);
-  padding: 8px 18px;
+  background: linear-gradient(90deg, rgba(3, 44, 77, 0.96) 0%, rgba(9, 29, 64, 0.96) 100%);
+  border-bottom: 2px solid #00f2fe;
+  box-shadow: 0 4px 20px rgba(0, 242, 254, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  padding: 10px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  font-size: 12px;
+  gap: 16px;
+  font-size: 14px;
   line-height: 1.45;
-  color: var(--texto);
-  min-height: 52px;
+  color: #f0faff;
+  min-height: 54px;
+  z-index: 5;
 }
 .banner-tutorial .aida-avatar {
-  display: flex;
+  background: #00f2fe;
+  color: #041226;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.65);
+  white-space: nowrap;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 700;
-  color: var(--acento);
-  white-space: nowrap;
-  font-size: 11px;
-  letter-spacing: 0.5px;
+  animation: pulsoTutorialAida 2s infinite alternate ease-in-out;
+}
+@keyframes pulsoTutorialAida {
+  from { box-shadow: 0 0 8px rgba(0, 242, 254, 0.5); }
+  to { box-shadow: 0 0 18px rgba(0, 242, 254, 0.9); }
 }
 .banner-tutorial .aida-texto {
   flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f0faff;
 }
 .banner-tutorial .aida-texto b {
   color: #fff;

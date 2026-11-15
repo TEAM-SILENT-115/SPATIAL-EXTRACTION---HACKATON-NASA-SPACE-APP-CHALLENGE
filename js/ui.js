@@ -59,7 +59,7 @@ var UI = (function() {
             id: 'cohete',
             selector: '[data-a="cohete"][data-x="halcon"]',
             texto: function() {
-                return '<b>[AIDA]:</b> ¡Hola! Soy AIDA, tu asistente de vuelo. Tu primer paso como jefe de misión es elegir lanzador. El <em>Halcón ligero</em> es económico y define tu capacidad de masa. Pulsa <b>ELEGIR</b> en Halcón ligero.';
+                return '<b>[AIDA]:</b> Bienvenido, comandante. Primer paso: selecciona un vector de lanzamiento. El <em>Halcón ligero</em> define tu límite de carga útil en 120 kg. Pulsa <b>ELEGIR</b>.';
             },
             espera: function(a, x) { return a === 'cohete' && x === 'halcon'; }
         },
@@ -67,7 +67,7 @@ var UI = (function() {
             id: 'objetivo',
             selector: '[data-a="objetivo"][data-x="crater_profunda"]',
             texto: function() {
-                return '<b>[AIDA]:</b> Observa el panel 1 (DESARROLLAR MISIÓN). Elige el objetivo científico <em>1 PROFUNDA</em>. Fíjate en los requisitos que exige debajo: taladro y contenedor.';
+                return '<b>[AIDA]:</b> En el Panel 1, fija la meta científica: <em>1 PROFUNDA</em>. Necesitamos extraer muestras en el cráter donde no llega luz solar.';
             },
             espera: function(a, x) { return a === 'objetivo' && x === 'crater_profunda'; }
         },
@@ -75,7 +75,7 @@ var UI = (function() {
             id: 'taladro',
             selector: '[data-a="equipar"][data-x="taladro"]',
             texto: function() {
-                return '<b>[AIDA]:</b> Sin taladro no podemos perforar el cráter. Pulsa <b>EQUIPAR</b> en el <em>Taladro de núcleo</em>. Mira cómo sube la barra de masa (⚖).';
+                return '<b>[AIDA]:</b> El regolito profundo requiere perforación mecánica. Pulsa <b>EQUIPAR</b> en el <em>Taladro de núcleo</em> (+25 kg de carga útil).';
             },
             espera: function(a, x) { return a === 'equipar' && x === 'taladro'; }
         },
@@ -83,7 +83,7 @@ var UI = (function() {
             id: 'o2',
             selector: '[data-a="equipar"][data-x="o2chico"]',
             texto: function() {
-                return '<b>[AIDA]:</b> El astronauta necesita respirar en superficie. Equipa el <em>Tanque O₂ 100</em>.';
+                return '<b>[AIDA]:</b> Soporte vital en superficie: equipa el <em>Tanque O₂ 100</em> para asegurar respiración durante la caminata lunar.';
             },
             espera: function(a, x) { return a === 'equipar' && x === 'o2chico'; }
         },
@@ -91,7 +91,7 @@ var UI = (function() {
             id: 'cont',
             selector: '[data-a="equipar"][data-x="cont1"]',
             texto: function() {
-                return '<b>[AIDA]:</b> Necesitamos dónde guardar la muestra. Equipa el <em>Contenedor simple</em>.';
+                return '<b>[AIDA]:</b> Almacenamiento hermético: equipa el <em>Contenedor simple</em> para transportar la muestra extraída de vuelta al módulo.';
             },
             espera: function(a, x) { return a === 'equipar' && x === 'cont1'; }
         },
@@ -99,7 +99,7 @@ var UI = (function() {
             id: 'bat100',
             selector: '[data-a="equipar"][data-x="bat100"]',
             texto: function() {
-                return '<b>[AIDA]:</b> Equipa la <em>Batería 100 Wh</em> estándar. Observa el panel 3 (RECURSOS): fíjate en el <em>Margen</em> y la <em>Reserva por tramos</em>.';
+                return '<b>[AIDA]:</b> Potencia primaria: equipa la <em>Batería 100 Wh</em>. En el Panel 3 verás el balance energético (ida + extracción + regreso).';
             },
             espera: function(a, x) { return a === 'equipar' && x === 'bat100'; }
         },
@@ -111,15 +111,14 @@ var UI = (function() {
                 var r = Motor.recomendacion(estado);
                 var margen = t.energia - r.normal.energia.total;
                 if (estado.equipo.indexOf('bat160') !== -1) {
-                    return '<b>[AIDA]:</b> ¡Fíjate! Con 160 Wh tu margen subió a <em>+' + margen + ' Wh</em> y absorbe terreno rocoso, pero consumiste más masa (35⚖) y presupuesto. Vuelve a poner la <em>Batería 100 Wh</em> para nuestra prueba.';
+                    return '<b>[AIDA]:</b> Telemetría: con 160 Wh tu margen de seguridad subió a <em>+' + margen + ' Wh</em> (resiste regolito rocoso), pero a costa de +15 kg de masa. Vuelve a equipar la <em>Batería 100 Wh</em>.';
                 } else if (estado.equipo.indexOf('bat100') === -1) {
-                    return '<b>[AIDA]:</b> Has quitado la batería. Ahora equipa la <em>Batería 160 Wh</em> para ver la diferencia.';
+                    return '<b>[AIDA]:</b> Ahora equipa la <em>Batería 160 Wh</em> para contrastar la curva de autonomía vs masa.';
                 } else {
-                    return '<b>[AIDA]:</b> En ingeniería comparamos opciones. Pulsa <b>QUITAR</b> en la Batería 100 Wh y luego prueba la Batería 160 Wh para ver cómo varía el margen.';
+                    return '<b>[AIDA]:</b> Principio de diseño de misión: pulsa <b>QUITAR</b> en Batería 100 Wh y prueba la Batería 160 Wh para evaluar el margen de retorno.';
                 }
             },
             espera: function(a, x) {
-                // Dejamos que explore cambiar entre bat100 y bat160, y cuando vuelva o tenga una lista coherente avanzamos
                 return (a === 'equipar' && x === 'bat160') || (a === 'equipar' && x === 'bat100' && estado.equipo.indexOf('bat100') !== -1);
             }
         },
@@ -127,8 +126,7 @@ var UI = (function() {
             id: 'combustible',
             selector: '[data-a="equipar"][data-x="fuelextra"]',
             texto: function() {
-                var t = Motor.totales(estado);
-                return '<b>[AIDA]:</b> Ahora equipa <em>Combustible extra</em> (▲). Te dará 30 unidades para maniobrar en vuelo si el escaneo detecta terreno peligroso. Llevas ' + t.energia + ' Wh.';
+                return '<b>[AIDA]:</b> Equipa <em>Combustible extra</em> (▲). Proporciona propulsión delta-V para ajustar la trayectoria orbital si el escaneo detecta obstáculos.';
             },
             espera: function(a, x) { return a === 'equipar' && x === 'fuelextra'; }
         },
@@ -136,7 +134,7 @@ var UI = (function() {
             id: 'probar_diseno',
             selector: '[data-a="probar"]',
             texto: function() {
-                return '<b>[AIDA]:</b> Antes de despegar, pulsa <b>REVISAR DISEÑO</b> en el panel 3 para ver el diagnóstico de ingeniería y comparar los escenarios.';
+                return '<b>[AIDA]:</b> Validación de ingeniería: pulsa <b>REVISAR DISEÑO</b> para simular la misión bajo escenario nominal vs terreno adverso.';
             },
             espera: function(a, x) { return a === 'probar'; }
         },
@@ -144,7 +142,7 @@ var UI = (function() {
             id: 'cerrar_modal',
             selector: '[data-a="cerrarmodal"]',
             texto: function() {
-                return '<b>[AIDA]:</b> En la prueba de ingeniería ves la autonomía en escenario normal vs adverso. Pulsa <b>CERRAR</b> para volver al hangar.';
+                return '<b>[AIDA]:</b> Simulación completada: la autonomía cubre los escenarios críticos. Pulsa <b>CERRAR</b> para proceder a la secuencia de despegue.';
             },
             espera: function(a, x) { return a === 'cerrarmodal'; }
         },
@@ -152,16 +150,16 @@ var UI = (function() {
             id: 'lanzar',
             selector: '[data-a="lanzar"]',
             texto: function() {
-                if (!estado.cohete) return '<b>[AIDA]:</b> Elige un lanzador para tu nave.';
+                if (!estado.cohete) return '<b>[AIDA]:</b> Falta vector de lanzamiento.';
                 var o = DATOS.objetivos[estado.objetivo];
                 var t = Motor.totales(estado);
-                if (estado.objetivo === 'crater_profunda' && !t.taladro) return '<b>[AIDA]:</b> ¡Alerta! Te falta equipar el <em>Taladro de núcleo</em> para tu objetivo.';
-                if (t.capacidadMuestras < o.espacioMinimo) return '<b>[AIDA]:</b> ¡Alerta! Te falta equipar un <em>Contenedor</em> con espacio para muestras.';
-                if (t.energia === 0) return '<b>[AIDA]:</b> ¡Alerta! Necesitas equipar una <em>Batería</em> antes de lanzar.';
-                if (t.oxigeno === 0) return '<b>[AIDA]:</b> ¡Alerta! Necesitas equipar un <em>Tanque de O₂</em> antes de lanzar.';
-                if (estado.masa.usada > estado.masa.capacidad) return '<b>[AIDA]:</b> Carga útil excedida. Reduce equipo para poder despegar.';
-                if (estado.presupuesto.gastado > estado.presupuesto.total) return '<b>[AIDA]:</b> Presupuesto excedido. Ajusta tu misión.';
-                return '<b>[AIDA]:</b> Todo verificado dentro de presupuesto y masa. Pulsa <b>LANZAR</b>. ¡Buen viaje!';
+                if (estado.objetivo === 'crater_profunda' && !t.taladro) return '<b>[AIDA]:</b> Carga incompleta: falta el <em>Taladro de núcleo</em>.';
+                if (t.capacidadMuestras < o.espacioMinimo) return '<b>[AIDA]:</b> Capacidad nula: falta un <em>Contenedor de muestras</em>.';
+                if (t.energia === 0) return '<b>[AIDA]:</b> Sin potencia: instala una <em>Batería</em> antes del despegue.';
+                if (t.oxigeno === 0) return '<b>[AIDA]:</b> Sin soporte vital: equipa un <em>Tanque de O₂</em>.';
+                if (estado.masa.usada > estado.masa.capacidad) return '<b>[AIDA]:</b> Masa crítica: excede la capacidad del lanzador.';
+                if (estado.presupuesto.gastado > estado.presupuesto.total) return '<b>[AIDA]:</b> Presupuesto de misión excedido.';
+                return '<b>[AIDA]:</b> Todos los subsistemas nominales. Carga y presupuesto verificados. Pulsa <b>LANZAR</b>.';
             },
             espera: function(a, x) { return a === 'lanzar' && estado.etapa === 'viaje'; }
         },
@@ -727,7 +725,6 @@ var UI = (function() {
 
         // --- panel objetivo y mapa ---
         html += '<section class="panel"><h2>1 · DESARROLLAR MISIÓN</h2>' +
-            '<p class="nota">Eres responsable de ingeniería: convierte un objetivo científico en una misión que pueda volver.</p>' +
             '<canvas id="cv-mapa" width="120" height="70"></canvas>' +
             '<div class="fila-botones">' +
             boton('zona', 'LLANURA', { x: 'llanura', clase: estado.zonaAterrizaje === 'llanura' ? 'activo' : '' }) +
@@ -736,14 +733,15 @@ var UI = (function() {
             boton('objetivo', '2 SUPERFICIALES', { x: 'llanura_doble', clase: estado.objetivo === 'llanura_doble' ? 'activo' : '' }) +
             boton('objetivo', '1 PROFUNDA', { x: 'crater_profunda', clase: estado.objetivo === 'crater_profunda' ? 'activo' : '' }) +
             '</div>' +
-            '<p class="dato">Ida ' + pasos + ' pasos · vuelta ' + pasos + ' pasos</p>' +
-            '<p class="dato">' + esc(m.nota) + '</p>' +
-            '<p class="dato">' + T.riesgoTerreno + ': <b class="ambar">' + pct(m.probRocoso) + ' %</b> · si sale, +' +
-            (r.adverso.energia.total - r.normal.energia.total) + ' Wh</p>' +
-            '<p class="dato">Exige: ' + esc(o.herramienta) +
-            (estado.objetivo === 'crater_profunda' && !t.taladro ? ' <span class="alerta">⚠ sin taladro</span>' : '') +
-            (t.capacidadMuestras < o.espacioMinimo ? ' <span class="alerta">⚠ falta espacio</span>' : '') +
-            '</p><div class="ingenieria"><h3>GEOMETRÍA DE MISIÓN</h3><p>Aterrizar cerca ahorra pasos; el terreno incierto exige reserva. Cambia la zona y compara el costo de ida y vuelta.</p></div></section>';
+            '<p class="dato">Trayecto: <b>' + pasos + ' pasos</b> (ida y vuelta)</p>' +
+            '<p class="dato">' + T.riesgoTerreno + ': <b class="ambar">' + pct(m.probRocoso) + ' %</b> (+' +
+            (r.adverso.energia.total - r.normal.energia.total) + ' Wh si es rocoso)</p>' +
+            '<p class="dato">Requisitos: ' + esc(o.herramienta) +
+            (estado.objetivo === 'crater_profunda' && !t.taladro ? ' <span class="alerta">⚠ falta taladro</span>' : '') +
+            (t.capacidadMuestras < o.espacioMinimo ? ' <span class="alerta">⚠ falta contenedor</span>' : '') +
+            '</p>' +
+            '<div class="ingenieria"><h3>CONCEPTO ORBITAL</h3><p>Aterrizar cerca ahorra batería; el terreno rocoso consume más reserva. Balancea distancia vs riesgo.</p></div>' +
+            '</section>';
 
         // --- panel cohete y equipo ---
         html += '<section class="panel"><h2>2 · COHETE Y EQUIPO</h2><div class="lista">';
@@ -767,27 +765,24 @@ var UI = (function() {
         // --- panel recursos y simulador ---
         var margen = t.energia - r.normal.energia.total;
         html += '<section class="panel"><h2>3 · RECURSOS Y SIMULADOR</h2>' +
-            '<p class="dato">' + termino('autonomia', 'Autonomía') + ' en superficie (energía y oxígeno):</p>' +
-            '<table class="tabla"><tr><th></th><th>Llevas</th><th>Estimado</th><th>Recomendado</th></tr>' +
+            '<p class="dato">' + termino('autonomia', 'Autonomía') + ' estimada (energía, O₂ y maniobra):</p>' +
+            '<table class="tabla"><tr><th>Recurso</th><th>Llevas</th><th>Estimado</th><th>Recomendado</th></tr>' +
             '<tr><td>⚡ Energía</td><td>' + t.energia + '</td><td>' + r.normal.energia.total + '</td><td>' + r.energiaRecomendada + '</td></tr>' +
             '<tr><td>◍ Oxígeno</td><td>' + t.oxigeno + '</td><td>' + r.normal.oxigeno.total + '</td><td>' + r.oxigenoRecomendado + '</td></tr>' +
             '<tr><td>▲ Comb.</td><td>' + t.combustible + '</td><td>0</td><td>' + C.maniobra + '</td></tr></table>' +
-            '<p class="dato">' + termino('margen', 'Margen') + ' de energía: <b class="' +
+            '<p class="dato">' + termino('margen', 'Margen de reserva') + ': <b class="' +
             (margen < 0 ? 'alerta' : (t.energia > 0 && margen < r.adverso.energia.total - r.normal.energia.total ? 'ambar' : 'ok')) + '">' +
-            margen + ' Wh</b> ' + (margen < 0 ? '✖' : (margen < r.adverso.energia.total - r.normal.energia.total ? '⚠' : '✓')) + '</p>' +
-            '<p class="dato">' + termino('reserva', 'Reserva') + ' por tramos' + (ev.manual ? '' : ' (automática: estimación normal, el resto a explorar)') + ':</p>' +
+            margen + ' Wh</b> ' + (margen < 0 ? '✖ Faltante' : (margen < r.adverso.energia.total - r.normal.energia.total ? '⚠ Ajustado' : '✓ Seguro')) + '</p>' +
             htmlReserva(ev, t.energia, false) +
-            '<p class="nota">Balance energético: disponible − ida − trabajo − regreso = reserva. Más batería aumenta autonomía, masa y costo.</p>' +
             '<div class="fila-botones">' +
             boton('vercalculo', T.btnVerCalculo) + boton('reservar', T.btnReservar) + boton('probar', 'REVISAR DISEÑO') +
             '</div>' +
             (t.energia === 0 ?
                 '<p class="dato alerta">⚠ Sin batería: no podrás dar ni un paso en superficie.</p>' :
                 margen < 0 ?
-                '<p class="dato alerta">⚠ Faltan ' + (-margen) + ' Wh incluso si el terreno sale bien.</p>' :
+                '<p class="dato alerta">⚠ Faltan ' + (-margen) + ' Wh para completar el plan previsto.</p>' :
                 '') +
             '<div class="fila-botones">' + boton('lanzar', T.btnLanzar, { clase: 'grande peligro' }) + '</div>' +
-            '<p class="nota">' + T.ficcion + '</p>' +
             '</section>';
 
         html += '</main>';

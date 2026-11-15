@@ -28,7 +28,18 @@ var SITIOS_LUNARES = {
     claseDificultad: 'facil',
     descripcion: 'Pendientes suaves (2°-15°). Terreno estable ideal para calibrar batería y masa.',
     desbloqueoRequerido: null,
-    desbloquea: 'Site04'
+    desbloquea: 'Site04',
+    // --- nivel jugable: qué sistemas entran en juego y qué decide el jugador ---
+    nivelNombre: 'BÁSICO',
+    lema: 'Lo esencial: llevar energía para ir y para volver.',
+    decides: 'Ruta y batería',
+    terreno: 'Terreno suave',
+    sistemas: {oxigeno: false, carga: false, combustible: false, escaner: false, formulas: false},
+    presupuesto: 1100,
+    cohete: 'halcon',
+    kit: ['o2chico', 'taladro', 'cont1'],
+    pasos: ['ruta', 'bateria', 'revision'],
+    novedades: []
   },
   Site04: {
     id: 'Site04',
@@ -39,7 +50,23 @@ var SITIOS_LUNARES = {
     claseDificultad: 'medio',
     descripcion: 'Pendientes mixtas (10°-25°). Terreno estándar VIPER con trampas de sombra y cráter pronunciado.',
     desbloqueoRequerido: 'Site01',
-    desbloquea: 'Site11'
+    desbloquea: 'Site11',
+    nivelNombre: 'INTERMEDIO',
+    lema: 'Ahora también respiras, pesas y pagas.',
+    decides: 'Ruta, batería y oxígeno',
+    terreno: 'Pendientes mixtas',
+    sistemas: {oxigeno: true, carga: true, combustible: false, escaner: false, formulas: false},
+    // 950 créditos: caben batería grande + tanque chico, o batería chica +
+    // tanque grande, pero no las dos mejoras a la vez. Hay que elegir.
+    presupuesto: 950,
+    cohete: 'halcon',
+    kit: ['taladro', 'cont1'],
+    pasos: ['ruta', 'bateria', 'oxigeno', 'revision'],
+    novedades: [
+      ['OXÍGENO', 'Se gasta con cada metro. Si se acaba, no vuelves.'],
+      ['MASA', 'Cada kilo que subes a la nave hace que cada paso gaste más energía.'],
+      ['PRESUPUESTO', 'No alcanza para llevarlo todo. Hay que elegir.']
+    ]
   },
   Site11: {
     id: 'Site11',
@@ -50,7 +77,24 @@ var SITIOS_LUNARES = {
     claseDificultad: 'dificil',
     descripcion: 'Pendientes extremas (>25°). Zonas escarpadas intransitables que exigen optimización máxima de vatios.',
     desbloqueoRequerido: 'Site04',
-    desbloquea: null
+    desbloquea: null,
+    nivelNombre: 'AVANZADO',
+    lema: 'Terreno extremo: aquí cada decisión cuenta.',
+    decides: 'Todo: ruta, batería, oxígeno, cohete y extras',
+    terreno: 'Pendientes extremas',
+    sistemas: {oxigeno: true, carga: true, combustible: true, escaner: true, formulas: true},
+    // 1200 créditos: alcanza para el plan completo con Halcón (1140), pero
+    // entonces la carga queda a 2 kg del límite. Con Titán sobra carga y
+    // falta dinero para el contenedor doble.
+    presupuesto: 1200,
+    cohete: 'halcon',
+    kit: ['taladro', 'cont1'],
+    pasos: ['ruta', 'bateria', 'oxigeno', 'cohete', 'extras', 'revision'],
+    novedades: [
+      ['COMBUSTIBLE', 'En vuelo puedes corregir el descenso y aterrizar más cerca del cráter.'],
+      ['ESCÁNER', 'Revela una segunda muestra. Más ciencia, más riesgo.'],
+      ['FÓRMULAS', 'Puedes abrir de dónde sale cada número.']
+    ]
   }
 };
 
@@ -123,6 +167,111 @@ var FINALES_LUNARES = {
     leccion: 'El regolito no perdona. Si la subida o la masa de la muestra no se presupuestan antes del despegue, el margen se rompe en el camino de regreso. ¡Aprende de los datos y vuelve a intentarlo!'
   }
 };
+
+/* Textos de la interfaz guiada: la misión en tres pasos, lo que se decide en
+   cada pantalla y la voz de AIDA. Solo texto: ninguna regla vive aquí. */
+var TEXTOS_LUNARES = {
+  lema: 'Planea. Explora. Y vuelve.',
+  mision: [
+    ['IR', 'Camina desde el módulo hasta el cráter.'],
+    ['PERFORAR', 'Saca el núcleo de hielo que hay dentro.'],
+    ['VOLVER', 'Regresa al módulo. La muestra solo cuenta si vuelves.']
+  ],
+  regla: 'Cada paso gasta energía, y en terreno empinado gasta mucho más. Si se acaba lejos del módulo, pierdes la muestra.',
+  controles: [
+    ['← ↑ ↓ →', 'Caminar (también W A S D)'],
+    ['E', 'Perforar, recoger o entregar'],
+    ['ESC', 'Pausa'],
+    ['M', 'Sonido']
+  ],
+  pasos: {
+    ruta: {
+      corto: 'RUTA',
+      titulo: '¿Por dónde vas al cráter?',
+      ayuda: 'En el mapa, lo oscuro y rayado es terreno empinado: ahí cada paso gasta más energía.'
+    },
+    bateria: {
+      corto: 'BATERÍA',
+      titulo: '¿Qué batería llevas?',
+      ayuda: 'La batería es toda la energía que tendrás para ir, perforar y volver. Se mide en Wh.'
+    },
+    oxigeno: {
+      corto: 'OXÍGENO',
+      titulo: '¿Cuánto oxígeno llevas?',
+      ayuda: 'El oxígeno se gasta con cada metro que caminas. Llevar de más también pesa.'
+    },
+    cohete: {
+      corto: 'COHETE',
+      titulo: '¿En qué cohete viajas?',
+      ayuda: 'El cohete decide cuántos kilos puedes subir y cuánto combustible tienes para maniobrar.'
+    },
+    extras: {
+      corto: 'EXTRAS',
+      titulo: '¿Qué extras subes a la nave?',
+      ayuda: 'Ninguno es obligatorio. Cada uno abre una posibilidad, pero pesa y cuesta.'
+    },
+    revision: {
+      corto: 'REVISIÓN',
+      titulo: 'Revisa tu plan antes de lanzar',
+      ayuda: 'Después del lanzamiento ya no podrás cambiar nada.'
+    }
+  },
+  aida: {
+    niveles: 'Soy AIDA, tu control de misión. Empieza por el nivel básico: cada nivel añade algo nuevo.',
+    briefing: 'Regla de oro: una muestra que no vuelve al módulo no cuenta.',
+    ruta: 'Elige una ruta y mira abajo cuánta energía pide el viaje.',
+    bateria: 'Elige una batería. La barra de abajo te dice si alcanza para volver.',
+    oxigeno: 'Mira cuánto oxígeno pide el viaje antes de cargar el tanque grande.',
+    cohete: 'Un cohete más grande carga más, pero se come el presupuesto.',
+    extras: 'Puedes lanzar sin extras. Súbelos solo si tienes un plan para usarlos.',
+    despegue: 'Motores encendidos. Ya no hay vuelta atrás.',
+    viaje: 'El plan quedó sellado: lo que no subiste a la nave, ya no lo tendrás.',
+    viajeDecision: 'Corregir gasta combustible y te deja más cerca. Mantener lo conserva. Tú decides.',
+    descenso: 'Contacto en tres, dos, uno…',
+    caminar: 'Usa las flechas o W A S D para caminar. Sigue la línea punteada hasta el cráter.',
+    alCrater: 'Vas bien. La barra de arriba te dice cuánto cuesta volver desde donde estás.',
+    enCrater: 'Estás sobre el cráter. Pulsa E para perforar.',
+    volver: 'Tienes el núcleo. Sigue la línea azul hasta el módulo y pulsa E para entregarlo.',
+    justo: 'Cuidado: te queda poco margen para volver. Regresa ya.',
+    sinRetorno: 'Ya no te alcanza para volver. Acércate todo lo que puedas al módulo.',
+    extra: 'Hay una señal cerca. Desviarte cuesta energía: mira la barra antes de ir.',
+    // Una frase por final: la personalidad de AIDA al cerrar la misión.
+    finales: {
+      pionero: 'Impecable. Voy a enmarcar este plan en la sala de control.',
+      maestro: 'Limpio y sin dramas. Así da gusto dirigir una misión.',
+      revolucion: 'Ciencia de primera en terreno de tercera. Bien jugado.',
+      in_extremis: 'Volviste… con el corazón en la boca. No lo hagamos costumbre.',
+      tactico: 'Sin muestra, pero con tripulación. Lo prefiero así.',
+      forense: 'Perdimos la señal. Mira dónde se rompió el margen y vuelve a intentarlo.'
+    }
+  }
+};
+
+/* Retrato de AIDA para la barra de guía (dos cuadros: ojos abiertos y parpadeo). */
+var SPRITE_AIDA = [
+  [
+    '..AAAAAA..',
+    '.AWWWWWWA.',
+    'AWWWWWWWWA',
+    'AWVVWWVVWA',
+    'AWVVWWVVWA',
+    'AWWWWWWWWA',
+    'AWWVVVVWWA',
+    '.AWWWWWWA.',
+    '..AAAAAA..'
+  ],
+  [
+    '..AAAAAA..',
+    '.AWWWWWWA.',
+    'AWWWWWWWWA',
+    'AWWWWWWWWA',
+    'AWVVWWVVWA',
+    'AWWWWWWWWA',
+    'AWWVVVVWWA',
+    '.AWWWWWWA.',
+    '..AAAAAA..'
+  ]
+];
 
 /* Sprites de animación: ciclo de caminata en 4 direcciones y efectos */
 var SPRITES_ANIMADOS = {
@@ -446,6 +595,42 @@ var LunarAudio = (function () {
     exito: function () {
       [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) {
         setTimeout(function () { tono(f, 'sine', 0.16, 0.07); }, i * 90);
+      });
+    },
+    // Despegue: rugido grave que sube de tono.
+    despegue: function () {
+      if (!activo) return;
+      var c = obtenerCtx();
+      if (!c) return;
+      try {
+        var osc = c.createOscillator();
+        var gain = c.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(45, c.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(190, c.currentTime + 2.2);
+        gain.gain.setValueAtTime(0.0001, c.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.08, c.currentTime + 0.5);
+        gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 2.4);
+        osc.connect(gain);
+        gain.connect(c.destination);
+        osc.start();
+        osc.stop(c.currentTime + 2.4);
+      } catch (e) {}
+    },
+    // Contacto con la superficie: golpe sordo.
+    contacto: function () {
+      tono(70, 'triangle', 0.25, 0.09);
+      setTimeout(function () { tono(52, 'triangle', 0.3, 0.06); }, 90);
+    },
+    // Elegir una opción en un menú.
+    elegir: function () {
+      tono(660, 'square', 0.05, 0.03);
+      setTimeout(function () { tono(880, 'square', 0.06, 0.03); }, 55);
+    },
+    // Misión perdida: tres notas que bajan.
+    fallo: function () {
+      [392, 311.13, 233.08].forEach(function (f, i) {
+        setTimeout(function () { tono(f, 'triangle', 0.28, 0.07); }, i * 170);
       });
     },
     conmutar: function () {

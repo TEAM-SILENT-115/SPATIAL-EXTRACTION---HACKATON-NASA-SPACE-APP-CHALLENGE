@@ -5,6 +5,12 @@ var Lunar = (function () {
   const eq = (a,b) => a[0]===b[0] && a[1]===b[1];
   const key = p => p.join(',');
   const map = s => MAPAS_NASA.find(m=>m.id===s.sitio) || MAPAS_NASA[0];
+  const n1 = v => Number(v).toFixed(1);
+
+  // Sistemas que el nivel pone en juego. Sin nivel (Lunar.nuevo a secas)
+  // están todos activos: así el motor conserva su comportamiento original.
+  const TODOS = {oxigeno:true, carga:true, combustible:true, escaner:true, formulas:true};
+  const sistemas = s => s.sistemas || TODOS;
 
   function cargarDesbloqueados() {
     try {
@@ -39,10 +45,36 @@ var Lunar = (function () {
       tomada: false, revelada: false, extraTomada: false, retorno: null, prueba: false,
       direccion: 'down', animFrame: 0, perforando: false,
       desbloqueados: desbloqueados,
+      sistemas: previous && previous.sistemas ? {...previous.sistemas} : {...TODOS},
+      modoNivel: !!(previous && previous.modoNivel),
       tutorial: {activo: false, comparado: false, probado: false, movido: false, interactuado: false},
       anterior: previous ? informe(previous) : null,
       registro: [], margenRoto: null, final: null, nuevoDesbloqueo: null
     });
+    if (previous) s.presupuesto.total = previous.presupuesto.total;
+    return s;
+  }
+
+  // Prepara una misión del nivel que corresponde al sitio: activa solo los
+  // sistemas de ese nivel, fija su presupuesto y deja en la nave el equipo
+  // que el jugador todavía no decide. Si "previous" es una partida terminada
+  // del mismo nivel, conserva sus decisiones para repetir cambiando una.
+  function iniciarNivel(sitio, previous) {
+    const meta = SITIOS_LUNARES[sitio] || SITIOS_LUNARES.Site01;
+    const repetir = !!(previous && previous.modoNivel && previous.sitio === meta.id && previous.plan && previous.etapa === 'informe');
+    const s = nuevo(repetir ? previous : null);
+    if (previous && previous.desbloqueados) s.desbloqueados = previous.desbloqueados.slice();
+    s.sitio = meta.id;
+    s.modoNivel = true;
+    s.sistemas = {...meta.sistemas};
+    s.presupuesto.total = meta.presupuesto;
+    if (!repetir) {
+      s.equipo.slice().forEach(id => Motor.quitar(s, id));
+      Motor.elegirCohete(s, meta.cohete);
+      meta.kit.forEach(id => Motor.equipar(s, id));
+      s.ruta = 'ahorro';
+      s.anterior = null;
+    }
     return s;
   }
 
@@ -120,16 +152,30 @@ var Lunar = (function () {
 
   function evaluar(s) {
     const p = proyectar(s), t = Motor.totales(s), bloqueos = [], riesgos = [];
-    if (s.masa.usada > s.masa.capacidad) bloqueos.push('Carga útil excedida. Reduce kg o elige Titán.');
-    if (s.presupuesto.gastado > s.presupuesto.total) bloqueos.push('Presupuesto excedido. Retira equipo.');
-    if (!p.viable) bloqueos.push('No existe recorrido transitable.');
-    if (!t.energia || !t.oxigeno) bloqueos.push('Necesitas batería y soporte vital para operar.');
+    const sis = sistemas(s);
+    if (s.masa.usada > s.masa.capacidad) bloqueos.push('La carga pesa ' + (s.masa.usada - s.masa.capacidad) + ' kg más de lo que el cohete puede llevar. Quita equipo o usa un cohete mayor.');
+    if (s.presupuesto.gastado > s.presupuesto.total) bloqueos.push('El equipo cuesta ' + (s.presupuesto.gastado - s.presupuesto.total) + ' créditos más que tu presupuesto. Quita algo.');
+    if (!p.viable) bloqueos.push('No existe un camino transitable hasta el cráter.');
+    if (!t.energia) bloqueos.push('Falta la batería: sin energía no puedes salir del módulo.');
+    if (!t.oxigeno) bloqueos.push('Falta el oxígeno: sin él no puedes salir del módulo.');
     if (!t.taladro) riesgos.push('Sin Taladro de núcleo no podrás recuperar el objetivo.');
     if (!t.capacidadMuestras) riesgos.push('Sin contenedor no podrás guardar muestras.');
     if (s.masa.usada + R.muestraKg > s.masa.capacidad) riesgos.push('No queda carga útil para la muestra de 1 kg.');
-    if (p.margen < p.reserva) riesgos.push('Energía por debajo del total más reserva recomendada.');
-    if (t.oxigeno < p.ox) riesgos.push('El oxígeno no cubre ida, trabajo y regreso.');
-    return {p, t, bloqueos, riesgos};
+    // Con combustible para corregir, el descenso cercano puede salvar un plan corto.
+    const cerca = sis.combustible && t.combustible >= DATOS.costos.maniobra ? proyectar(s, s.ruta, map(s).nearModule) : null;
+    const salva = !!(cerca && t.energia - cerca.total >= 0);
+    let energia = 'ok';
+    if (t.energia && p.margen < 0) {
+      energia = salva ? 'corrigiendo' : 'falta';
+      riesgos.push(salva
+        ? 'Solo alcanza si corriges el descenso en vuelo: así sobrarían ' + n1(t.energia - cerca.total) + ' Wh. Sin corregir faltan ' + n1(-p.margen) + '.'
+        : 'Por esa ruta la batería NO alcanza para ir y volver: faltan ' + n1(-p.margen) + ' Wh.');
+    } else if (t.energia && p.margen < p.reserva) {
+      energia = 'justo';
+      riesgos.push('Alcanza muy justo: sobran ' + n1(p.margen) + ' Wh y se recomiendan ' + n1(p.reserva) + '. Un desvío te deja sin volver.');
+    }
+    if (sis.oxigeno && t.oxigeno && t.oxigeno < p.ox) riesgos.push('El oxígeno NO alcanza para ir y volver: llevas ' + t.oxigeno + ' y hacen falta ' + n1(p.ox) + '.');
+    return {p, t, bloqueos, riesgos, energia, cerca};
   }
 
   function esDesbloqueado(s, id) {
@@ -216,6 +262,7 @@ var Lunar = (function () {
   }
 
   function gastar(s, wh, ox, accion) {
+    if (!sistemas(s).oxigeno) ox = 0; // en los niveles sin oxígeno, respirar no es un límite
     if (s.recursos.energiaWh + 1e-8 < wh || s.recursos.oxigeno + 1e-8 < ox) return false;
     s.recursos.energiaWh = Math.max(0, s.recursos.energiaWh - wh);
     s.recursos.oxigeno = Math.max(0, s.recursos.oxigeno - ox);
@@ -231,7 +278,9 @@ var Lunar = (function () {
       .map(d => [s.pos[0]+d[0], s.pos[1]+d[1]])
       .filter(p => transitable(m, p))
       .map(p => costo(m, s.pos, p, masa(s)));
-    if (!costes.some(c => c.wh <= s.recursos.energiaWh + 1e-8 && c.ox <= s.recursos.oxigeno + 1e-8)) {
+    const sinOx = !sistemas(s).oxigeno;
+    if (!costes.some(c => c.wh <= s.recursos.energiaWh + 1e-8 && (sinOx || c.ox <= s.recursos.oxigeno + 1e-8))) {
+      s.agotado = costes.some(c => c.wh <= s.recursos.energiaWh + 1e-8) ? 'oxigeno' : 'energia';
       s.resultado = 'varado';
       s.etapa = 'informe';
     }
@@ -266,12 +315,15 @@ var Lunar = (function () {
     if (eq(s.pos, map(s).target) && !s.tomada) {
       return {accion:'perforar', texto:'Perforar', wh: R.acciones.perforar.wh, falta: !Motor.totales(s).taladro ? 'Falta Taladro de núcleo' : null};
     }
-    if (eq(s.pos, map(s).extra) && !s.extraTomada) {
+    if (sistemas(s).escaner && eq(s.pos, map(s).extra) && !s.extraTomada) {
       return {
         accion: s.revelada ? 'recoger' : 'escanear',
         texto: s.revelada ? 'Recoger' : 'Escanear',
         wh: R.acciones[s.revelada ? 'recoger' : 'escanear'].wh,
-        falta: !s.revelada && !Motor.totales(s).escaner ? 'Falta Escáner de terreno' : null
+        falta: !s.revelada && !Motor.totales(s).escaner ? 'Falta Escáner de terreno' : null,
+        // Con un solo hueco, la muestra extra dejaría fuera al núcleo.
+        aviso: s.revelada && !s.tomada && Motor.totales(s).capacidadMuestras - s.muestras.recogidas.length <= 1
+          ? 'Solo te cabe una muestra: si recoges esta, el núcleo ya no entrará.' : null
       };
     }
     return null;
@@ -402,6 +454,7 @@ var Lunar = (function () {
     return {
       ciencia,
       reservaCumplida,
+      resumen: resumenJugador(s),
       causa,
       distancia: s.recorrido,
       consumo: s.gastado,
@@ -412,6 +465,53 @@ var Lunar = (function () {
       final: fin,
       nuevoDesbloqueo
     };
+  }
+
+  // Lo mismo que "causa", contado para quien juega por primera vez: qué pasó,
+  // por qué y qué probar ahora. Sin jerga y con las cifras de esa partida.
+  function resumenJugador(s) {
+    const plan = s.plan, restante = s.recursos.energiaWh, frases = [];
+    const acciones = {desplazamiento:'dar un paso más', perforar:'perforar', escanear:'escanear', recoger:'recoger la muestra extra'};
+    let consejo;
+    if (s.resultado === 'varado') {
+      const falta = s.agotado === 'oxigeno' ? 'oxígeno' : 'energía';
+      frases.push('Te quedaste sin ' + falta + ' a ' + Math.round(s.retorno ? s.retorno.metros : 0) + ' m del módulo. La muestra se quedó en la Luna.');
+      if (plan.margen < 0) {
+        frases.push('El plan ya salía corto desde la agencia: pedía ' + n1(plan.total) + ' Wh y llevabas ' + n1(plan.energia) + '.');
+      } else if (s.margenRoto) {
+        frases.push('Cruzaste el punto sin retorno al ' + (acciones[s.margenRoto.accion] || 'desviarte') + ': desde ahí volver costaba más de lo que te quedaba.');
+      }
+      consejo = s.agotado === 'oxigeno'
+        ? 'Prueba con un tanque de oxígeno mayor o un camino más corto.'
+        : 'Prueba con una batería más grande, la ruta de ahorro o menos desvíos.';
+    } else if (!s.tomada) {
+      frases.push('Volviste a salvo al módulo, pero sin el núcleo del cráter.');
+      frases.push('Saber volver a tiempo también es ingeniería: la nave y la tripulación están enteras.');
+      consejo = 'Repite la misión: llega al cráter, perfora y regresa.';
+    } else {
+      frases.push((s.muestras.entregadas.length > 1 ? 'Trajiste el núcleo y una muestra extra' : 'Trajiste el núcleo del cráter')
+        + ' y volviste con ' + n1(restante) + ' Wh de sobra.');
+      // Lo caminado de más frente al plan (el plan cambia si se corrigió el descenso).
+      const previsto = s.aterrizaje ? s.aterrizaje.total : plan.total;
+      if (s.gastado > previsto * 1.08 + R.acciones.escanear.wh + R.acciones.recoger.wh) {
+        frases.push('Gastaste ' + n1(s.gastado - previsto) + ' Wh más que el plan: cada desvío también se paga.');
+      }
+      if (s.viaje.corrigio && s.aterrizaje) {
+        frases.push('Corregir el descenso acortó la caminata: el plan bajó de ' + n1(plan.total) + ' a ' + n1(s.aterrizaje.total) + ' Wh.');
+      }
+      // sobrar más de lo que pidió el viaje entero es haber cargado de más
+      if (restante > plan.total) {
+        frases.push('Te sobró muchísima energía: cargaste más batería, y más peso, de la que hacía falta.');
+        consejo = 'Prueba con un equipo más ligero: llevar de más también cuesta.';
+      } else if (restante + 1e-8 >= plan.reserva) {
+        frases.push('Tu reserva superó la recomendada (' + n1(plan.reserva) + ' Wh): un margen sano.');
+        consejo = 'Buen equilibrio. Prueba el siguiente nivel o cambia una decisión para comparar.';
+      } else {
+        frases.push('Llegaste muy justo: la reserva recomendada era ' + n1(plan.reserva) + ' Wh.');
+        consejo = 'Un paso en falso y no vuelves. Prueba con más batería o con menos peso a bordo.';
+      }
+    }
+    return {frases, consejo};
   }
 
   function guia(s) {
@@ -441,6 +541,7 @@ var Lunar = (function () {
     nuevo, map, masa, costo, transitable, camino, medir, proyectar, evaluar,
     cambiar, probar, lanzar, escanearViaje, decidir, descender, mover,
     contexto, interactuar, preverAccion, informe, guia, eq,
-    evaluarFinal, esDesbloqueado, desbloquearSiguiente
+    evaluarFinal, esDesbloqueado, desbloquearSiguiente,
+    iniciarNivel, sistemas
   };
 })();

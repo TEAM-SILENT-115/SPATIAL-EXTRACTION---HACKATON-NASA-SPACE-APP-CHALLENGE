@@ -2,10 +2,143 @@
 .lunar button, .lunar input, .lunar select, .lunar textarea, .lunar table { font-family:inherit; }
 .lunar button:focus-visible,.lunar select:focus-visible {outline:2px solid #f0a53b;outline-offset:2px}
 .lunar a {color:#f0a53b}.lunar small {color:#8a9fc4;font-size:11px;line-height:1.4;display:block}
-.l-header {display:flex;align-items:center;gap:16px;padding:10px 20px;background:#10162b;border-bottom:1px solid #2a3a5e;min-height:58px}
-.l-header b {letter-spacing:1.5px;color:#e2ecf8;font-size:13px}.l-header small {font-size:10px;color:#8a9fc4;letter-spacing:1px;margin-top:2px}
-.l-header nav {display:flex;gap:18px;flex:1;justify-content:center;color:#8a9fc4;font-size:11px;font-weight:600}
-.l-header nav .active {color:#f0a53b}.l-header .btn {font-size:11px;padding:6px 10px}
+.l-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 18px;
+  background: #10162b;
+  border-bottom: 1px solid #2a3a5e;
+  min-height: 58px;
+}
+.l-header-brand {
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+}
+.l-header-brand b {
+  letter-spacing: 1.5px;
+  color: #e2ecf8;
+  font-size: 14px;
+}
+.l-header-brand small {
+  font-size: 10px;
+  color: #8a9fc4;
+  letter-spacing: 1px;
+  margin-top: 1px;
+}
+.l-header-telemetria {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  justify-content: center;
+}
+.l-hbar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 135px;
+  max-width: 170px;
+  flex: 1;
+  background: rgba(14, 23, 44, 0.85);
+  border: 1px solid #2a3a5e;
+  border-radius: 4px;
+  padding: 4px 8px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+}
+.l-hbar-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8a9fc4;
+  letter-spacing: 0.5px;
+}
+.l-hbar-label b {
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.l-hbar-track {
+  width: 100%;
+  height: 6px;
+  background: #060914;
+  border: 1px solid #1c2742;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.l-hbar-fill {
+  height: 100%;
+  background: #00f2fe;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 6px rgba(0, 242, 254, 0.6);
+}
+/* Barra de espacio / carga útil */
+.l-hbar.espacio .l-hbar-fill {
+  background: linear-gradient(90deg, #52c785 0%, #00f2fe 100%);
+  box-shadow: 0 0 6px rgba(0, 242, 254, 0.5);
+}
+.l-hbar.espacio.alerta .l-hbar-fill {
+  background: #e85555;
+  box-shadow: 0 0 8px rgba(232, 85, 85, 0.9);
+}
+/* Barra de oxígeno */
+.l-hbar.oxigeno .l-hbar-fill {
+  background: linear-gradient(90deg, #00f2fe 0%, #38bdf8 100%);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+}
+.l-hbar.oxigeno.alerta .l-hbar-fill {
+  background: #e85555;
+  box-shadow: 0 0 8px rgba(232, 85, 85, 0.9);
+}
+/* Barra de energía */
+.l-hbar.energia .l-hbar-fill {
+  background: linear-gradient(90deg, #f0a53b 0%, #fcd34d 100%);
+  box-shadow: 0 0 8px rgba(240, 165, 59, 0.7);
+}
+.l-hbar.energia.alerta .l-hbar-fill {
+  background: #e85555;
+  box-shadow: 0 0 8px rgba(232, 85, 85, 0.9);
+}
+.l-header-controles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.l-header-nav {
+  display: flex;
+  gap: 12px;
+  color: #8a9fc4;
+  font-size: 11px;
+  font-weight: 600;
+}
+.l-header-nav .active {
+  color: #00f2fe;
+  font-weight: 800;
+  text-shadow: 0 0 8px rgba(0, 242, 254, 0.6);
+}
+.btn-tutorial-nav {
+  background: rgba(0, 242, 254, 0.15) !important;
+  border: 1px solid #00f2fe !important;
+  color: #00f2fe !important;
+  font-weight: 900 !important;
+  font-size: 12px !important;
+  padding: 4px 9px !important;
+  border-radius: 4px !important;
+}
+.btn-tutorial-nav:hover:not(:disabled) {
+  background: #00f2fe !important;
+  color: #041226 !important;
+  box-shadow: 0 0 10px #00f2fe !important;
+}
+.btn-tutorial-nav:disabled {
+  opacity: 0.3 !important;
+  border-color: #2a3a5e !important;
+  color: #6d80a5 !important;
+}
 .l-kicker {font-size:11px;color:#f0a53b;letter-spacing:1.5px;margin-bottom:6px;font-weight:700}
 .l-intro {height:100%;display:grid;grid-template-columns:1fr 1fr;align-items:center;background:#0a0e1c;position:relative;padding:40px;gap:40px}
 .l-intro canvas {width:520px;height:390px;image-rendering:pixelated;border:1px solid #2a3a5e;border-radius:6px;box-shadow:0 12px 30px rgba(0,0,0,0.5)}

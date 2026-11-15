@@ -132,7 +132,7 @@ for(const m of MAPAS_NASA)for(const route of ['directa','ahorro'])for(const corr
   LunarAudio.exito();
   check(true,'LunarAudio llamadas seguras sin entorno DOM');
 }
-// Tutorial enfocado paso a paso
+// Tutorial enfocado paso a paso por las 4 categorías de equipo
 {
   const s = Lunar.nuevo();
   s.tutorial.activo = true;
@@ -141,14 +141,37 @@ for(const m of MAPAS_NASA)for(const route of ['directa','ahorro'])for(const corr
   check(g.paso === 1, 'tutorial paso 1');
   check(g.selector.includes('directa'), 'foco en ruta directa');
   Lunar.cambiar(s, 'ruta', 'directa');
-  // Paso 2 Hangar: Probar plan
+  s.tutorial.rutaElegida = true;
+  s.tutorial.catIndex = 0;
+  // Paso 2 Hangar: Herramientas -> Foco en Energía
   g = Lunar.guiaPaso(s);
   check(g.paso === 2, 'tutorial paso 2');
-  check(g.selector.includes('test'), 'foco en probar plan');
-  Lunar.probar(s);
-  // Paso 3 Hangar: Lanzar
+  check(g.selector.includes('data-x="1"'), 'foco en categoria energia');
+  s.tutorial.catIndex = 1;
+  s.tutorial.cat1 = true;
+  // Paso 3 Hangar: Energía -> Foco en Soporte Vital
   g = Lunar.guiaPaso(s);
   check(g.paso === 3, 'tutorial paso 3');
+  check(g.selector.includes('data-x="2"'), 'foco en categoria soporte vital');
+  s.tutorial.catIndex = 2;
+  s.tutorial.cat2 = true;
+  // Paso 4 Hangar: Soporte Vital -> Foco en Muestras
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 4, 'tutorial paso 4');
+  check(g.selector.includes('data-x="3"'), 'foco en categoria muestras');
+  s.tutorial.catIndex = 3;
+  s.tutorial.cat3 = true;
+  // Paso 5 Hangar: Muestras -> Foco en Probar Plan
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 5, 'tutorial paso 5');
+  check(g.selector.includes('test'), 'foco en probar plan desde muestras');
+  s.tutorial.equipoVisto = true;
+  // Paso 6 Hangar: Probar plan
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 6, 'tutorial paso 6 probar');
+  Lunar.probar(s);
+  // Paso 6 Hangar (autorizado): Lanzar
+  g = Lunar.guiaPaso(s);
   check(g.selector.includes('launch'), 'foco en lanzar');
   Lunar.lanzar(s);
   // Paso 1 Viaje: Escaneo

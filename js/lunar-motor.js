@@ -447,34 +447,89 @@ var Lunar = (function () {
 
   function guiaPaso(s) {
     if (s.etapa === 'hangar') {
-      if (!s.tutorial.comparado) {
+      // Paso 1: Sección 01 - Ruta
+      if (!s.tutorial.rutaElegida && !s.tutorial.comparado) {
         return {
           paso: 1,
-          total: 3,
+          total: 6,
           fase: '01 / SITIO Y RUTA',
           selector: 'button[data-l="ruta"][data-x="directa"]',
-          badge: 'PASO 1 DE 3',
-          texto: 'Haz clic en [ RUTA DIRECTA ] en la Sección 01 para trazar el camino más corto.',
+          badge: 'PASO 1 DE 6',
+          texto: 'Haz clic en [ RUTA DIRECTA ] en la Sección 01 para comparar el trazado más corto.',
           detalle: 'Observa cómo la distancia y las pendientes modifican el consumo previsto.'
         };
       }
-      if (!s.prueba) {
+
+      // Paso 2: Sección 02 - Categoría 0: Herramientas
+      if (!s.tutorial.cat1 && (s.tutorial.catIndex === 0 || s.tutorial.catIndex === undefined)) {
         return {
           paso: 2,
-          total: 3,
+          total: 6,
+          fase: '02 / HERRAMIENTAS',
+          selector: 'button[data-l="category"][data-x="1"]',
+          badge: 'PASO 2 DE 6',
+          texto: 'HERRAMIENTAS: El Taladro es imprescindible para extraer el núcleo y el Escáner revela recursos. Haz clic en [ ENERGÍA ].',
+          detalle: 'Sin taladro no podrás perforar en el cráter.'
+        };
+      }
+
+      // Paso 3: Sección 02 - Categoría 1: Energía
+      if (!s.tutorial.cat2 && s.tutorial.catIndex === 1) {
+        return {
+          paso: 3,
+          total: 6,
+          fase: '02 / ENERGÍA',
+          selector: 'button[data-l="category"][data-x="2"]',
+          badge: 'PASO 3 DE 6',
+          texto: 'ENERGÍA: Baterías (100 Wh o 160 Wh) dan autonomía para caminar y perforar. Haz clic en [ SOPORTE VITAL ].',
+          detalle: 'Más batería te da autonomía, pero pesa más y encarece cada metro.'
+        };
+      }
+
+      // Paso 4: Sección 02 - Categoría 2: Soporte vital
+      if (!s.tutorial.cat3 && s.tutorial.catIndex === 2) {
+        return {
+          paso: 4,
+          total: 6,
+          fase: '02 / SOPORTE VITAL',
+          selector: 'button[data-l="category"][data-x="3"]',
+          badge: 'PASO 4 DE 6',
+          texto: 'SOPORTE VITAL: Tanques de O₂ para respirar y combustible para corregir descenso. Haz clic en [ MUESTRAS ].',
+          detalle: 'Llevar combustible extra habilita la corrección de aterrizaje en vuelo.'
+        };
+      }
+
+      // Paso 5: Sección 02 - Categoría 3: Muestras
+      if (!s.tutorial.equipoVisto && s.tutorial.catIndex === 3) {
+        return {
+          paso: 5,
+          total: 6,
+          fase: '02 / MUESTRAS',
+          selector: 'button[data-l="test"]',
+          badge: 'PASO 5 DE 6',
+          texto: 'MUESTRAS: Contenedores para almacenar rocas y regolito. ¡Carga lista! Haz clic en [ PROBAR PLAN ] en la Sección 03.',
+          detalle: 'Cada muestra recogida pesará 1 kg y aumentará el consumo de retorno.'
+        };
+      }
+
+      // Paso 6: Sección 03 - Probar el plan / Lanzar
+      if (!s.prueba) {
+        return {
+          paso: 6,
+          total: 6,
           fase: '03 / PROBAR EL PLAN',
           selector: 'button[data-l="test"]',
-          badge: 'PASO 2 DE 3',
-          texto: 'Haz clic en [ PROBAR PLAN ] en la Sección 03 para calcular telemetría y balance de energía.',
+          badge: 'PASO 6 DE 6',
+          texto: 'Haz clic en [ PROBAR PLAN ] en la Sección 03 para calcular telemetría, reserva y balance de energía.',
           detalle: 'La simulación calcula si tu batería y oxígeno soportan la ruta elegida.'
         };
       }
       return {
-        paso: 3,
-        total: 3,
+        paso: 6,
+        total: 6,
         fase: '03 / AUTORIZAR DESPEGUE',
         selector: 'button[data-l="launch"]',
-        badge: 'PASO 3 DE 3',
+        badge: 'AUTORIZADO',
         texto: '¡Telemetría validada! Haz clic en [ LANZAR ] en la Sección 03 para despegar hacia la Luna.',
         detalle: 'Tu nave viajará a la órbita lunar con la configuración ensayada.'
       };

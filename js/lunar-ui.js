@@ -21,17 +21,89 @@ var LunarUI = (function () {
   function header() {
     const audioOn = LunarAudio.estaActivo();
     const sitioInfo = SITIOS_LUNARES[s.sitio] || SITIOS_LUNARES.Site01;
+
+    // Métricas de telemetría de recursos en tiempo real
+    const masaActual = Lunar.masa(s);
+    const masaMax = s.masa.capacidad || 120;
+    const pctMasa = Math.min(100, Math.round((masaActual / masaMax) * 100));
+    const masaAlerta = masaActual > masaMax;
+
+    let oxActual, oxMax, pctOx, oxAlerta;
+    let energiaActual, energiaMax, pctEnergia, energiaAlerta;
+
+    if (s.etapa === 'hangar') {
+      const tot = Motor.totales(s);
+      const pr = Lunar.proyectar(s);
+      oxActual = tot.oxigeno;
+      oxMax = Math.max(160, tot.oxigeno);
+      pctOx = Math.min(100, Math.round((tot.oxigeno / oxMax) * 100));
+      oxAlerta = tot.oxigeno < pr.ox;
+
+      energiaActual = tot.energia;
+      energiaMax = Math.max(160, tot.energia);
+      pctEnergia = Math.min(100, Math.round((tot.energia / energiaMax) * 100));
+      energiaAlerta = pr.total > tot.energia;
+    } else {
+      oxActual = Math.max(0, Math.round(s.recursos.oxigeno));
+      oxMax = s.plan?.oxigeno || Motor.totales(s).oxigeno || 100;
+      pctOx = oxMax > 0 ? Math.max(0, Math.min(100, Math.round((oxActual / oxMax) * 100))) : 0;
+      oxAlerta = s.retorno && s.recursos.oxigeno < s.retorno.ox;
+
+      energiaActual = Math.max(0, Math.round(s.recursos.energiaWh));
+      energiaMax = s.plan?.energia || Motor.totales(s).energia || 100;
+      pctEnergia = energiaMax > 0 ? Math.max(0, Math.min(100, Math.round((energiaActual / energiaMax) * 100))) : 0;
+      energiaAlerta = s.retorno && s.recursos.energiaWh < s.retorno.wh;
+    }
+
     return `<header class="l-header">
-      <div>
+      <div class="l-header-brand">
         <b>MISIÓN UMBRAL</b>
-        <small>AGENCIA DE EXPLORACIÓN LUNAR · ${sitioInfo.estrellas} ${esc(sitioInfo.dificultad.toUpperCase())}</small>
+        <small>AGENCIA LUNAR · ${sitioInfo.estrellas} ${esc(sitioInfo.dificultad.toUpperCase())}</small>
       </div>
-      <nav>
-        ${['hangar','viaje','superficie','informe'].map((x,i)=>`<span class="${s.etapa===x?'active':''}">${'0'+(i+1)} ${['PLANEAR','VIAJAR','EXPLORAR','APRENDER'][i]}</span>`).join('')}
-      </nav>
-      ${btn('sound', audioOn ? '🔊 AUDIO' : '🔇 MUDO', '', false, 'btn-sound' + (audioOn ? '' : ' muted'))}
-      ${btn('tutorial_modal', '🚀 TUTORIAL INTERACTIVO', '', false, 'btn-tutorial-header mini')}
-      ${btn('credits', 'CRÉDITOS', '', false, 'mini')}
+
+      <div class="l-header-telemetria">
+        <!-- BARRA DE ESPACIO / CARGA ÚTIL -->
+        <div class="l-hbar espacio ${masaAlerta ? 'alerta' : ''}" title="Espacio de carga útil: ${masaActual} kg usados de ${masaMax} kg disponibles">
+          <div class="l-hbar-label">
+            <span>⚖ ESPACIO</span>
+            <b>${masaActual} / ${masaMax} kg</b>
+          </div>
+          <div class="l-hbar-track">
+            <div class="l-hbar-fill" style="width:${pctMasa}%"></div>
+          </div>
+        </div>
+
+        <!-- BARRA DE OXÍGENO -->
+        <div class="l-hbar oxigeno ${oxAlerta ? 'alerta' : ''}" title="Soporte vital: ${oxActual} u de O₂ disponibles">
+          <div class="l-hbar-label">
+            <span>🫁 OXÍGENO</span>
+            <b>${oxActual} u</b>
+          </div>
+          <div class="l-hbar-track">
+            <div class="l-hbar-fill" style="width:${pctOx}%"></div>
+          </div>
+        </div>
+
+        <!-- BARRA DE ENERGÍA -->
+        <div class="l-hbar energia ${energiaAlerta ? 'alerta' : ''}" title="Batería: ${energiaActual} Wh de reserva">
+          <div class="l-hbar-label">
+            <span>⚡ BATERÍA</span>
+            <b>${energiaActual} Wh</b>
+          </div>
+          <div class="l-hbar-track">
+            <div class="l-hbar-fill" style="width:${pctEnergia}%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="l-header-controles">
+        <nav class="l-header-nav">
+          ${['hangar','viaje','superficie','informe'].map((x,i)=>`<span class="${s.etapa===x?'active':''}">${'0'+(i+1)} ${['PLANEAR','VIAJAR','EXPLORAR','APRENDER'][i]}</span>`).join('')}
+        </nav>
+        ${btn('sound', audioOn ? '🔊' : '🔇', '', false, 'btn-sound mini' + (audioOn ? '' : ' muted'))}
+        ${btn('tutorial_modal', '🚀 TUTORIAL', '', false, 'btn-tutorial-header mini')}
+        ${btn('credits', 'CRÉDITOS', '', false, 'mini')}
+      </div>
     </header>`;
   }
 
@@ -47,7 +119,11 @@ var LunarUI = (function () {
         <p class="aida-instruccion">${esc(p.texto)}</p>
       </div>
       <div class="aida-acciones">
-        ${btn('tutorial_modal', '📖 VER TUTORIAL ▶', '', false, 'btn-tutorial-open')}
+        ${s.etapa === 'hangar' ? `
+          ${btn('tutorial_step_hangar', '◀', String(p.paso - 2), p.paso <= 1, 'mini btn-tutorial-nav')}
+          ${btn('tutorial_step_hangar', '▶', String(p.paso), p.paso >= p.total, 'mini btn-tutorial-nav')}
+        ` : ''}
+        ${btn('tutorial_modal', '📖 GUÍA ▶', '', false, 'btn-tutorial-open mini')}
         ${btn('skip', '✕ CERRAR', '', false, 'btn-tutorial-close mini')}
       </div>
     </aside>`;
@@ -773,7 +849,67 @@ var LunarUI = (function () {
       keys = {};
     }
     if (a === 'close') modal = null;
-    if (a === 'category') { category = Number(x); selected = 0; }
+    if (a === 'tutorial_step_hangar') {
+      const pIndex = Math.max(0, Math.min(5, Number(x)));
+      if (pIndex === 0) {
+        s.tutorial.rutaElegida = false;
+        s.tutorial.comparado = false;
+        s.tutorial.catIndex = undefined;
+      } else if (pIndex === 1) {
+        s.tutorial.rutaElegida = true;
+        s.tutorial.comparado = true;
+        s.tutorial.catIndex = 0;
+        s.tutorial.cat1 = false;
+        category = 0; selected = 0;
+      } else if (pIndex === 2) {
+        s.tutorial.rutaElegida = true;
+        s.tutorial.comparado = true;
+        s.tutorial.catIndex = 1;
+        s.tutorial.cat1 = true;
+        s.tutorial.cat2 = false;
+        category = 1; selected = 0;
+      } else if (pIndex === 3) {
+        s.tutorial.rutaElegida = true;
+        s.tutorial.comparado = true;
+        s.tutorial.catIndex = 2;
+        s.tutorial.cat1 = true;
+        s.tutorial.cat2 = true;
+        s.tutorial.cat3 = false;
+        category = 2; selected = 0;
+      } else if (pIndex === 4) {
+        s.tutorial.rutaElegida = true;
+        s.tutorial.comparado = true;
+        s.tutorial.catIndex = 3;
+        s.tutorial.cat1 = true;
+        s.tutorial.cat2 = true;
+        s.tutorial.cat3 = true;
+        s.tutorial.equipoVisto = false;
+        category = 3; selected = 0;
+      } else if (pIndex >= 5) {
+        s.tutorial.rutaElegida = true;
+        s.tutorial.comparado = true;
+        s.tutorial.catIndex = 3;
+        s.tutorial.cat1 = true;
+        s.tutorial.cat2 = true;
+        s.tutorial.cat3 = true;
+        s.tutorial.equipoVisto = true;
+      }
+      render();
+      return;
+    }
+    if (a === 'category') {
+      category = Number(x);
+      selected = 0;
+      if (s.tutorial.activo) {
+        s.tutorial.catIndex = category;
+        if (category === 1) s.tutorial.cat1 = true;
+        if (category === 2) s.tutorial.cat2 = true;
+        if (category === 3) {
+          s.tutorial.cat3 = true;
+          s.tutorial.equipoVisto = true;
+        }
+      }
+    }
     if (a === 'select') selected = Number(x);
 
     if (['ruta','equipo','sitio','cohete'].includes(a)) {
@@ -781,6 +917,13 @@ var LunarUI = (function () {
       Lunar.cambiar(s, a, x);
       const after = Lunar.proyectar(s);
       message = `Proyección ${n(before.total)} → ${n(after.total)} Wh; reserva ${n(before.margen)} → ${n(after.margen)} Wh. ${a==='ruta'?'Cambió distancia y pendientes.':a==='equipo'?'Cambió energía disponible o masa.':'Condiciones recalculadas.'}`;
+      if (a === 'ruta' && s.tutorial.activo) {
+        s.tutorial.rutaElegida = true;
+        s.tutorial.comparado = true;
+        s.tutorial.catIndex = 0;
+        category = 0;
+        selected = 0;
+      }
     }
     if (a === 'test') {
       const v = Lunar.probar(s);

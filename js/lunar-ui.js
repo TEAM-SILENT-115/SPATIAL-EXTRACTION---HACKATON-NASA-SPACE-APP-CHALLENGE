@@ -24,7 +24,7 @@ var LunarUI = (function () {
   let pantalla = 'titulo'; // titulo | niveles | briefing | plan | despegue | viaje | descenso | superficie | informe
   let paso = 0, elegidos = {}, modal = null, informe = null, fin = null, rutas = null;
   let keys = {}, elapsed = 0, last = 0, reloj = 0, t0 = 0;
-  let particulas = [], flotantes = [], vis = null, ultimaAlerta = -9, sacudida = 0, contactoHecho = false, claveVista = '', alPrimario = false;
+  let particulas = [], flotantes = [], vis = null, ultimaAlerta = -9, sacudida = 0, contactoHecho = false, claveVista = '', alPrimario = false, hallazgo = null;
 
   /* ---------------- progreso guardado ---------------- */
 
@@ -206,7 +206,7 @@ var LunarUI = (function () {
     if (id === 'extras') {
       return [
         ['fuelextra', 'COMBUSTIBLE EXTRA', '+30 de combustible para corregir el descenso y aterrizar más cerca.'],
-        ['escaner', 'ESCÁNER DE TERRENO', 'Revela una segunda muestra cerca del camino.'],
+        ['escaner', 'ESCÁNER DE TERRENO', 'Revela una segunda muestra y registra los hallazgos científicos del mapa.'],
         ['cont2', 'CONTENEDOR DOBLE', 'Guarda 2 muestras. Sin él, solo cabe una.']
       ].map(x => ({ id: x[0], elegida: tiene(x[0]), titulo: x[1], texto: x[2], datos: chips(Motor.obj(x[0])), casilla: true }));
     }
@@ -266,7 +266,7 @@ var LunarUI = (function () {
       <section class="u-plan-mapa">
         <canvas id="u-mapa" width="560" height="420" aria-label="Mapa de pendientes del sitio"></canvas>
         <div class="u-leyenda">
-          <span><i class="l-suave"></i>Suave</span><span><i class="l-emp"></i>Empinado: gasta más</span><span><i class="l-no"></i>Sin paso</span>
+          <span><i class="l-suave"></i>Suave</span><span><i class="l-emp"></i>Empinado: gasta más</span><span><i class="l-no"></i>Sin paso</span><span><i class="l-roca"></i>Roca: hay que rodearla</span>
         </div>
       </section>
       <section class="u-plan-paso">
@@ -413,7 +413,7 @@ var LunarUI = (function () {
 
   function accHTML() {
     const c = Lunar.contexto(s), pv = Lunar.preverAccion(s);
-    const etq = { perforar: 'PERFORAR', escanear: 'ESCANEAR', recoger: 'RECOGER' };
+    const etq = { perforar: 'PERFORAR', escanear: 'ESCANEAR', recoger: 'RECOGER', escanear_poi: 'ESCANEAR HALLAZGO' };
     let centro = '', texto = aidaSuperficie(), clase = '';
     if (c && c.accion === 'entregar') {
       if (s.muestras.recogidas.length) {
@@ -434,6 +434,7 @@ var LunarUI = (function () {
         : 'Gasta ' + c.wh + ' Wh. Después te FALTARÁN ' + n(-pv.margen) + ' Wh para volver ✖';
       clase = pv.margen >= 0 ? 'ok' : 'alerta';
       if (c.aviso) { texto = c.aviso; clase = 'ambar'; }
+      if (c.poi && pv.margen >= 0) texto = 'Señal científica. Escanearla gasta ' + c.wh + ' Wh; después te sobrarán ' + n(pv.margen) + ' para volver ✓';
     }
     const cruz = [['w', '▲'], ['a', '◀'], ['s', '▼'], ['d', '▶']].map(k =>
       `<button class="btn u-cruz-${k[0]}" data-l="mv" data-x="${k[0]}" aria-label="Mover">${k[1]}</button>`).join('');
@@ -449,10 +450,19 @@ var LunarUI = (function () {
       <div class="u-campo">
         <canvas id="u-campo" tabindex="0" aria-label="Superficie lunar. Flechas o WASD para moverte, E para actuar"></canvas>
         <div class="u-minimapa"><canvas id="u-mini-sup" width="160" height="120"></canvas><span>MAPA</span></div>
+        <div class="u-hallazgo" id="u-hallazgo" hidden></div>
         <div class="u-fin" id="u-fin" hidden></div>
       </div>
       <div class="u-acc" id="u-acc">${accHTML()}</div>
     </main>`;
+  }
+
+  function mostrarHallazgo(poi) {
+    hallazgo = { poi, t0: reloj };
+    const caja = document.getElementById('u-hallazgo');
+    if (!caja) return;
+    caja.hidden = false;
+    caja.innerHTML = `<small>HALLAZGO REGISTRADO · +${poi.ciencia} CIENCIA</small><b>${esc(poi.nombre)}</b><p>${esc(poi.hallazgo)}</p>`;
   }
 
   function refrescarSuperficie() {
@@ -484,7 +494,8 @@ var LunarUI = (function () {
       <section class="u-inf-texto">
         <p class="u-kicker">INFORME DE MISIÓN · NIVEL ${m.nivel} · ${esc(m.nombre).toUpperCase()}</p>
         <h1>${esc(f.titulo)}</h1>
-        <ul class="u-frases">${r.resumen.frases.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+        <ul class="u-frases">${r.resumen.frases.map(x => `<li>${esc(x)}</li>`).join('')}${r.hallazgos
+          ? `<li>${r.cienciaHallazgos ? 'Registraste ' + (r.hallazgos === 1 ? 'un hallazgo científico' : r.hallazgos + ' hallazgos científicos') + ': +' + r.cienciaHallazgos + ' de ciencia.' : 'Lo que escaneaste se perdió con la señal.'}</li>` : ''}</ul>
         <div class="u-inf-barra">
           <div class="u-g-pista"><i class="u-gastado" style="width:${(lim(r.consumo / ini, 0, 1) * 100).toFixed(1)}%"></i><em class="${previsto / ini > 0.85 ? 'izq' : ''}" style="left:${(lim(previsto / ini, 0, 1) * 100).toFixed(1)}%">PLAN</em></div>
           <p>De <b>${n(ini)} Wh</b> gastaste <b>${n(r.consumo)}</b> (el plan pedía ${n(previsto)}) y te sobraron <b>${n(r.restante)}</b>.</p>
@@ -571,6 +582,35 @@ var LunarUI = (function () {
     ctx.restore();
   }
 
+  // Sprites de recursos lunares (rocas, hielo, sondas…): usan su propia paleta.
+  function sprRecurso(ctx, nombre, cx, cy, k) {
+    const filas = SPRITES_RECURSOS_LUNARES[nombre], pal = SPRITES_RECURSOS_LUNARES.paleta;
+    if (!filas) return;
+    const x0 = Math.round(cx - filas[0].length * k / 2), y0 = Math.round(cy - filas.length * k / 2);
+    for (let r = 0; r < filas.length; r++) {
+      for (let c = 0; c < filas[r].length; c++) {
+        const color = pal[filas[r][c]];
+        if (!color) continue;
+        ctx.fillStyle = color;
+        ctx.fillRect(x0 + c * k, y0 + r * k, k, k);
+      }
+    }
+  }
+  const pois = () => (typeof PUNTOS_INTERES_LUNARES !== 'undefined' && PUNTOS_INTERES_LUNARES[s.sitio]) || { obstaculos: [], escaneos: [] };
+
+  // Nebulosas tenues de fondo: manchas de píxeles que respiran despacio.
+  const NEBULOSAS = [[0.18, 0.3, 46, '110,84,190'], [0.72, 0.22, 58, '52,120,170'], [0.5, 0.62, 40, '150,70,140']];
+  function nebulosas(ctx, w, h) {
+    NEBULOSAS.forEach((nb, i) => {
+      const cx = nb[0] * w, cy = nb[1] * h, r = nb[2], a = 0.05 + 0.02 * Math.sin(reloj * 0.4 + i * 2);
+      ctx.fillStyle = 'rgba(' + nb[3] + ',' + a.toFixed(3) + ')';
+      for (let y = -r; y <= r; y += 4) {
+        const m = Math.floor(Math.sqrt(r * r - y * y) * (0.75 + 0.25 * Math.sin(y * 0.21 + i)));
+        ctx.fillRect(Math.round(cx - m), Math.round(cy + y * 0.6), m * 2, 4);
+      }
+    });
+  }
+
   const ESTRELLAS = Array.from({ length: 110 }, (_, i) => ({
     x: (i * 53 + 11) % 331, y: (i * 37 + 5) % 181, f: (i * 0.7) % 6.28, v: 0.7 + (i % 5) * 0.4, g: i % 9 === 0
   }));
@@ -578,6 +618,7 @@ var LunarUI = (function () {
   function cielo(ctx, w, h, deriva) {
     ctx.fillStyle = '#0b1026';
     ctx.fillRect(0, 0, w, h);
+    nebulosas(ctx, w, h);
     for (const e of ESTRELLAS) {
       if (e.y >= h) continue;
       const x = (((e.x - (deriva || 0) * (e.g ? 1.7 : 1)) % w) + w) % w;
@@ -678,6 +719,14 @@ var LunarUI = (function () {
         }
       }
     }
+    const rocas = (typeof PUNTOS_INTERES_LUNARES !== 'undefined' && PUNTOS_INTERES_LUNARES[m.id] ? PUNTOS_INTERES_LUNARES[m.id].obstaculos : []);
+    rocas.forEach(o => {
+      const cx = (o[0] + 0.5) * T, cy = (o[1] + 0.5) * T;
+      if (T < 8) { ctx.fillStyle = '#1e293b'; ctx.fillRect(o[0] * T, o[1] * T, T, T); return; }
+      ctx.fillStyle = 'rgba(11,16,38,.45)';
+      ctx.fillRect(Math.round(cx - T * 0.45), Math.round(cy + T * 0.25), Math.round(T * 0.9), Math.max(2, T >> 3));
+      sprRecurso(ctx, 'roca_3d', cx, cy, T >= 20 ? 2 : 1);
+    });
     cacheTerreno[clave] = cv;
     return cv;
   }
@@ -938,6 +987,20 @@ var LunarUI = (function () {
       rotulo(s.revelada ? 'MUESTRA' : '? SEÑAL', ex, ey - 14, '#9fd6ff');
     }
 
+    // hallazgos científicos: señales que el escáner puede registrar
+    if (sis().escaner) {
+      pois().escaneos.forEach(poi => {
+        const hecho = (s.escaneosExtra || []).includes(poi.id), [hx, hy] = xy(poi.pos);
+        if (hx < -40 || hx > W + 40 || hy < -40 || hy > H + 40) return;
+        const lat = Math.sin(reloj * 4 + poi.pos[0]) * 2;
+        ctx.strokeStyle = hecho ? 'rgba(111,208,140,.8)' : 'rgba(125,249,255,.9)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(hx - 12 - lat / 2 + 0.5, hy - 12 - lat / 2 + 0.5, 24 + lat, 24 + lat);
+        sprRecurso(ctx, poi.tipo, hx, hy, 2);
+        rotulo(hecho ? '✓ REGISTRADO' : '? HALLAZGO', hx, hy - 18, hecho ? '#6fd08c' : '#7df9ff');
+      });
+    }
+
     // módulo con baliza
     const [mx, my] = xy(s.modulo);
     ctx.fillStyle = 'rgba(11,16,38,.4)'; ctx.fillRect(mx - 15, my + 7, 30, 4);
@@ -1006,6 +1069,10 @@ var LunarUI = (function () {
       const t4 = 4;
       mini.drawImage(terreno(m, t4), 0, 0);
       if (s.tomada) trazo(mini, s.retorno.path.map(p => [(p[0] + 0.5) * t4, (p[1] + 0.5) * t4]), '#76d2e7', 1);
+      if (sis().escaner) pois().escaneos.forEach(poi => {
+        mini.fillStyle = (s.escaneosExtra || []).includes(poi.id) ? '#6fd08c' : '#7df9ff';
+        mini.fillRect(poi.pos[0] * t4, poi.pos[1] * t4, 3, 3);
+      });
       mini.fillStyle = '#e6bd6a'; mini.fillRect(s.modulo[0] * t4 - 1, s.modulo[1] * t4 - 1, 5, 5);
       if (!s.tomada) { mini.fillStyle = '#ffffff'; mini.fillRect(m.target[0] * t4 - 1, m.target[1] * t4 - 1, 5, 5); }
       mini.fillStyle = Math.floor(reloj * 4) % 2 ? '#ff7785' : '#ffffff';
@@ -1076,7 +1143,7 @@ var LunarUI = (function () {
       if (!sis().combustible) Lunar.decidir(s, false);
     }
     if (p === 'descenso') contactoHecho = false;
-    if (p === 'superficie') { vis = null; particulas = []; flotantes = []; fin = null; ultimaAlerta = -9; }
+    if (p === 'superficie') { vis = null; particulas = []; flotantes = []; fin = null; hallazgo = null; ultimaAlerta = -9; }
     render();
   }
 
@@ -1143,6 +1210,9 @@ var LunarUI = (function () {
       if (gasto >= 1.5) flotantes.push({ paso: true, x: (s.pos[0] + 0.5) * 24, y: (s.pos[1] + 0.5) * 24 - 22, vida: 0.8, txt: 'EMPINADO −' + n(gasto) + ' Wh', color: gasto >= 2.2 ? '#ff9d9d' : '#f3d998' });
       if (estadoRetorno().estado === 'rojo' && reloj - ultimaAlerta > 1.6) { ultimaAlerta = reloj; LunarAudio.alerta(); }
       refrescarSuperficie();
+    } else if (s.etapa === 'superficie' && Lunar.esObstaculo(Lunar.map(s), [s.pos[0] + d[0], s.pos[1] + d[1]])) {
+      flotantes = flotantes.filter(f => !f.paso);
+      flotantes.push({ paso: true, x: px + d[0] * 24, y: py + d[1] * 24 - 16, vida: 0.9, txt: 'ROCA: RODÉALA', color: '#f3d998' });
     }
     comprobarFin();
   }
@@ -1159,9 +1229,11 @@ var LunarUI = (function () {
     const r = Lunar.interactuar(s);
     if (r.ok && c.accion !== 'entregar') {
       if (c.accion === 'perforar') { LunarAudio.perforar(); sacudida = 0.35; setTimeout(() => { s.perforando = false; }, 700); }
+      else if (c.accion === 'escanear' || c.accion === 'escanear_poi') LunarAudio.escanear();
       else LunarAudio.elegir();
       flotantes.push({ x: px, y: py - 20, vida: 1.4, txt: '−' + c.wh + ' Wh', color: '#f3d998' });
-      if (c.accion !== 'escanear') flotantes.push({ x: px, y: py - 32, vida: 1.6, txt: '+1 MUESTRA', color: '#6fd08c' });
+      if (c.accion === 'escanear_poi') { flotantes.push({ x: px, y: py - 32, vida: 1.6, txt: '+' + c.poi.ciencia + ' CIENCIA', color: '#7df9ff' }); mostrarHallazgo(c.poi); }
+      else if (c.accion !== 'escanear') flotantes.push({ x: px, y: py - 32, vida: 1.6, txt: '+1 MUESTRA', color: '#6fd08c' });
     } else if (!r.ok) {
       flotantes.push({ x: px, y: py - 20, vida: 1.6, txt: 'NO SE PUEDE', color: '#ff9d9d' });
     }
@@ -1276,6 +1348,7 @@ var LunarUI = (function () {
       if (pantalla === 'despegue' && reloj - t0 > CINE.despegue) ir('viaje');
       else if (pantalla === 'descenso' && reloj - t0 > CINE.descenso) ir('superficie');
       else if (pantalla === 'superficie') {
+        if (hallazgo && reloj - hallazgo.t0 > 7) { hallazgo = null; const caja = document.getElementById('u-hallazgo'); if (caja) caja.hidden = true; }
         if (fin) { if (reloj - fin.t0 > CINE.fin) cerrarFin(); }
         else if (!modal) {
           const k = Object.keys(keys).find(x => keys[x]);

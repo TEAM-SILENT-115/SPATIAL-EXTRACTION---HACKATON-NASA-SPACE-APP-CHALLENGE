@@ -2,7 +2,17 @@
    Reglas de la casa: nada de texto por debajo de 13 px, una decisión por
    pantalla, y el estado nunca se comunica solo con color (color + icono + cifra). */
 
-.lunar { font-size: 16px; border-color: #394b68 !important; color: var(--texto); }
+/* La interfaz guiada fija su propia letra y sus botones: así se ve igual con o
+   sin conexión (la letra pixel del estilo base se descarga de internet). */
+.lunar {
+  --fondo: #0b1026; --panel: #121a3e; --borde: #5a6fa0; --texto: #dce9f8; --apagado: #9fb6dd;
+  --acento: #e4a33c; --ok: #6fd08c; --ambar: #e4a33c; --rojo: #e05c5c;
+  font-family: 'Courier New', Consolas, monospace; font-size: 16px; letter-spacing: 0;
+  border: 4px solid #394b68 !important; border-radius: 0 !important; background: var(--fondo); color: var(--texto);
+}
+.lunar .panel { border: 3px solid var(--borde); border-radius: 0; }
+.lunar .btn { font-weight: bold; color: var(--texto); background: var(--fondo); border: 3px solid var(--borde); box-shadow: 3px 3px 0 #05081a; border-radius: 0; text-transform: none; }
+.lunar .btn:hover:not(:disabled) { border-color: var(--acento); color: var(--acento); }
 .lunar button { font-family: inherit; }
 .lunar button:focus-visible { outline: 3px solid #94e7f2; outline-offset: 2px; }
 .lunar canvas { image-rendering: pixelated; }
@@ -103,6 +113,7 @@
 .l-suave { background: #8894aa; }
 .l-emp { background: repeating-linear-gradient(45deg, #56627a 0 3px, #2a3449 3px 5px); }
 .l-no { background: #121a30; }
+.l-roca { background: #64748b; border-color: #1e293b !important; border-radius: 5px 5px 2px 2px; }
 
 .u-plan-paso { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
 .u-pips { display: flex; align-items: center; gap: 6px; font-size: 13px; letter-spacing: 1px; color: var(--acento); }
@@ -226,6 +237,11 @@
 .u-minimapa { position: absolute; right: 12px; top: 12px; padding: 4px; background: #0b1026; border: 3px solid var(--borde); }
 .u-minimapa canvas { width: 160px; height: 120px; display: block; }
 .u-minimapa span { display: block; margin-top: 3px; text-align: center; font-size: 13px; letter-spacing: 2px; color: var(--apagado); }
+.u-hallazgo { position: absolute; left: 12px; top: 12px; width: 420px; padding: 10px 14px; background: rgba(11, 16, 38, 0.94); border: 3px solid #7df9ff; box-shadow: 4px 4px 0 #05081a; animation: u-aparece 0.25s ease-out; }
+.u-hallazgo[hidden] { display: none; }
+.u-hallazgo small { display: block; font-size: 13px; letter-spacing: 2px; color: #7df9ff; }
+.u-hallazgo b { display: block; margin: 4px 0; font-size: 18px; }
+.u-hallazgo p { font-size: 15px; line-height: 1.4; color: var(--apagado); }
 .u-fin { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(5, 8, 26, 0.74); animation: u-aparece 0.3s ease-out; }
 .u-fin[hidden] { display: none; }
 .u-fin b { font-size: 54px; letter-spacing: 6px; text-shadow: 5px 5px 0 #05081a; }

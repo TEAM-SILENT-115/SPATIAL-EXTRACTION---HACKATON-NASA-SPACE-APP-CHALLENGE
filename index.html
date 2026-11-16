@@ -1,25 +1,120 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-US">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mission Umbral</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/lunar.css">
+  <meta name="theme-color" content="#090d1d">
+  <meta name="description" content="Design a lunar mission, manage limited resources, and decide when to return in Misión Umbral, an educational game for the NASA Space Apps Challenge.">
+  <title>Misión Umbral — Plan. Explore. Return.</title>
+  <link rel="stylesheet" href="landing.css">
 </head>
 <body>
-  <div id="marco">
-    <div id="juego"></div>
-  </div>
-  <script src="js/datos.js"></script>
-  <script src="js/motor.js"></script>
-  <script src="data/nasa/processed/maps.js"></script>
-  <script src="js/lunar-datos.js"></script>
-  <script src="js/lunar-motor.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/lunar-ui.js"></script>
+  <header class="topbar">
+    <a class="brand" href="#inicio" aria-label="Misión Umbral, home"><span class="brand-mark" aria-hidden="true">✦</span> MISIÓN UMBRAL</a>
+    <nav aria-label="Main navigation">
+      <a href="#desafio">The challenge</a>
+      <a href="#mision">The mission</a>
+      <a href="#datos">The data</a>
+      <a class="nav-play" href="#jugar">Play <span aria-hidden="true">↘</span></a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="live-dot"></span> NASA SPACE APPS CHALLENGE · SPACE MISSION DESIGN GAME</p>
+        <h1 id="hero-title">One mission.<br>Finite resources.<br><em>Can you make it back?</em></h1>
+        <p class="hero-lede">Design an expedition to the lunar South Pole, search for ice, and make engineering decisions where every kilogram and every watt matter.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#jugar">Play the mission <span aria-hidden="true">→</span></a>
+          <a class="text-link" href="#desafio">Explore the challenge <span aria-hidden="true">↓</span></a>
+        </div>
+        <p class="hero-note"><span aria-hidden="true">⌁</span> Educational game · Ages 12 and up · No prior experience needed</p>
+      </div>
+      <div class="moon-scene" role="img" aria-label="Illustration of a robotic expedition at the lunar South Pole">
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <div class="moon-glow"></div>
+        <div class="moon"><div class="crater crater-a"></div><div class="crater crater-b"></div><div class="crater crater-c"></div><div class="ridge"></div></div>
+        <div class="lander"><i></i><b></b><span></span></div>
+        <div class="rover"><i></i><b></b><span></span></div>
+        <span class="coordinate coord-a">89° S <b>·</b> 137° E</span>
+        <span class="coordinate coord-b">SITE 04 / SHACKLETON</span>
+        <span class="star star-a">✦</span><span class="star star-b">·</span><span class="star star-c">✧</span>
+        <div class="scene-caption"><span class="caption-pulse"></span> EXPLORATION ZONE <small>LUNAR SOUTH POLE</small></div>
+      </div>
+      <div class="hero-bottom"><span>01 / 04</span><span class="scroll-line"></span><span>PLAN · TRAVEL · EXPLORE · RETURN</span></div>
+    </section>
+
+    <section class="challenge section-wrap" id="desafio" aria-labelledby="challenge-title">
+      <div class="section-label"><span>01</span> THE CHALLENGE</div>
+      <div class="challenge-grid">
+        <h2 id="challenge-title">Space engineering means deciding <em>what to leave behind.</em></h2>
+        <div class="challenge-copy">
+          <p>Designing a mission means balancing scientific goals, spacecraft, instruments, mass, budget, power, communications, and orbital constraints. For many students, these trade-offs remain abstract.</p>
+          <p><strong>Misión Umbral turns them into playable decisions.</strong> Plan an expedition, manage limited resources, and discover how each choice shapes your options once you reach the surface.</p>
+          <p class="scope-note"><strong>What this version simulates:</strong> equipment and launch vehicle choices, budget and mass limits, descent decisions, and a lunar surface expedition with finite energy and oxygen. Communications, orbital design, crew training, and the return trip to Earth are outside the current playable mission.</p>
+        </div>
+      </div>
+      <div class="tradeoff-strip" aria-label="Trade-offs to balance during the mission">
+        <div><span class="trade-icon">＋</span><b>More battery</b><small>longer range</small></div><span class="trade-sign" aria-hidden="true">↔</span>
+        <div><span class="trade-icon">－</span><b>More battery</b><small>more mass and cost</small></div><span class="trade-sign" aria-hidden="true">↔</span>
+        <div><span class="trade-icon">⌖</span><b>More exploration</b><small>less margin to return</small></div>
+      </div>
+    </section>
+
+    <section class="mission section-wrap" id="mision" aria-labelledby="mission-title">
+      <div class="section-label"><span>02</span> YOUR MISSION, FOUR STAGES</div>
+      <div class="section-heading-row"><h2 id="mission-title">Every choice <em>leaves a mark.</em></h2><p>Your goal: bring a sample back to the lander. What you carry from the hangar determines how far you can go.</p></div>
+      <div class="steps">
+        <article class="step-card"><div class="step-top"><span>01</span><span class="step-symbol">◈</span></div><h3>Plan</h3><p>Choose your route, battery, and equipment within mass and budget limits.</p><div class="step-meter"><span style="--meter:82%"></span></div><small>DESIGN DECISIONS</small></article>
+        <article class="step-card"><div class="step-top"><span>02</span><span class="step-symbol">⌁</span></div><h3>Travel</h3><p>Commit to your plan and decide whether to spend fuel correcting the descent.</p><div class="step-meter"><span style="--meter:55%"></span></div><small>RESOURCES IN TRANSIT</small></article>
+        <article class="step-card"><div class="step-top"><span>03</span><span class="step-symbol">⌖</span></div><h3>Explore</h3><p>Cross lunar slopes, collect samples, and watch your reserve for the trip back.</p><div class="step-meter"><span style="--meter:36%"></span></div><small>ENERGY TO RETURN</small></article>
+        <article class="step-card"><div class="step-top"><span>04</span><span class="step-symbol">▤</span></div><h3>Learn</h3><p>Read the mission report: what worked, what failed, and what to change next time.</p><div class="step-meter"><span style="--meter:100%"></span></div><small>MISSION REPORT</small></article>
+      </div>
+      <div class="learning-support"><span class="support-icon" aria-hidden="true">✳</span><div><h3>New to space missions? AIDA guides you.</h3><p>One decision appears at a time. AIDA explains what it means, the in-game glossary defines unfamiliar terms, and three levels introduce more systems gradually—from energy alone to mass, oxygen, fuel, and scientific tools.</p></div></div>
+      <div class="lesson"><span class="lesson-mark">“</span><p>Every resource you carry costs mass, money, and space. The reserve you fail to plan for may be what strands you.</p><span class="lesson-tag">THE UMBRAL LESSON</span></div>
+    </section>
+
+    <section class="data-section" id="datos" aria-labelledby="data-title">
+      <div class="section-wrap data-inner">
+        <div class="section-label"><span>03</span> SCIENCE AND DATA</div>
+        <div class="data-grid">
+          <div><h2 id="data-title">Terrain grounded in lunar data.<br><em>Decisions built for learning.</em></h2><p>The expedition maps begin with real measurements of the lunar South Pole. The simulator uses them so terrain affects your route and the cost of exploration.</p></div>
+          <div class="data-cards">
+            <article class="data-card real"><span class="data-kicker"><i></i> REAL DATA</span><h3>Lunar terrain slopes</h3><p>Maps from the LOLA altimeter aboard Lunar Reconnaissance Orbiter (LRO), grouped into 20 m cells.</p><small>CONNECTING RIDGE · SHACKLETON · DE GERLACHE</small></article>
+            <article class="data-card model"><span class="data-kicker"><i></i> EDUCATIONAL MODEL</span><h3>Costs and resources</h3><p>Energy and oxygen use, mass, budget, and discovery locations are game values calibrated for learning, not engineering predictions.</p><small>A LEARNING SIMULATION, NOT A REAL MISSION DESIGN TOOL</small></article>
+          </div>
+        </div>
+        <div class="source-panel" aria-labelledby="sources-title">
+          <h3 id="sources-title">Sources behind the mission</h3>
+          <div class="source-grid">
+            <div class="source-group"><span>01 / TOPOGRAPHIC DATA</span><p>NASA Goddard Space Flight Center, LRO–LOLA South Pole slope maps (degrees, 5 m/pixel). The game uses processed versions of these three files:</p><ul>
+              <li><a href="https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_slp.tif" target="_blank" rel="noopener noreferrer">Site01 · Connecting Ridge <small>GeoTIFF ↗</small></a></li>
+              <li><a href="https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site04/Site04_final_adj_5mpp_slp.tif" target="_blank" rel="noopener noreferrer">Site04 · Shackleton rim <small>GeoTIFF ↗</small></a></li>
+              <li><a href="https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site11/Site11_final_adj_5mpp_slp.tif" target="_blank" rel="noopener noreferrer">Site11 · de Gerlache rim <small>GeoTIFF ↗</small></a></li>
+            </ul><a class="inline-link" href="https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/" target="_blank" rel="noopener noreferrer">Browse the NASA data directory <span aria-hidden="true">↗</span></a></div>
+            <div class="source-group"><span>02 / MISSION REFERENCE</span><p>NASA's VIPER Lunar Operations describes planning routes across rugged terrain while balancing science goals, power, lighting, and communication. It informs the game's mission concept; it is not an input dataset.</p><a class="inline-link" href="https://science.nasa.gov/mission/viper/lunar-operations/" target="_blank" rel="noopener noreferrer">Read VIPER Lunar Operations <span aria-hidden="true">↗</span></a><div class="source-note">The <a href="https://pgda.gsfc.nasa.gov/products/78" target="_blank" rel="noopener noreferrer">NASA PGDA product overview ↗</a> provides additional context for the LOLA maps.</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo section-wrap" aria-labelledby="demo-title">
+      <div class="section-label"><span>04</span> PROJECT DEMO</div>
+      <div class="demo-box"><div class="demo-copy"><span class="demo-icon">▶</span><div><h2 id="demo-title">A quick look at the mission in action.</h2><p>A public video of 30 seconds or less, or a presentation of up to 7 slides, will be linked here once the team publishes it.</p></div></div><span class="demo-status"><i></i> COMING SOON</span></div>
+    </section>
+
+    <section class="play-section" id="jugar" aria-labelledby="play-title">
+      <div class="section-wrap">
+        <div class="section-label"><span>05</span> PLAY THE MISSION</div>
+        <div class="play-heading"><div><p class="eyebrow">YOUR TURN, COMMANDER</p><h2 id="play-title">Can you return <em>with the sample?</em></h2></div><p>Start with the basic level and follow AIDA's guidance. Use your mouse or keyboard. The game loads here from the project.</p></div>
+        <p class="small-screen-note">On a narrow screen, scroll the game panel sideways to see the full interface. A larger screen and keyboard offer the best experience.</p>
+        <div class="game-frame"><div class="frame-top"><span><i></i><i></i><i></i></span><b>MISIÓN UMBRAL <small>· SIMULATOR</small></b><a href="index.html" target="_blank" rel="noopener">Open game separately ↗</a></div><iframe src="index.html" title="Misión Umbral game: design and explore a lunar mission" loading="lazy" allow="fullscreen" allowfullscreen></iframe></div>
+        <p class="game-help"><span>CONTROLS</span> Arrow keys or WASD to move · E to interact · Enter to continue · Esc to pause · M for sound. A keyboard is recommended for surface exploration.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"><a class="brand" href="#inicio"><span class="brand-mark" aria-hidden="true">✦</span> MISIÓN UMBRAL</a><p>An educational lunar exploration game · NASA Space Apps Challenge</p><div class="footer-links"><a href="https://github.com/TEAM-SILENT-115/SPATIAL-EXTRACTION---HACKATON-NASA-SPACE-APP-CHALLENGE" target="_blank" rel="noopener noreferrer">Source code ↗</a><a href="https://science.nasa.gov/mission/lro/" target="_blank" rel="noopener noreferrer">NASA · LRO ↗</a></div><small>Missions are made of decisions. The next one is yours.</small></footer>
 </body>
 </html>

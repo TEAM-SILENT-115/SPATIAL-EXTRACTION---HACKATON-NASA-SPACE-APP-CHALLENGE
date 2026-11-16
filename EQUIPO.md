@@ -4,7 +4,7 @@
 
 Juego educativo para el NASA Space Apps Challenge 2026, reto "Space Mission Design Game".
 El jugador diseña una misión en la agencia (presupuesto, masa, equipo), la opera en vuelo
-y explora un planeta helado para traer una muestra de vuelta al módulo.
+y explora el Polo Sur de la Luna para traer una muestra de hielo de vuelta al módulo.
 
 **La lección que enseña (todo lo demás se recorta si no la sirve):** un recurso que llevas
 no es gratis —cuesta masa, presupuesto y espacio— y el margen que NO reservas al planificar

@@ -121,6 +121,11 @@ Cada nivel usa un sitio real del Polo Sur lunar y añade algo nuevo. Se desbloqu
 | 2 · Intermedio | Borde de Shackleton (mixto) | + oxígeno | Oxígeno, masa y un presupuesto que no alcanza para todo |
 | 3 · Avanzado | Borde de Gerlache (extremo) | + cohete y extras | Combustible para corregir el descenso, escáner y fórmulas |
 
+En los tres mapas hay **rocas** que cortan el paso y obligan a rodear. En el nivel avanzado,
+además, el escáner permite registrar **hallazgos científicos** repartidos por el mapa (una
+sonda precursora, vetas de hielo, un tubo de lava…): cada uno suma ciencia, pero ir a por él
+cuesta energía.
+
 El básico no se puede perder si sigues la línea: está hecho para aprender el ciclo. En el
 intermedio ya hay planes que no vuelven, y el juego lo avisa antes de lanzar. En el avanzado
 casi nada alcanza sin corregir el descenso, y el rango máximo (S+) exige traer dos muestras con
@@ -163,10 +168,11 @@ node tests/lunar.test.js
 node tests/motor.test.js
 ```
 
-`tests/lunar.test.js` (2366 comprobaciones) juega misiones completas en los tres mapas y
+`tests/lunar.test.js` (2549 comprobaciones) juega misiones completas en los tres mapas y
 verifica los tres niveles: qué sistemas activa cada uno, que el básico se gana con cualquier
 plan, que en el intermedio el presupuesto obliga a elegir y un plan corto deja varado, que en
-el avanzado se gana corrigiendo el descenso y que el rango S+ es alcanzable.
+el avanzado se gana corrigiendo el descenso, que el rango S+ es alcanzable, que ninguna roca
+tapa una ruta o un punto clave y que los hallazgos solo cuentan si la expedición vuelve.
 
 `tests/browser.test.mjs` recorre los tres niveles en un navegador real, con ratón y teclado, y
 en cada pantalla comprueba tres cosas medibles de usabilidad: ningún texto por debajo de 13 px,
@@ -174,7 +180,7 @@ nada que se salga de la pantalla fija y no más de 10 botones a la vez. Necesita
 sin cabeza en el puerto 9223 (el encabezado del archivo trae el comando).
 
 Dos parámetros útiles para demos: `index.html?niveles=todos` abre los tres niveles sin tener
-que ganarlos, y en `AYUDA → BORRAR PROGRESO` se vuelve a empezar de cero (para que otra persona
+que ganarlos, `index.html?modo=clasico` abre la versión clásica, y en `AYUDA → BORRAR PROGRESO` se vuelve a empezar de cero (para que otra persona
 pruebe el juego en el mismo equipo).
 
 Todo el arte es pixel art original dibujado por código (sprites y primitivas de canvas) y el

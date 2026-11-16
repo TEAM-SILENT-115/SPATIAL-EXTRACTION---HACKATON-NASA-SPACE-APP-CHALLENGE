@@ -54,13 +54,13 @@ Sin Git: en la página del repositorio pulsa **Code → Download ZIP** y descomp
 
 ### 2. Abre el juego
 
-Haz doble clic en `index.html`. También puedes abrirlo desde la terminal:
+Abre `index.html` para ver la página del proyecto y jugar desde ella, o abre `game.html` para ir directamente al juego. Para abrir el juego desde la terminal:
 
 | Sistema | Comando |
 |---|---|
-| Windows | `start index.html` |
-| macOS | `open index.html` |
-| Linux | `xdg-open index.html` |
+| Windows | `start game.html` |
+| macOS | `open game.html` |
+| Linux | `xdg-open game.html` |
 
 Funciona sin conexión y en una sola pantalla (1280×720, escalada al tamaño de tu ventana). Para
 verlo más grande, pon el navegador en pantalla completa con `F11`.
@@ -169,7 +169,9 @@ ese es el punto.
 ## Arquitectura
 
 ```
-index.html              pantalla única
+index.html              página de presentación con el juego integrado
+landing.css             estilos de la página de presentación
+game.html               pantalla única del juego
 css/style.css           base: marco 1280×720, botones, modales
 css/lunar.css           interfaz guiada (azul NASA, pixel art)
 js/datos.js             catálogo de equipo y costos (sin lógica)
@@ -203,8 +205,8 @@ en cada pantalla comprueba tres cosas medibles de usabilidad: ningún texto por 
 nada que se salga de la pantalla fija y no más de 10 botones a la vez. Necesita Edge abierto
 sin cabeza en el puerto 9223 (el encabezado del archivo trae el comando).
 
-Dos parámetros útiles para demos: `index.html?niveles=todos` abre los tres niveles sin tener
-que ganarlos, `index.html?modo=clasico` abre la versión clásica, y en `AYUDA → BORRAR PROGRESO` se vuelve a empezar de cero (para que otra persona
+Dos parámetros útiles para demos: `game.html?niveles=todos` abre los tres niveles sin tener
+que ganarlos, `game.html?modo=clasico` abre la versión clásica, y en `AYUDA → BORRAR PROGRESO` se vuelve a empezar de cero (para que otra persona
 pruebe el juego en el mismo equipo).
 
 Todo el arte es pixel art original dibujado por código (sprites y primitivas de canvas) y el

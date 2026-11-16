@@ -196,7 +196,7 @@ frente a 46). Esa es la incertidumbre que la spec pide: ninguna zona es "la corr
 - `js/motor.js` — SOLO reglas. Funciones puras (estado, decisión) → estado nuevo.
   Prohibido meter DOM aquí. Si cambias una regla, corre los tests.
 - `js/ui.js` + `css/style.css` — SOLO render y eventos. Lee del motor, nunca calcula.
-- Sin dependencias, sin build, sin red: abrir `index.html` debe seguir funcionando
+- Sin dependencias, sin build, sin red: abrir `game.html` debe seguir funcionando
   offline con doble click (el wifi del hackatón es un riesgo real).
 
 ## Cómo funciona [ RESERVAR ] (panel 3.3 de la spec)
@@ -276,7 +276,7 @@ Antes el terreno salía siempre rocoso y la segunda partida ya no tenía incerti
   aparte, "Terreno (azar)". Si cambió, la frase lo dice: con las mismas decisiones, «esa
   diferencia es suerte»; con un solo cambio, «no se puede atribuir solo a tu cambio. Repite
   para confirmarlo».
-- **Demo y video con resultado fijo:** `index.html?terreno=rocoso` o `?terreno=despejado`
+- **Demo y video con resultado fijo:** `game.html?terreno=rocoso` o `?terreno=despejado`
   (lo lee `azarTerreno()` en `ui.js`). Sin el parámetro, el dado es real.
 - **Informe que siempre cabe:** con las frases nuevas el informe podía pasarse del alto de
   la pantalla. `ajustarInforme()` recorta la cadena de decisiones por el principio y, si aun
@@ -333,7 +333,7 @@ Son **dos enlaces**:
 
 1. **Enlace de presentación** (el pitch para el jurado). **Es el foco actual.**
 2. **Enlace del proyecto desplegado** (el juego jugable en línea). **Pendiente**; por
-   ahora el juego se abre con doble clic en `index.html`.
+   ahora el juego se abre con doble clic en `game.html`.
 
 ## Qué falta (en orden de valor)
 

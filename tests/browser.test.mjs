@@ -70,7 +70,7 @@ async function misionCompleta() {
 
 fs.mkdirSync('artifacts', {recursive: true});
 try {
-  await c.send('Page.navigate', {url: pathToFileURL(process.cwd() + '/index.html').href}); await delay(400);
+  await c.send('Page.navigate', {url: pathToFileURL(process.cwd() + '/game.html').href}); await delay(400);
   await c.evaluate('localStorage.clear();window.__qaErrors=[];window.addEventListener("error",e=>__qaErrors.push(e.message));0');
   await c.send('Page.reload'); await delay(500);
   await c.evaluate('window.__qaErrors=[];window.addEventListener("error",e=>__qaErrors.push(e.message));0');

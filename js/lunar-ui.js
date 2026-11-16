@@ -1375,7 +1375,7 @@ var LunarUI = (function () {
   function iniciar() {
     root = document.getElementById('juego');
     root.classList.add('lunar');
-    // index.html?niveles=todos abre los tres niveles (demo y video); no se guarda
+    // game.html?niveles=todos abre los tres niveles (demo y video); no se guarda
     if (/[?&]niveles=todos/.test(window.location.search || '')) s.desbloqueados = ORDEN.slice();
     root.addEventListener('click', e => {
       const b = e.target.closest('button[data-l]');

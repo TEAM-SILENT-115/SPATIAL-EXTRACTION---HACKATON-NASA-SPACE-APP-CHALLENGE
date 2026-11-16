@@ -607,7 +607,7 @@ var UI = (function() {
     function pct(p) { return Math.round(p * 100); }
 
     // Dado del terreno. Para grabar el video o hacer la demo con un resultado
-    // fijo, abre index.html?terreno=rocoso o index.html?terreno=despejado.
+    // fijo, abre game.html?terreno=rocoso o game.html?terreno=despejado.
     function azarTerreno() {
         var q = /[?&]terreno=(rocoso|despejado)/.exec(window.location.search || '');
         if (q) return q[1] === 'rocoso' ? 0 : 0.999;

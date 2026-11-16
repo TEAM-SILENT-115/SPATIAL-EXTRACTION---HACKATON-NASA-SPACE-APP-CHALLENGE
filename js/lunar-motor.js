@@ -78,9 +78,14 @@ var Lunar = (function () {
     return s;
   }
 
+  function esObstaculo(m, p) {
+    const poi = typeof PUNTOS_INTERES_LUNARES !== 'undefined' ? PUNTOS_INTERES_LUNARES[m.id] : null;
+    return poi && poi.obstaculos && poi.obstaculos.some(o => o[0] === p[0] && o[1] === p[1]);
+  }
+
   function transitable(m, p) {
     const [x,y] = p;
-    return x>=0 && y>=0 && x<m.width && y<m.height && m.slopes[y][x]!==null && m.slopes[y][x]<=R.pendienteMax;
+    return x>=0 && y>=0 && x<m.width && y<m.height && m.slopes[y][x]!==null && m.slopes[y][x]<=R.pendienteMax && !esObstaculo(m, p);
   }
 
   function masa(s, muestras) {
@@ -326,6 +331,19 @@ var Lunar = (function () {
           ? 'Solo te cabe una muestra: si recoges esta, el núcleo ya no entrará.' : null
       };
     }
+    const pois = sistemas(s).escaner && typeof PUNTOS_INTERES_LUNARES !== 'undefined' ? PUNTOS_INTERES_LUNARES[s.sitio] : null;
+    if (pois && pois.escaneos) {
+      const pExtra = pois.escaneos.find(p => eq(s.pos, p.pos));
+      if (pExtra && (!s.escaneosExtra || !s.escaneosExtra.includes(pExtra.id))) {
+        return {
+          accion: 'escanear_poi',
+          texto: 'Escanear ' + pExtra.nombre,
+          wh: R.acciones.escanear.wh,
+          poi: pExtra,
+          falta: !Motor.totales(s).escaner ? 'Falta Escáner de terreno' : null
+        };
+      }
+    }
     return null;
   }
 
@@ -339,10 +357,10 @@ var Lunar = (function () {
       return {ok:true, msg:'Muestras aseguradas en el módulo.'};
     }
     if (c.falta) return {ok:false, msg: c.falta + '. Debías equiparlo en la agencia.'};
-    if (c.accion !== 'escanear' && (s.muestras.recogidas.length >= Motor.totales(s).capacidadMuestras || masa(s) + R.muestraKg > s.masa.capacidad)) {
+    if (c.accion !== 'escanear' && c.accion !== 'escanear_poi' && (s.muestras.recogidas.length >= Motor.totales(s).capacidadMuestras || masa(s) + R.muestraKg > s.masa.capacidad)) {
       return {ok:false, msg:'No hay capacidad de contenedor o carga útil para 1 kg más.'};
     }
-    const cost = R.acciones[c.accion];
+    const cost = R.acciones[c.accion === 'escanear_poi' ? 'escanear' : c.accion];
     if (!gastar(s, cost.wh, cost.ox, c.accion)) {
       return {ok:false, msg:'Recursos insuficientes para esta acción. Puedes intentar regresar.'};
     }
@@ -358,6 +376,19 @@ var Lunar = (function () {
       s.extraTomada = true;
       s.muestras.recogidas.push('Regolito superficial');
     }
+    if (c.accion === 'escanear_poi') {
+      if (!s.escaneosExtra) s.escaneosExtra = [];
+      s.escaneosExtra.push(c.poi.id);
+      s.cienciaExtra = (s.cienciaExtra || 0) + c.poi.ciencia;
+      actualizarRetorno(s);
+      comprobarAgotado(s);
+      return {
+        ok: true,
+        accion: 'escanear_poi',
+        poi: c.poi,
+        msg: 'Hallazgo registrado: ' + c.poi.nombre + '. ' + c.poi.hallazgo
+      };
+    }
     actualizarRetorno(s);
     comprobarAgotado(s);
     return {
@@ -369,12 +400,13 @@ var Lunar = (function () {
   function preverAccion(s) {
     const c = contexto(s);
     if (!c || c.accion === 'entregar') return null;
-    const kg = masa(s) + (c.accion === 'escanear' ? 0 : R.muestraKg), m = map(s);
+    const soloEscanea = c.accion === 'escanear' || c.accion === 'escanear_poi';
+    const kg = masa(s) + (soloEscanea ? 0 : R.muestraKg), m = map(s);
     const path = camino(m, s.pos, s.modulo, kg), regreso = medir(m, path, kg);
     return {
       regreso: regreso.wh,
       margen: s.recursos.energiaWh - c.wh - regreso.wh,
-      oxMargen: s.recursos.oxigeno - R.acciones[c.accion].ox - regreso.ox
+      oxMargen: s.recursos.oxigeno - R.acciones[soloEscanea ? 'escanear' : c.accion].ox - regreso.ox
     };
   }
 
@@ -400,7 +432,7 @@ var Lunar = (function () {
     }
 
     // Terreno exigente con escaneo o muestra extra
-    if ((sitio === 'Site04' || sitio === 'Site11') && (entregadas >= 2 || s.revelada) && restante >= reserva * 0.4) {
+    if ((sitio === 'Site04' || sitio === 'Site11') && (entregadas >= 2 || s.revelada || (s.escaneosExtra || []).length) && restante >= reserva * 0.4) {
       return FINALES_LUNARES.revolucion;
     }
 
@@ -428,7 +460,9 @@ var Lunar = (function () {
   }
 
   function informe(s) {
-    const ciencia = s.muestras.entregadas.length * 100, plan = s.plan;
+    // Los hallazgos escaneados solo puntúan si la expedición vuelve.
+    const hallazgos = (s.escaneosExtra || []).length, cienciaHallazgos = s.resultado === 'varado' ? 0 : (s.cienciaExtra || 0);
+    const ciencia = s.muestras.entregadas.length * 100 + cienciaHallazgos, plan = s.plan;
     const reservaCumplida = s.resultado === 'exito' && s.recursos.energiaWh + 1e-8 >= plan.reserva;
     const fin = evaluarFinal(s);
     s.final = fin;
@@ -453,6 +487,8 @@ var Lunar = (function () {
 
     return {
       ciencia,
+      hallazgos,
+      cienciaHallazgos,
       reservaCumplida,
       resumen: resumenJugador(s),
       causa,
@@ -514,33 +550,181 @@ var Lunar = (function () {
     return {frases, consejo};
   }
 
-  function guia(s) {
+  function guiaPaso(s) {
     if (s.etapa === 'hangar') {
-      if (!s.tutorial.comparado) return 'AIDA: Compara ingeniería: elige la otra ruta o cambia la batería. Observa cómo cambia la reserva estimada.';
-      if (!s.prueba) return 'AIDA: Has cambiado el plan. Pulsa PROBAR PLAN: revisa consumo, reserva y riesgos antes de comprometerte.';
-      return 'AIDA: Si aceptas los riesgos visibles, pulsa LANZAR. El equipo y la ruta quedarán sellados.';
+      // Paso 1: Sección 01 - Ruta
+      if (!s.tutorial.rutaElegida && !s.tutorial.comparado) {
+        return {
+          paso: 1,
+          total: 6,
+          fase: '01 / SITIO Y RUTA',
+          selector: 'button[data-l="ruta"][data-x="directa"]',
+          badge: 'PASO 1 DE 6',
+          texto: 'Haz clic en [ RUTA DIRECTA ] en la Sección 01 para comparar el trazado más corto.',
+          detalle: 'Observa cómo la distancia y las pendientes modifican el consumo previsto.'
+        };
+      }
+
+      // Paso 2: Sección 02 - Categoría 0: Herramientas
+      if (!s.tutorial.cat1 && (s.tutorial.catIndex === 0 || s.tutorial.catIndex === undefined)) {
+        return {
+          paso: 2,
+          total: 6,
+          fase: '02 / HERRAMIENTAS',
+          selector: 'button[data-l="category"][data-x="1"]',
+          badge: 'PASO 2 DE 6',
+          texto: 'HERRAMIENTAS: El Taladro es imprescindible para extraer el núcleo y el Escáner revela recursos. Haz clic en [ ENERGÍA ].',
+          detalle: 'Sin taladro no podrás perforar en el cráter.'
+        };
+      }
+
+      // Paso 3: Sección 02 - Categoría 1: Energía
+      if (!s.tutorial.cat2 && s.tutorial.catIndex === 1) {
+        return {
+          paso: 3,
+          total: 6,
+          fase: '02 / ENERGÍA',
+          selector: 'button[data-l="category"][data-x="2"]',
+          badge: 'PASO 3 DE 6',
+          texto: 'ENERGÍA: Baterías (100 Wh o 160 Wh) dan autonomía para caminar y perforar. Haz clic en [ SOPORTE VITAL ].',
+          detalle: 'Más batería te da autonomía, pero pesa más y encarece cada metro.'
+        };
+      }
+
+      // Paso 4: Sección 02 - Categoría 2: Soporte vital
+      if (!s.tutorial.cat3 && s.tutorial.catIndex === 2) {
+        return {
+          paso: 4,
+          total: 6,
+          fase: '02 / SOPORTE VITAL',
+          selector: 'button[data-l="category"][data-x="3"]',
+          badge: 'PASO 4 DE 6',
+          texto: 'SOPORTE VITAL: Tanques de O₂ para respirar y combustible para corregir descenso. Haz clic en [ MUESTRAS ].',
+          detalle: 'Llevar combustible extra habilita la corrección de aterrizaje en vuelo.'
+        };
+      }
+
+      // Paso 5: Sección 02 - Categoría 3: Muestras
+      if (!s.tutorial.equipoVisto && s.tutorial.catIndex === 3) {
+        return {
+          paso: 5,
+          total: 6,
+          fase: '02 / MUESTRAS',
+          selector: 'button[data-l="test"]',
+          badge: 'PASO 5 DE 6',
+          texto: 'MUESTRAS: Contenedores para almacenar rocas y regolito. ¡Carga lista! Haz clic en [ PROBAR PLAN ] en la Sección 03.',
+          detalle: 'Cada muestra recogida pesará 1 kg y aumentará el consumo de retorno.'
+        };
+      }
+
+      // Paso 6: Sección 03 - Probar el plan / Lanzar
+      if (!s.prueba) {
+        return {
+          paso: 6,
+          total: 6,
+          fase: '03 / PROBAR EL PLAN',
+          selector: 'button[data-l="test"]',
+          badge: 'PASO 6 DE 6',
+          texto: 'Haz clic en [ PROBAR PLAN ] en la Sección 03 para calcular telemetría, reserva y balance de energía.',
+          detalle: 'La simulación calcula si tu batería y oxígeno soportan la ruta elegida.'
+        };
+      }
+      return {
+        paso: 6,
+        total: 6,
+        fase: '03 / AUTORIZAR DESPEGUE',
+        selector: 'button[data-l="launch"]',
+        badge: 'AUTORIZADO',
+        texto: '¡Telemetría validada! Haz clic en [ LANZAR ] en la Sección 03 para despegar hacia la Luna.',
+        detalle: 'Tu nave viajará a la órbita lunar con la configuración ensayada.'
+      };
     }
     if (s.etapa === 'viaje') {
-      return !s.viaje.escaneado ?
-        'AIDA: Pulsa ESCANEAR DESCENSO. Luego compara combustible y distancia antes de decidir.' :
-        !s.viaje.decidido ?
-        'AIDA: Mantener conserva combustible; corregir acerca el módulo. Elige según tu equipo.' :
-        'AIDA: Pulsa DESCENDER para comprobar tu plan en el terreno.';
+      if (!s.viaje.escaneado) {
+        return {
+          paso: 1,
+          total: 2,
+          fase: 'EN VUELO · TELEMETRÍA',
+          selector: 'button[data-l="scanflight"]',
+          badge: 'PASO 1 DE 2',
+          texto: 'Haz clic en [ ESCANEAR DESCENSO ] para evaluar la plataforma más cercana al objetivo.',
+          detalle: 'Los sensores en órbita calculan la distancia exacta al cráter objetivo.'
+        };
+      }
+      if (!s.viaje.decidido) {
+        return {
+          paso: 2,
+          total: 2,
+          fase: 'EN VUELO · TRAYECTORIA',
+          selector: 'button[data-l="keep"]',
+          badge: 'PASO 2 DE 2',
+          texto: 'Haz clic en [ MANTENER ] para confirmar el descenso nominal directo.',
+          detalle: 'O elige Corregir si tienes 30 u de combustible para acercar el módulo.'
+        };
+      }
+      return {
+        paso: 2,
+        total: 2,
+        fase: 'DESCENSO AUTORIZADO',
+        selector: 'button[data-l="land"]',
+        badge: 'LISTO',
+        texto: 'Trayectoria sellada. Haz clic en [ DESCENDER A SUPERFICIE ] para comenzar a jugar.',
+        detalle: 'La nave iniciará el aterrizaje suave en el Polo Sur Lunar.'
+      };
     }
     if (s.etapa === 'superficie') {
-      return !s.tutorial.movido ?
-        'AIDA: Usa WASD o flechas para caminar. Sigue la línea ámbar hasta el núcleo ◇. Pulsa I para ver el inventario.' :
-        !s.tomada ?
-        'AIDA: Sitúate sobre el marcador ◇ y pulsa E para perforar. La línea azul indica tu ruta de retorno óptima.' :
-        'AIDA: ¡Núcleo asegurado! Sigue la línea azul de regreso al módulo ▣ y pulsa E para entregar y ganar.';
+      if (!s.tutorial.movido) {
+        return {
+          paso: 1,
+          total: 3,
+          fase: 'SUPERFICIE LUNAR · MOVIMIENTO',
+          selector: '#l-field',
+          badge: 'PASO 1 DE 3',
+          texto: 'Usa las teclas WASD o las FLECHAS del teclado para mover a tu astronauta en el terreno.',
+          detalle: 'Cada metro consume energía Wh y oxígeno. Evita las rocas oscuras ▲.'
+        };
+      }
+      if (!s.tomada) {
+        return {
+          paso: 2,
+          total: 3,
+          fase: 'SUPERFICIE LUNAR · EXTRACCIÓN',
+          selector: '#l-field',
+          badge: 'PASO 2 DE 3',
+          texto: 'Sigue la línea ámbar hasta el cráter ◇ y pulsa la tecla [ E ] para perforar el núcleo.',
+          detalle: 'Extracción científica requerida para el éxito de la misión.'
+        };
+      }
+      return {
+        paso: 3,
+        total: 3,
+        fase: 'SUPERFICIE LUNAR · RETORNO',
+        selector: '#l-field',
+        badge: 'PASO 3 DE 3',
+        texto: '¡Núcleo a bordo! Sigue la línea azul de regreso al módulo ▣ y pulsa [ E ] para entregar y ganar.',
+        detalle: 'Debes llegar con energía y oxígeno antes de agotar los recursos.'
+      };
     }
-    return 'AIDA: Misión finalizada. Revisa la causa raíz y tu rango de ingeniería. ¡Prueba otra ruta o desbloquea el siguiente sitio!';
+    return {
+      paso: 1,
+      total: 1,
+      fase: 'INFORME DE MISIÓN',
+      selector: 'button[data-l="repeat"], button[data-l="new"]',
+      badge: 'FIN MISIÓN',
+      texto: 'Revisa tu balance de ingeniería y presiona [ NUEVA MISIÓN ] para el siguiente reto.',
+      detalle: ''
+    };
+  }
+
+  function guia(s) {
+    const p = guiaPaso(s);
+    return 'AIDA: ' + p.texto;
   }
 
   return {
     nuevo, map, masa, costo, transitable, camino, medir, proyectar, evaluar,
     cambiar, probar, lanzar, escanearViaje, decidir, descender, mover,
-    contexto, interactuar, preverAccion, informe, guia, eq,
+    contexto, interactuar, preverAccion, informe, guia, guiaPaso, eq, esObstaculo,
     evaluarFinal, esDesbloqueado, desbloquearSiguiente,
     iniciarNivel, sistemas
   };

@@ -592,6 +592,11 @@ var LunarAudio = (function () {
       tono(520, 'square', 0.07, 0.05);
       setTimeout(function () { tono(520, 'square', 0.07, 0.05); }, 110);
     },
+    escanear: function () {
+      [880, 1174, 1760].forEach(function (f, i) {
+        setTimeout(function () { tono(f, 'sine', 0.08, 0.05); }, i * 60);
+      });
+    },
     exito: function () {
       [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) {
         setTimeout(function () { tono(f, 'sine', 0.16, 0.07); }, i * 90);
@@ -641,3 +646,120 @@ var LunarAudio = (function () {
     estaActivo: function () { return activo; }
   };
 })();
+
+/* Modelos gráficos y sprites pixel art para recursos lunares a explorar */
+var SPRITES_RECURSOS_LUNARES = {
+  paleta: {
+    W: '#ffffff', // blanco polar
+    L: '#7df9ff', // cian hielo claro
+    C: '#00f2fe', // cian neón brillante
+    B: '#0284c7', // azul silicio / solar
+    D: '#fbbf24', // dorado reflectante
+    Y: '#f59e0b', // ámbar / ilmenita
+    N: '#e2e8f0', // cara iluminada
+    G: '#64748b', // basalto gris
+    g: '#1e293b', // basalto oscuro / contorno
+    R: '#ef4444', // rojo telemetría
+    K: '#0f172a'  // sombra profunda
+  },
+  nucleo: [
+    '....WWWW....',
+    '..WWLLLLWW..',
+    '.WLLCCCCLLW.',
+    '.WLCCCCCCLW.',
+    '.WLCCCCCCLW.',
+    '..WWLLLLWW..',
+    '....WWWW....',
+    '....DDDD....',
+    '..DDVVVVDD..',
+    '.DVV....VVD.',
+    'DD........DD'
+  ],
+  hielo: [
+    '.....W.....',
+    '....WLW....',
+    '...WLLLW...',
+    '..WLLCLLW..',
+    '.WLLCCCLLW.',
+    'WLLCCCCCLLW',
+    '.WLLCCCLLW.',
+    '..WLLCLLW..',
+    '...WLLLW...',
+    '....WLW....',
+    '.....W.....'
+  ],
+  sonda: [
+    '....YY....',
+    '...Y..Y...',
+    '....YY....',
+    '....WW....',
+    '..BBBBBB..',
+    '.BBDDDDBB.',
+    '.BBDDDDBB.',
+    '..BBBBBB..',
+    '..GG..GG..',
+    '.gg....gg.'
+  ],
+  mineral: [
+    '....gggg....',
+    '..ggGGYYgg..',
+    '.gGGYYGGYYg.',
+    '.gYYYYGGGGg.',
+    'gGGGGYYYYGGg',
+    'gGGYYYYGGGGg',
+    '.gGGGGYYGGg.',
+    '..ggGGGGgg..',
+    '....gggg....'
+  ],
+  escarpe: [
+    '..gggggggg..',
+    '.gNNNNNNNNg.',
+    'gGGGGGGGGGGg',
+    'gKKLLLLKKGGg',
+    'gKKCCCCKKGGg',
+    '.gKKKKKKGGg.',
+    '..gggggggg..'
+  ],
+  roca_3d: [
+    '....gg......',
+    '..ggNNgg....',
+    '.gNNNNGGgg..',
+    '.gNNNNGGGGg.',
+    'gNNNNGGGGGGg',
+    'gNNGGGGGGGgg',
+    '.gGGGGGGGgg.',
+    '..ggGGGGgg..',
+    '....gggg....'
+  ]
+};
+
+/* Puntos de interés y obstáculos geológicos en mapas lunares */
+var PUNTOS_INTERES_LUNARES = {
+  Site01: {
+    obstaculos: [[12, 10], [13, 10], [20, 8], [21, 8], [26, 18], [27, 18], [8, 12], [17, 13], [31, 14]],
+    escaneos: [
+      { id: 'poi_01_a', tipo: 'sonda', pos: [15, 6], nombre: 'Baliza Sismológica NASA', hallazgo: 'Sensor de impacto meteorítico y sismos lunares profundos.', ciencia: 20 },
+      { id: 'poi_01_b', tipo: 'mineral', pos: [28, 20], nombre: 'Afloramiento de Ilmenita', hallazgo: 'Óxidos de hierro y titanio para extracción in-situ de oxígeno (ISRU).', ciencia: 25 },
+      { id: 'poi_01_c', tipo: 'hielo', pos: [10, 22], nombre: 'Pozo de Sombra Criogénica', hallazgo: 'Temperatura de 48 K con condensados de hielo polar atrapado.', ciencia: 30 },
+      { id: 'poi_01_d', tipo: 'sonda', pos: [22, 13], nombre: 'Sonda Precursora VIPER', hallazgo: 'Módulo de penetrómetro con telemetría de densidad del regolito.', ciencia: 35 }
+    ]
+  },
+  Site04: {
+    obstaculos: [[10, 8], [11, 8], [18, 14], [19, 14], [28, 22], [29, 22], [14, 18], [24, 16], [32, 12]],
+    escaneos: [
+      { id: 'poi_04_a', tipo: 'escarpe', pos: [8, 14], nombre: 'Escarpe Tectónico Lobulado', hallazgo: 'Falla compresional activa por contracción del núcleo lunar.', ciencia: 25 },
+      { id: 'poi_04_b', tipo: 'hielo', pos: [22, 10], nombre: 'Veta Glaciar de Shackleton', hallazgo: 'Concentración masiva de volátiles de agua al 5.5% en peso.', ciencia: 35 },
+      { id: 'poi_04_c', tipo: 'sonda', pos: [16, 24], nombre: 'Reflector Láser Polar', hallazgo: 'Retrorreflector de esquina para telemetría milimétrica Tierra-Luna.', ciencia: 30 },
+      { id: 'poi_04_d', tipo: 'mineral', pos: [30, 8], nombre: 'Dique Basáltico KREEP', hallazgo: 'Magma lunar primitivo enriquecido con tierras raras y potasio.', ciencia: 35 }
+    ]
+  },
+  Site11: {
+    obstaculos: [[8, 10], [9, 10], [18, 18], [19, 18], [26, 12], [27, 12], [15, 14], [23, 22], [30, 19]],
+    escaneos: [
+      { id: 'poi_11_a', tipo: 'mineral', pos: [12, 8], nombre: 'Brecha Anortosítica Mg-Suite', hallazgo: 'Muestra primordial del manto lunar con 4.360 millones de años.', ciencia: 30 },
+      { id: 'poi_11_b', tipo: 'hielo', pos: [25, 20], nombre: 'Depósito Criogénico Gerlache', hallazgo: 'Firma a 38 K con amoníaco, metano y hielo ultra-puro conservado.', ciencia: 40 },
+      { id: 'poi_11_c', tipo: 'sonda', pos: [19, 9], nombre: 'Estación Automática Artemis', hallazgo: 'Paquete de radiación cósmica y espectroscopía de rayos alfa.', ciencia: 35 },
+      { id: 'poi_11_d', tipo: 'escarpe', pos: [32, 10], nombre: 'Boca de Tubo de Lava', hallazgo: 'Cavidad subterránea con protección total contra micrometeoritos.', ciencia: 45 }
+    ]
+  }
+};

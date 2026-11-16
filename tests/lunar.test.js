@@ -239,4 +239,104 @@ for(const m of MAPAS_NASA)for(const route of ['directa','ahorro'])for(const corr
     check(/no entrará/.test(Lunar.contexto(s).aviso||''),'aviso: con un solo hueco, la extra deja fuera al núcleo');
   }
 }
-console.log('Lunar: '+checks+' comprobaciones pasaron (12 misiones completas, progresión, 6 finales, audio y los 3 niveles).');
+// Tutorial enfocado paso a paso por las 4 categorías de equipo
+{
+  const s = Lunar.nuevo();
+  s.tutorial.activo = true;
+  // Paso 1 Hangar: Ruta Directa
+  let g = Lunar.guiaPaso(s);
+  check(g.paso === 1, 'tutorial paso 1');
+  check(g.selector.includes('directa'), 'foco en ruta directa');
+  Lunar.cambiar(s, 'ruta', 'directa');
+  s.tutorial.rutaElegida = true;
+  s.tutorial.catIndex = 0;
+  // Paso 2 Hangar: Herramientas -> Foco en Energía
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 2, 'tutorial paso 2');
+  check(g.selector.includes('data-x="1"'), 'foco en categoria energia');
+  s.tutorial.catIndex = 1;
+  s.tutorial.cat1 = true;
+  // Paso 3 Hangar: Energía -> Foco en Soporte Vital
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 3, 'tutorial paso 3');
+  check(g.selector.includes('data-x="2"'), 'foco en categoria soporte vital');
+  s.tutorial.catIndex = 2;
+  s.tutorial.cat2 = true;
+  // Paso 4 Hangar: Soporte Vital -> Foco en Muestras
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 4, 'tutorial paso 4');
+  check(g.selector.includes('data-x="3"'), 'foco en categoria muestras');
+  s.tutorial.catIndex = 3;
+  s.tutorial.cat3 = true;
+  // Paso 5 Hangar: Muestras -> Foco en Probar Plan
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 5, 'tutorial paso 5');
+  check(g.selector.includes('test'), 'foco en probar plan desde muestras');
+  s.tutorial.equipoVisto = true;
+  // Paso 6 Hangar: Probar plan
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 6, 'tutorial paso 6 probar');
+  Lunar.probar(s);
+  // Paso 6 Hangar (autorizado): Lanzar
+  g = Lunar.guiaPaso(s);
+  check(g.selector.includes('launch'), 'foco en lanzar');
+  Lunar.lanzar(s);
+  // Paso 1 Viaje: Escaneo
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 1, 'viaje paso 1');
+  check(g.selector.includes('scanflight'), 'foco en scanflight');
+  Lunar.escanearViaje(s);
+  // Paso 2 Viaje: Mantener
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 2, 'viaje paso 2');
+  check(g.selector.includes('keep'), 'foco en keep');
+  Lunar.decidir(s, false);
+  // Descenso listo
+  g = Lunar.guiaPaso(s);
+  check(g.selector.includes('land'), 'foco en land');
+  Lunar.descender(s);
+  // Superficie: Movimiento
+  g = Lunar.guiaPaso(s);
+  check(g.paso === 1, 'superficie paso 1 movimiento');
+  check(g.selector.includes('field'), 'foco en canvas');
+}
+// Hallazgos científicos y rocas (aportes de main) dentro de los niveles
+{
+  const elegir=(s,ids)=>ids.forEach(id=>Lunar.cambiar(s,'equipo',id));
+  const ir=(s,destino)=>walk(s,Lunar.camino(Lunar.map(s),s.pos,destino,Lunar.masa(s)));
+  for(const id of ['Site01','Site04','Site11']) {
+    const m=MAPAS_NASA.find(x=>x.id===id),poi=PUNTOS_INTERES_LUNARES[id];
+    check(poi.escaneos.length===4&&poi.obstaculos.length>0,id+': 4 hallazgos y rocas definidos');
+    for(const o of poi.obstaculos)check(Lunar.esObstaculo(m,o)&&!Lunar.transitable(m,o),id+': la roca '+o+' no se puede pisar');
+    for(const k of [m.module,m.nearModule,m.target,m.extra])check(Lunar.transitable(m,k),id+': los puntos clave quedan libres de rocas');
+    for(const e of poi.escaneos)check(Lunar.transitable(m,e.pos)&&Lunar.camino(m,m.module,e.pos,100).length>0,id+': se puede llegar a '+e.nombre);
+    for(const ruta of ['directa','ahorro'])check(!Lunar.camino(m,m.module,m.target,100,ruta).some(c=>Lunar.esObstaculo(m,c)),id+': la ruta '+ruta+' rodea las rocas');
+  }
+  {
+    // en el básico no hay escáner: los hallazgos no aparecen
+    const s=Lunar.iniciarNivel('Site01',null);elegir(s,['bat160']);land(s);ir(s,PUNTOS_INTERES_LUNARES.Site01.escaneos[3].pos);
+    check(Lunar.contexto(s)===null,'básico: sin hallazgos que escanear');
+  }
+  {
+    // en el avanzado, sin subir el escáner, el hallazgo se ve pero no se puede registrar
+    const s=Lunar.iniciarNivel('Site11',null);elegir(s,['bat160','o2chico','fuelextra']);land(s,true);
+    const poi=PUNTOS_INTERES_LUNARES.Site11.escaneos[2];ir(s,poi.pos);
+    const c=Lunar.contexto(s);check(c.accion==='escanear_poi'&&/Escáner/.test(c.falta),'avanzado sin escáner: el hallazgo pide la herramienta');
+    check(!Lunar.interactuar(s).ok,'y no se registra');
+  }
+  {
+    const s=Lunar.iniciarNivel('Site11',null);elegir(s,['bat160','o2chico','fuelextra','escaner']);land(s,true);
+    const poi=PUNTOS_INTERES_LUNARES.Site11.escaneos[2];ir(s,poi.pos);
+    const antes=s.recursos.energiaWh,pv=Lunar.preverAccion(s);
+    check(Number.isFinite(pv.margen)&&Number.isFinite(pv.oxMargen),'se puede prever el margen antes de escanear un hallazgo');
+    const r=Lunar.interactuar(s);check(r.ok&&r.accion==='escanear_poi'&&r.poi.id===poi.id,'hallazgo registrado');
+    close(antes-s.recursos.energiaWh,REGLAS_LUNARES.acciones.escanear.wh,'escanear un hallazgo cuesta lo mismo que escanear');
+    check(Lunar.contexto(s)===null,'un hallazgo no se registra dos veces');
+    ir(s,Lunar.map(s).target);Lunar.interactuar(s);walk(s,s.retorno.path);Lunar.interactuar(s);
+    const inf=Lunar.informe(s);
+    check(inf.resultado==='exito'&&inf.hallazgos===1&&inf.cienciaHallazgos===poi.ciencia,'el informe cuenta el hallazgo');
+    check(inf.ciencia===100+poi.ciencia,'y lo suma a la ciencia de la misión');
+    check(inf.final.id==='revolucion','explorar con el escáner en terreno extremo da el final de frontera científica');
+  }
+}
+console.log('Lunar: '+checks+' comprobaciones pasaron (misiones completas, progresión, 6 finales, audio, 3 niveles, hallazgos y rocas).');

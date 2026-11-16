@@ -64,20 +64,21 @@ for(const m of MAPAS_NASA)for(const route of ['directa','ahorro'])for(const corr
   const c=Lunar.nuevo();land(c);const snapshot=JSON.stringify(c.equipo);Lunar.cambiar(c,'equipo','taladro');check(JSON.stringify(c.equipo)===snapshot,'loadout sealed');
   check(!Lunar.decidir(c,true).ok,'cannot correct again');
 }
-// Modo Hackathon: todas las zonas libres y desbloqueadas desde el inicio
+// Progresión de dificultad y desbloqueo de sitios (Connecting Ridge -> Shackleton -> Gerlache)
 {
   const s=Lunar.nuevo();
-  check(Lunar.esDesbloqueado(s,'Site01'),'Site01 libre para hackathon');
-  check(Lunar.esDesbloqueado(s,'Site04'),'Site04 libre para hackathon');
-  check(Lunar.esDesbloqueado(s,'Site11'),'Site11 libre para hackathon');
+  check(Lunar.esDesbloqueado(s,'Site01'),'Site01 inicial desbloqueado');
+  check(!Lunar.esDesbloqueado(s,'Site11'),'Site11 bloqueado al inicio');
   s.sitio='Site01';
   s.resultado='exito';
   s.muestras.entregadas=['Núcleo'];
   const u1=Lunar.desbloquearSiguiente(s);
-  check(u1==='Site04','Referencia a Site04');
+  check(u1==='Site04','Completar Site01 desbloquea Site04');
+  check(Lunar.esDesbloqueado(s,'Site04'),'Site04 ahora desbloqueado');
   s.sitio='Site04';
   const u2=Lunar.desbloquearSiguiente(s);
-  check(u2==='Site11','Referencia a Site11');
+  check(u2==='Site11','Completar Site04 desbloquea Site11');
+  check(Lunar.esDesbloqueado(s,'Site11'),'Site11 ahora desbloqueado');
 }
 // Evaluación de los 6 finales
 {
@@ -130,6 +131,113 @@ for(const m of MAPAS_NASA)for(const route of ['directa','ahorro'])for(const corr
   LunarAudio.alerta();
   LunarAudio.exito();
   check(true,'LunarAudio llamadas seguras sin entorno DOM');
+}
+// Niveles que suman sistemas: básico (energía), intermedio (+ oxígeno, masa y presupuesto), avanzado (+ combustible y escáner)
+{
+  const elegir=(s,ids)=>ids.forEach(id=>Lunar.cambiar(s,'equipo',id));
+  const ir=(s,destino)=>walk(s,Lunar.camino(Lunar.map(s),s.pos,destino,Lunar.masa(s)));
+  const jugar=(s,corregir=false)=>{land(s,corregir);ir(s,Lunar.map(s).target);check(Lunar.interactuar(s).ok,'perfora');walk(s,s.retorno.path);check(Lunar.interactuar(s).ok,'entrega');return Lunar.informe(s);};
+
+  // Lunar.nuevo() a secas conserva todos los sistemas (compatibilidad con el motor original)
+  check(Object.values(Lunar.sistemas(Lunar.nuevo())).every(Boolean),'sin nivel, todos los sistemas activos');
+
+  // --- nivel 1: solo ruta y batería ---
+  const b=Lunar.iniciarNivel('Site01',null);
+  check(b.sitio==='Site01'&&b.modoNivel,'nivel básico en Connecting Ridge');
+  check(!Lunar.sistemas(b).oxigeno&&!Lunar.sistemas(b).carga&&!Lunar.sistemas(b).combustible&&!Lunar.sistemas(b).escaner,'básico: solo energía');
+  check(!b.equipo.some(id=>Motor.obj(id).tipo==='bateria'),'básico: la batería la elige el jugador');
+  check(b.equipo.includes('taladro')&&b.equipo.includes('cont1')&&b.equipo.includes('o2chico'),'básico: el resto del equipo ya va a bordo');
+  check(Lunar.evaluar(b).bloqueos.some(x=>/batería/.test(x)),'sin batería no se puede lanzar');
+  for(const bat of ['bat100','bat160'])for(const ruta of ['directa','ahorro']) {
+    const s=Lunar.iniciarNivel('Site01',null);Lunar.cambiar(s,'ruta',ruta);elegir(s,[bat]);
+    const v=Lunar.evaluar(s);check(!v.bloqueos.length&&!v.riesgos.length&&v.energia==='ok','básico: '+bat+' por '+ruta+' es un plan sólido');
+    const r=jugar(s);check(r.resultado==='exito'&&r.final.rango==='S','básico: se gana con rango S');
+    close(s.recursos.oxigeno,Motor.totales(s).oxigeno,'básico: el oxígeno no se consume');
+    check(r.resumen.frases.length>=2&&typeof r.resumen.consejo==='string','el informe trae resumen y consejo');
+    check((bat==='bat160')===r.resumen.frases.some(x=>/sobró muchísima/.test(x)),'solo la batería grande deja energía de sobra en el básico');
+  }
+  {
+    // sin escáner en el nivel, la señal extra no existe
+    const s=Lunar.iniciarNivel('Site01',null);elegir(s,['bat160']);land(s);ir(s,Lunar.map(s).extra);
+    check(Lunar.contexto(s)===null,'básico: no hay muestra extra que escanear');
+  }
+
+  // --- nivel 2: presupuesto de 950 obliga a elegir ---
+  check(SITIOS_LUNARES.Site04.presupuesto===950&&Lunar.iniciarNivel('Site04',null).presupuesto.total===950,'intermedio: presupuesto propio');
+  {
+    const s=Lunar.iniciarNivel('Site04',null);elegir(s,['bat160','o2grande']);
+    check(Lunar.evaluar(s).bloqueos.some(x=>/créditos/.test(x)),'intermedio: batería grande + tanque grande no cabe en el presupuesto');
+    Lunar.probar(s);check(!Lunar.lanzar(s).ok,'y no deja lanzar');
+  }
+  {
+    // batería chica + tanque grande: el tanque que sobra pesa, y ese peso es el que deja varado
+    const s=Lunar.iniciarNivel('Site04',null);Lunar.cambiar(s,'ruta','directa');elegir(s,['bat100','o2grande']);
+    const v=Lunar.evaluar(s);check(v.energia==='falta'&&v.riesgos.some(x=>/NO alcanza/.test(x)),'intermedio: batería chica por la ruta directa no alcanza, y se avisa');
+    Lunar.probar(s);check(Lunar.lanzar(s).ok,'pero lanzar con riesgo está permitido: equivocarse es la lección');
+    Lunar.escanearViaje(s);Lunar.decidir(s,false);Lunar.descender(s);
+    walk(s,s.aterrizaje.ida);Lunar.interactuar(s);
+    // vuelve por el camino más barato hasta que ya no puede dar un paso
+    for(let i=0;i<400&&s.etapa==='superficie';i++) {
+      const p=s.retorno.path[1];if(!p)break;
+      if(Lunar.mover(s,p[0]-s.pos[0],p[1]-s.pos[1])||s.etapa!=='superficie')continue;
+      // el paso del camino ya no se puede pagar: gasta lo que quede en cualquier paso posible
+      const d=[[1,0],[-1,0],[0,1],[0,-1]].find(d=>Lunar.transitable(Lunar.map(s),[s.pos[0]+d[0],s.pos[1]+d[1]])&&Lunar.costo(Lunar.map(s),s.pos,[s.pos[0]+d[0],s.pos[1]+d[1]],Lunar.masa(s)).wh<=s.recursos.energiaWh);
+      if(d)Lunar.mover(s,...d);
+    }
+    check(s.resultado==='varado'&&s.agotado==='energia','siguiendo la ruta directa con batería chica se queda varado por energía');
+    const r=Lunar.informe(s);check(r.final.rango==='F'&&r.resumen.frases.some(x=>/salía corto/.test(x)),'el informe dice que el plan ya salía corto');
+    check(/batería más grande/.test(r.resumen.consejo),'y aconseja qué cambiar');
+    // repetir conserva las decisiones para cambiar solo una
+    const rep=Lunar.iniciarNivel('Site04',s);
+    check(rep.etapa==='hangar'&&rep.ruta==='directa'&&rep.equipo.includes('bat100')&&rep.equipo.includes('o2grande'),'repetir conserva ruta y equipo');
+    check(rep.anterior&&rep.anterior.final.rango==='F','repetir recuerda el resultado anterior');
+    check(rep.presupuesto.total===950&&Lunar.sistemas(rep).oxigeno&&!Lunar.sistemas(rep).combustible,'repetir conserva las reglas del nivel');
+    elegir(rep,['o2chico']);const r2=jugar(rep);check(r2.resultado==='exito','cambiando solo el tanque por el ligero ya se vuelve');
+    check(r2.resumen.frases.some(x=>/muy justo/.test(x)),'pero el informe avisa de que el margen quedó al límite');
+    // empezar otro nivel no hereda el equipo
+    const otro=Lunar.iniciarNivel('Site01',rep);check(!otro.equipo.includes('bat160')&&otro.anterior===null,'un nivel nuevo empieza limpio');
+  }
+  {
+    const s=Lunar.iniciarNivel('Site04',null);elegir(s,['bat160','o2chico']);const antes=Motor.totales(s).oxigeno;jugar(s);
+    check(s.recursos.oxigeno<antes,'intermedio: el oxígeno sí se consume');
+  }
+
+  // --- nivel 3: el combustible para corregir decide la misión ---
+  check(SITIOS_LUNARES.Site11.presupuesto===1200&&Object.values(SITIOS_LUNARES.Site11.sistemas).every(Boolean),'avanzado: todos los sistemas');
+  {
+    const s=Lunar.iniciarNivel('Site11',null);elegir(s,['bat160','o2chico']);
+    const v=Lunar.evaluar(s);check(v.energia==='justo'&&v.cerca===null,'avanzado: sin combustible el plan va justo y no hay corrección posible');
+    Lunar.probar(s);Lunar.lanzar(s);Lunar.escanearViaje(s);check(!Lunar.decidir(s,true).ok,'Halcón sin extra no puede corregir');
+  }
+  {
+    const s=Lunar.iniciarNivel('Site11',null);elegir(s,['bat160','o2chico','fuelextra']);
+    const v=Lunar.evaluar(s);check(v.energia==='corrigiendo'&&v.riesgos.some(x=>/corriges el descenso/.test(x)),'avanzado: el aviso dice que el plan depende de corregir');
+    const r=jugar(s,true);check(r.resultado==='exito'&&r.final.rango==='S','avanzado: corrigiendo se gana con rango S');
+    check(r.resumen.frases.some(x=>/Corregir el descenso/.test(x)),'el informe atribuye el éxito a la corrección');
+  }
+  {
+    const s=Lunar.iniciarNivel('Site11',null);Lunar.cambiar(s,'cohete','titan');elegir(s,['bat160','o2chico']);
+    check(Lunar.evaluar(s).cerca!==null,'Titán trae combustible para corregir sin el extra');
+    check(jugar(s,true).final.rango==='S','avanzado: la ruta del Titán también gana');
+    const caro=Lunar.iniciarNivel('Site11',null);Lunar.cambiar(caro,'cohete','titan');elegir(caro,['bat160','o2chico','escaner','cont2']);
+    check(Lunar.evaluar(caro).bloqueos.some(x=>/créditos/.test(x)),'pero con Titán no alcanza el dinero para el contenedor doble');
+  }
+  {
+    // el rango máximo exige todo: combustible, escáner y contenedor doble, a 2 kg del límite
+    const s=Lunar.iniciarNivel('Site11',null);elegir(s,['bat160','o2chico','fuelextra','escaner','cont2']);
+    check(s.presupuesto.gastado===1140&&s.masa.usada===118&&!Lunar.evaluar(s).bloqueos.length,'el plan completo cabe en presupuesto y masa');
+    land(s,true);ir(s,Lunar.map(s).extra);
+    check(Lunar.contexto(s).accion==='escanear','avanzado: la señal extra existe');Lunar.interactuar(s);
+    check(Lunar.contexto(s).aviso===null,'con contenedor doble no hay aviso de espacio');Lunar.interactuar(s);
+    ir(s,Lunar.map(s).target);Lunar.interactuar(s);walk(s,s.retorno.path);Lunar.interactuar(s);
+    const r=Lunar.informe(s);check(r.entregadas===2&&r.final.rango==='S+','avanzado: dos muestras con reserva dan el rango S+');
+  }
+  {
+    // con contenedor simple, la muestra extra dejaría fuera al núcleo: se avisa antes
+    const s=Lunar.iniciarNivel('Site11',null);elegir(s,['bat160','o2chico','fuelextra','escaner']);land(s,true);
+    ir(s,Lunar.map(s).extra);Lunar.interactuar(s);
+    check(/no entrará/.test(Lunar.contexto(s).aviso||''),'aviso: con un solo hueco, la extra deja fuera al núcleo');
+  }
 }
 // Tutorial enfocado paso a paso por las 4 categorías de equipo
 {
@@ -192,4 +300,43 @@ for(const m of MAPAS_NASA)for(const route of ['directa','ahorro'])for(const corr
   check(g.paso === 1, 'superficie paso 1 movimiento');
   check(g.selector.includes('field'), 'foco en canvas');
 }
-console.log('Lunar: '+checks+' comprobaciones pasaron (12 misiones completas, progresión, 6 finales y audio).');
+// Hallazgos científicos y rocas (aportes de main) dentro de los niveles
+{
+  const elegir=(s,ids)=>ids.forEach(id=>Lunar.cambiar(s,'equipo',id));
+  const ir=(s,destino)=>walk(s,Lunar.camino(Lunar.map(s),s.pos,destino,Lunar.masa(s)));
+  for(const id of ['Site01','Site04','Site11']) {
+    const m=MAPAS_NASA.find(x=>x.id===id),poi=PUNTOS_INTERES_LUNARES[id];
+    check(poi.escaneos.length===4&&poi.obstaculos.length>0,id+': 4 hallazgos y rocas definidos');
+    for(const o of poi.obstaculos)check(Lunar.esObstaculo(m,o)&&!Lunar.transitable(m,o),id+': la roca '+o+' no se puede pisar');
+    for(const k of [m.module,m.nearModule,m.target,m.extra])check(Lunar.transitable(m,k),id+': los puntos clave quedan libres de rocas');
+    for(const e of poi.escaneos)check(Lunar.transitable(m,e.pos)&&Lunar.camino(m,m.module,e.pos,100).length>0,id+': se puede llegar a '+e.nombre);
+    for(const ruta of ['directa','ahorro'])check(!Lunar.camino(m,m.module,m.target,100,ruta).some(c=>Lunar.esObstaculo(m,c)),id+': la ruta '+ruta+' rodea las rocas');
+  }
+  {
+    // en el básico no hay escáner: los hallazgos no aparecen
+    const s=Lunar.iniciarNivel('Site01',null);elegir(s,['bat160']);land(s);ir(s,PUNTOS_INTERES_LUNARES.Site01.escaneos[3].pos);
+    check(Lunar.contexto(s)===null,'básico: sin hallazgos que escanear');
+  }
+  {
+    // en el avanzado, sin subir el escáner, el hallazgo se ve pero no se puede registrar
+    const s=Lunar.iniciarNivel('Site11',null);elegir(s,['bat160','o2chico','fuelextra']);land(s,true);
+    const poi=PUNTOS_INTERES_LUNARES.Site11.escaneos[2];ir(s,poi.pos);
+    const c=Lunar.contexto(s);check(c.accion==='escanear_poi'&&/Escáner/.test(c.falta),'avanzado sin escáner: el hallazgo pide la herramienta');
+    check(!Lunar.interactuar(s).ok,'y no se registra');
+  }
+  {
+    const s=Lunar.iniciarNivel('Site11',null);elegir(s,['bat160','o2chico','fuelextra','escaner']);land(s,true);
+    const poi=PUNTOS_INTERES_LUNARES.Site11.escaneos[2];ir(s,poi.pos);
+    const antes=s.recursos.energiaWh,pv=Lunar.preverAccion(s);
+    check(Number.isFinite(pv.margen)&&Number.isFinite(pv.oxMargen),'se puede prever el margen antes de escanear un hallazgo');
+    const r=Lunar.interactuar(s);check(r.ok&&r.accion==='escanear_poi'&&r.poi.id===poi.id,'hallazgo registrado');
+    close(antes-s.recursos.energiaWh,REGLAS_LUNARES.acciones.escanear.wh,'escanear un hallazgo cuesta lo mismo que escanear');
+    check(Lunar.contexto(s)===null,'un hallazgo no se registra dos veces');
+    ir(s,Lunar.map(s).target);Lunar.interactuar(s);walk(s,s.retorno.path);Lunar.interactuar(s);
+    const inf=Lunar.informe(s);
+    check(inf.resultado==='exito'&&inf.hallazgos===1&&inf.cienciaHallazgos===poi.ciencia,'el informe cuenta el hallazgo');
+    check(inf.ciencia===100+poi.ciencia,'y lo suma a la ciencia de la misión');
+    check(inf.final.id==='revolucion','explorar con el escáner en terreno extremo da el final de frontera científica');
+  }
+}
+console.log('Lunar: '+checks+' comprobaciones pasaron (misiones completas, progresión, 6 finales, audio, 3 niveles, hallazgos y rocas).');

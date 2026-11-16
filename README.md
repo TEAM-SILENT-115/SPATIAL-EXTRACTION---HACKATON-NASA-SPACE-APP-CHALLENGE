@@ -2,12 +2,36 @@
 
 Juego educativo de diseño de misiones espaciales, hecho para el **NASA Space Apps Challenge 2026**
 (reto *Space Mission Design Game*). Diriges una misión completa: la diseñas en la agencia, la
-operas en vuelo y la terminas explorando un planeta helado para traer una muestra de vuelta.
+operas en vuelo y la terminas explorando el Polo Sur de la Luna para traer una muestra de hielo.
 
 La idea que el juego quiere enseñar cabe en dos líneas:
 
 > Un recurso que llevas no es gratis: cuesta masa, presupuesto y espacio. Y el margen que **no**
 > reservas al planificar es el que te deja varado cuando el terreno resulta más difícil de lo previsto.
+
+## Para quién es
+
+Para estudiantes desde los 12 años y público general **sin conocimientos previos** de
+ingeniería espacial. Por eso cada pantalla pide una sola decisión, el asistente AIDA explica en
+una línea qué se está decidiendo, el glosario (`AYUDA → GLOSARIO`) dice qué es cada término y
+qué implica, y los sistemas se introducen de a pocos en tres niveles.
+
+## Qué es real y qué es de juego
+
+**Real.** Los tres mapas son pendientes medidas del Polo Sur de la Luna: datos del altímetro
+LOLA de la sonda Lunar Reconnaissance Orbiter (LRO) de la NASA, a 5 m por píxel, agrupados en
+celdas de 20 m. Los sitios son Connecting Ridge (Site01), el borde de Shackleton (Site04) y el
+borde de De Gerlache (Site11), zonas que la NASA estudia para futuros alunizajes. El terreno
+que pisas y lo que cuesta cruzarlo sale de esos datos.
+
+**De juego.** Las cifras de energía, oxígeno, masa y costo, la fórmula de consumo y la posición
+del módulo, del cráter, de las rocas y de los hallazgos científicos están inventadas y
+calibradas para enseñar a decidir. Los hallazgos describen fenómenos lunares reales (hielo en
+sombra permanente, ilmenita, tubos de lava), pero su ubicación en el mapa es ficticia.
+
+**Alcance.** La misión cubre el diseño en la agencia, el descenso y la exploración a pie hasta
+volver al módulo. El viaje de regreso a la Tierra, la tripulación y los materiales del cohete
+no se simulan: están en el trabajo futuro (ver [`ENTREGA.md`](ENTREGA.md)).
 
 ## Cómo empezar
 
@@ -205,6 +229,24 @@ Pendiente para iterar en equipo:
 - Versión en inglés.
 - Licencia del repositorio.
 - Despliegue en línea (segundo enlace del hackatón; el primero es la presentación).
+
+## Referencias
+
+Recursos de la NASA:
+
+- NASA GSFC, Planetary Geodesy Data Archive (PGDA). *High-Resolution LOLA Topography for Lunar
+  South Pole Sites* (producto 78): <https://pgda.gsfc.nasa.gov/products/78>. De aquí salen los
+  mapas de pendiente de 5 m por píxel de Site01, Site04 y Site11.
+- NASA Science. *Lunar Reconnaissance Orbiter*: <https://science.nasa.gov/mission/lro/>.
+- NASA Science. *VIPER*: <https://science.nasa.gov/mission/viper/>.
+- NASA (2022). *NASA Identifies Candidate Regions for Landing Next Americans on Moon*:
+  <https://www.nasa.gov/news-release/nasa-identifies-candidate-regions-for-landing-next-americans-on-moon/>.
+
+Otras referencias:
+
+- Barker, M. K., et al. (2021). Improved LOLA Elevation Maps for South Pole Landing Sites: Error
+  Estimates and Their Impact on Illumination Conditions. *Planetary and Space Science*, 203,
+  105119. <https://doi.org/10.1016/j.pss.2020.105119>.
 
 ## Créditos
 

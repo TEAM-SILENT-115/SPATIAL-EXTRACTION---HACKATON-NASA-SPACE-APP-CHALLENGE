@@ -216,6 +216,22 @@ var TEXTOS_LUNARES = {
       ayuda: 'Después del lanzamiento ya no podrás cambiar nada.'
     }
   },
+  // Glosario: qué es cada cosa y qué implica al decidir. {reserva} y {pendiente}
+  // se rellenan con las reglas vigentes.
+  glosario: [
+    ['ENERGÍA (Wh)', 'Lo que guarda la batería. Caminar, perforar y escanear la gastan. Si llega a cero lejos del módulo, no vuelves.'],
+    ['RESERVA', 'La energía que te sobra al volver. Se recomienda el {reserva} % de lo que pide el viaje: es el colchón para un desvío.'],
+    ['PENDIENTE', 'La inclinación del terreno. Cuenta al cuadrado: el doble de pendiente cuesta mucho más del doble. Por encima de {pendiente}° no se pasa.'],
+    ['MASA', 'Los kilos que subes a la nave. Cada kilo encarece cada paso, y el cohete tiene un tope de carga.'],
+    ['PRESUPUESTO', 'Los créditos de la misión. No alcanzan para todo: llevar algo es renunciar a otra cosa.'],
+    ['OXÍGENO', 'Se gasta con cada metro que caminas. El tanque grande dura más, pero pesa y cuesta más.'],
+    ['COMBUSTIBLE', 'Sirve para corregir el descenso y aterrizar más cerca del cráter. Si no lo subiste, esa opción no existe.'],
+    ['NÚCLEO', 'La muestra de hielo del cráter: el objetivo científico. Solo cuenta si la entregas en el módulo.']
+  ],
+  // Qué es dato real y qué es regla de juego (créditos y documentación).
+  real: 'Los tres mapas son pendientes reales del Polo Sur de la Luna, medidas por el altímetro LOLA de la sonda LRO de la NASA: 5 m por píxel, agrupados en celdas de 20 m. Connecting Ridge, el borde de Shackleton y el borde de De Gerlache son sitios que la NASA estudia para futuros alunizajes.',
+  juego: 'La energía, el oxígeno, la masa, los costos y la posición del módulo, del cráter, de las rocas y de los hallazgos son reglas de juego: están pensadas para enseñar a decidir, no para simular una misión real.',
+  fuente: 'Fuente: Barker et al. (2021), «Improved LOLA Elevation Maps for South Pole Landing Sites», Planetary and Space Science 203, 105119. Datos: NASA GSFC, PGDA, producto 78.',
   aida: {
     niveles: 'Soy AIDA, tu control de misión. Empieza por el nivel básico: cada nivel añade algo nuevo.',
     briefing: 'Regla de oro: una muestra que no vuelve al módulo no cuenta.',

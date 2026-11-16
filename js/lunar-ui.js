@@ -518,7 +518,12 @@ var LunarUI = (function () {
       c = `<h2>CÓMO SE JUEGA</h2>${listaMision()}
         <p class="u-regla"><b>⚡</b>${esc(TX.regla)}</p>
         <dl class="u-ctl">${TX.controles.map(k => `<dt>${k[0]}</dt><dd>${esc(k[1])}</dd>`).join('')}</dl>
-        <div class="u-fila">${btn('cerrar', 'ENTENDIDO', { cls: 'grande', primario: true })}${btn('creditos', 'CRÉDITOS')}${btn('borrar', 'BORRAR PROGRESO')}</div>`;
+        <div class="u-fila">${btn('cerrar', 'ENTENDIDO', { cls: 'grande', primario: true })}${btn('glosario', 'GLOSARIO')}${btn('creditos', 'DATOS Y CRÉDITOS')}${btn('borrar', 'BORRAR PROGRESO')}</div>`;
+    } else if (modal === 'glosario') {
+      const txt = x => esc(x.replace('{reserva}', Math.round(R.reserva * 100)).replace('{pendiente}', R.pendienteMax));
+      c = `<h2>GLOSARIO: QUÉ ES Y QUÉ IMPLICA</h2>
+        <dl class="u-glosario">${TX.glosario.map(g => `<dt>${g[0]}</dt><dd>${txt(g[1])}</dd>`).join('')}</dl>
+        <div class="u-fila">${btn('cerrar', 'ENTENDIDO', { cls: 'grande', primario: true })}</div>`;
     } else if (modal === 'borrar') {
       c = `<h2>¿BORRAR EL PROGRESO?</h2><p>Se bloquean de nuevo los niveles 2 y 3 y se olvidan los rangos. Sirve para que otra persona empiece de cero.</p>
         <div class="u-fila">${btn('cerrar', 'NO, VOLVER', { cls: 'grande', primario: true })}${btn('borrar_si', 'SÍ, BORRAR')}</div>`;
@@ -538,9 +543,11 @@ var LunarUI = (function () {
         <p class="u-nota">Son reglas de juego calibradas para enseñar, no estimaciones de ingeniería de la NASA.</p>
         <div class="u-fila">${btn('cerrar', 'CERRAR', { cls: 'grande', primario: true })}</div>`;
     } else if (modal === 'creditos') {
-      c = `<h2>CRÉDITOS</h2>
-        <p>Pendientes reales: NASA Goddard / LRO-LOLA (Barker et al., 2021). Sitios 01, 04 y 11 del Polo Sur lunar, a partir de GeoTIFF de 5 m por píxel.</p>
-        <p>Misión Umbral es un proyecto del NASA Space Apps Challenge 2026. Arte, código y sonido originales del equipo, sin dependencias externas.</p>
+      c = `<h2>DATOS Y CRÉDITOS</h2>
+        <p><b>QUÉ ES REAL.</b> ${esc(TX.real)}</p>
+        <p><b>QUÉ ES DE JUEGO.</b> ${esc(TX.juego)}</p>
+        <p class="u-nota">${esc(TX.fuente)}</p>
+        <p>Misión Umbral es un proyecto del NASA Space Apps Challenge 2026. Arte, código y sonido originales del equipo.</p>
         <div class="u-fila">${btn('cerrar', 'CERRAR', { cls: 'grande', primario: true })}</div>`;
     } else if (modal === 'detalle') {
       const r = informe, f = r.final;
@@ -1189,7 +1196,7 @@ var LunarUI = (function () {
     if (caja) {
       caja.hidden = false;
       caja.className = 'u-fin ' + tipo;
-      caja.innerHTML = tipo === 'exito' ? '<b>¡MUESTRA ENTREGADA!</b><span>Misión cumplida</span>'
+      caja.innerHTML = tipo === 'exito' ? '<b>¡MUESTRA ENTREGADA!</b><span>El módulo despega de regreso a la Tierra</span>'
         : tipo === 'varado' ? '<b>SEÑAL PERDIDA</b><span>Te quedaste sin ' + (s.agotado === 'oxigeno' ? 'oxígeno' : 'energía') + '</span>'
         : '<b>MISIÓN CERRADA</b><span>Volviste sin el núcleo</span>';
     }
@@ -1250,7 +1257,7 @@ var LunarUI = (function () {
     else if (a === 'jugar') pantalla = 'niveles';
     else if (a === 'volver_titulo') pantalla = 'titulo';
     else if (a === 'niveles') { modal = null; pantalla = 'niveles'; }
-    else if (['ayuda', 'creditos', 'calculo', 'detalle', 'borrar'].includes(a)) { modal = a; keys = {}; }
+    else if (['ayuda', 'glosario', 'creditos', 'calculo', 'detalle', 'borrar'].includes(a)) { modal = a; keys = {}; }
     else if (a === 'pausa') { if (!fin) { modal = 'pausa'; keys = {}; } }
     else if (a === 'cerrar') modal = null;
     else if (a === 'borrar_si') { borrarProgreso(); modal = null; pantalla = 'titulo'; }

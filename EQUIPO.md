@@ -72,6 +72,23 @@ misma pantalla compleja.
 ningún texto por debajo de 13 px, nada que desborde la pantalla fija 1280×720, y como mucho 10
 botones a la vez. La partida entera se puede jugar solo con teclado o solo con ratón.
 
+**Lo que se integró de `main` (15-nov-2026).** Mientras se hacía la interfaz guiada, en
+`main` se siguió trabajando sobre la pantalla anterior. Al fusionar se conservó la interfaz
+guiada y se trajo lo que aporta juego:
+
+| De `main` | Qué se hizo |
+|---|---|
+| Hallazgos científicos (4 por mapa, con dato real) | **Integrado.** Aparecen en el nivel avanzado, que es el que tiene escáner. Al registrarlos sale un aviso con el hallazgo y suman ciencia en el informe, solo si se vuelve. Cuentan para el final "Revolución polar". |
+| Rocas que bloquean el paso | **Integrado** en los tres niveles: se ven en el mapa del plan, el minimapa y la superficie. Chocar no gasta energía. |
+| Sprites de recursos (hielo, sonda, mineral, escarpe, roca) | **Integrado**: se usan para rocas y hallazgos. |
+| Sonido de escaneo | **Integrado.** |
+| Fondo con nebulosas | **Integrado** en el título y las escenas de vuelo, dibujado en canvas. |
+| Selector `?modo=clasico` y animación de paso clásica | **Se conserva** tal cual (`js/ui.js`). |
+| Todas las zonas desbloqueadas | **No se tomó**: rompe la progresión por niveles. Para demos existe `?niveles=todos`. |
+| Tutorial por pasos del hangar de 4 pestañas | **No aplica**: ese hangar ya no existe. `Lunar.guiaPaso` sigue en el motor con sus pruebas, sin uso en pantalla. |
+| Letra pixel VT323 / Press Start 2P (Google Fonts) | **No se usa en la interfaz guiada**: se descarga de internet y el juego debe verse igual sin conexión. Sigue cargándose para el modo clásico. Si se quiere, hay que incluir el archivo de la fuente en el repo y reajustar tamaños. |
+| Paleta y estilos nuevos de `css/style.css` | La interfaz guiada fija su propia paleta y botones dentro de `.lunar`, así que no le afectan. |
+
 **Identidad visual.** Azul oscuro NASA (`#0b1026`), ámbar para la acción principal, verde /
 ámbar / rojo siempre acompañados de icono y cifra. Todas las escenas se mueven: estrellas,
 astronauta, baliza del módulo, rutas, despegue, descenso, polvo al caminar, chispas al perforar
@@ -357,6 +374,8 @@ Son **dos enlaces**:
   con zona "para volver", cruceta para ratón, navegación por teclado, progreso y rangos.
 - `css/lunar.css`: reescrito para la interfaz nueva.
 - `tests/lunar.test.js`: 738 comprobaciones nuevas de niveles (total 2366).
+- Fusión de `main`: hallazgos, rocas, sprites, sonido de escaneo y nebulosas dentro de la
+  interfaz guiada; 183 comprobaciones más (total 2549). Ver "Lo que se integró de `main`".
 - `tests/browser.test.mjs`: reescrito para el flujo nuevo, con las comprobaciones de
   legibilidad por pantalla.
 - `README.md` y `EQUIPO.md`: esta documentación.

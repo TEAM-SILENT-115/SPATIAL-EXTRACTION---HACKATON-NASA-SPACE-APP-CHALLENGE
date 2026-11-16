@@ -7,7 +7,7 @@ var LunarUI = (function () {
   const ORDEN = ['Site01', 'Site04', 'Site11'];
   const RANGOS = ['F', 'B', 'A', 'A+', 'S', 'S+'];
   const COLOR = { directa: '#e6bd6a', ahorro: '#6dd6cf' };
-  const NOMBRE_RUTA = { directa: 'Directa', ahorro: 'De ahorro' };
+  const NOMBRE_RUTA = { directa: 'Direct', ahorro: 'Economy' };
   const DIR = {
     ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1],
     ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0]
@@ -59,17 +59,17 @@ var LunarUI = (function () {
 
   function btnSonido() {
     const on = LunarAudio.estaActivo();
-    return `<button class="btn mini" data-l="sonido" data-x="" title="Sonido (M)">${on ? '♪ SONIDO' : '♪ MUDO'}</button>`;
+    return `<button class="btn mini" data-l="sonido" data-x="" title="Sound (M)">${on ? '♪ AUDIO' : '♪ MUTE'}</button>`;
   }
 
   function cabecera() {
-    const m = meta(), etapas = ['PLANEAR', 'VIAJAR', 'EXPLORAR', 'INFORME'];
+    const m = meta(), etapas = ['PLAN', 'TRAVEL', 'EXPLORE', 'REPORT'];
     const idx = { briefing: 0, plan: 0, viaje: 1, superficie: 2, informe: 3 }[pantalla];
     return `<header class="u-cab">
-      <div class="u-marca"><b>MISIÓN UMBRAL</b><span>NIVEL ${m.nivel} · ${m.nivelNombre}</span></div>
+      <div class="u-marca"><b>MISSION UMBRAL</b><span>LEVEL ${m.nivel} · ${m.nivelNombre}</span></div>
       <ol class="u-etapas">${etapas.map((e, i) =>
         `<li class="${i === idx ? 'actual' : i < idx ? 'hecha' : ''}"><i>${i < idx ? '✓' : i + 1}</i>${e}</li>`).join('')}</ol>
-      <div class="u-cab-btns">${btn('ayuda', '? AYUDA', { cls: 'mini', nonav: true })}${btnSonido()}</div>
+      <div class="u-cab-btns">${btn('ayuda', '? HELP', { cls: 'mini', nonav: true })}${btnSonido()}</div>
     </header>`;
   }
 
@@ -88,39 +88,39 @@ var LunarUI = (function () {
       <canvas id="u-esc-titulo" class="u-fondo"></canvas>
       <div class="u-titulo-caja">
         <p class="u-kicker">NASA SPACE APPS CHALLENGE</p>
-        <h1>MISIÓN <em>UMBRAL</em></h1>
+        <h1>MISSION <em>UMBRAL</em></h1>
         <p class="u-lema">${esc(TX.lema)}</p>
         <div class="u-menu">
-          ${btn('jugar', 'JUGAR', { cls: 'grande', primario: true })}
-          ${btn('ayuda', 'CÓMO SE JUEGA', { cls: 'grande' })}
+          ${btn('jugar', 'PLAY', { cls: 'grande', primario: true })}
+          ${btn('ayuda', 'HOW TO PLAY', { cls: 'grande' })}
         </div>
       </div>
-      <p class="u-pie">Pendientes reales del Polo Sur lunar (NASA LRO-LOLA) · Funciona sin conexión</p>
-      <div class="u-esquina">${btnSonido()}${btn('creditos', 'CRÉDITOS', { cls: 'mini', nonav: true })}</div>
+      <p class="u-pie">Real Lunar South Pole slopes (NASA LRO-LOLA) · Offline capable</p>
+      <div class="u-esquina">${btnSonido()}${btn('creditos', 'CREDITS', { cls: 'mini', nonav: true })}</div>
     </div>`;
   }
 
   function nivelesHTML() {
     const rangos = leerRangos();
     return `<div class="u-niveles">
-      <p class="u-kicker">TRES MISIONES · TRES NIVELES</p>
-      <h1>ELIGE TU MISIÓN</h1>
-      <p class="u-sub">Cada nivel añade algo nuevo. Completa uno para abrir el siguiente.</p>
+      <p class="u-kicker">THREE MISSIONS · THREE TIERS</p>
+      <h1>CHOOSE YOUR MISSION</h1>
+      <p class="u-sub">Each level introduces new systems. Complete one to unlock the next.</p>
       <div class="u-cartas">${ORDEN.map(id => {
         const m = meta(id), ok = abierto(id), previo = ORDEN[ORDEN.indexOf(id) - 1];
         return `<article class="u-carta ${ok ? '' : 'bloq'}">
-          <header><small>NIVEL ${m.nivel}</small><b>${m.nivelNombre}</b><span>${m.estrellas}</span></header>
+          <header><small>LEVEL ${m.nivel}</small><b>${m.nivelNombre}</b><span>${m.estrellas}</span></header>
           <canvas class="u-mini" data-sitio="${id}" width="160" height="120"></canvas>
           <p class="u-sitio">${esc(m.nombre)} · ${esc(m.terreno)}</p>
           <p class="u-carta-lema">${esc(m.lema)}</p>
-          <p class="u-decides"><small>TÚ DECIDES</small>${esc(m.decides)}</p>
+          <p class="u-decides"><small>YOU DECIDE</small>${esc(m.decides)}</p>
           ${ok
-            ? `<p class="u-mejor">Mejor rango: <b>${rangos[id] || '—'}</b></p>` +
-              btn('nivel', rangos[id] ? 'JUGAR DE NUEVO' : 'JUGAR', { x: id, cls: 'grande', primario: !rangos[id] })
-            : `<p class="u-candado"><b>BLOQUEADO</b>Completa el nivel ${meta(previo).nivel} para abrirlo.</p>`}
+            ? `<p class="u-mejor">Best rank: <b>${rangos[id] || '—'}</b></p>` +
+              btn('nivel', rangos[id] ? 'PLAY AGAIN' : 'PLAY', { x: id, cls: 'grande', primario: !rangos[id] })
+            : `<p class="u-candado"><b>LOCKED</b>Complete level ${meta(previo).nivel} to unlock.</p>`}
         </article>`;
       }).join('')}</div>
-      <div class="u-fila">${btn('volver_titulo', '◀ VOLVER')}</div>
+      <div class="u-fila">${btn('volver_titulo', '◀ BACK')}</div>
     </div>` + pieAida(TX.aida.niveles);
   }
 
@@ -132,13 +132,13 @@ var LunarUI = (function () {
         <p class="u-regla"><b>⚡</b>${esc(TX.regla)}</p>
       </section>
       <section class="u-brief-der">
-        <p class="u-kicker">NIVEL ${m.nivel} · ${m.nivelNombre} · ${esc(m.nombre).toUpperCase()}</p>
-        <h1>TU MISIÓN</h1>
+        <p class="u-kicker">LEVEL ${m.nivel} · ${m.nivelNombre} · ${esc(m.nombre).toUpperCase()}</p>
+        <h1>YOUR MISSION</h1>
         ${listaMision()}
-        ${m.novedades.length ? `<div class="u-nuevo"><h3>NUEVO EN ESTE NIVEL</h3><ul>${m.novedades.map(x =>
+        ${m.novedades.length ? `<div class="u-nuevo"><h3>NEW IN THIS LEVEL</h3><ul>${m.novedades.map(x =>
           `<li><b>${x[0]}</b>${esc(x[1])}</li>`).join('')}</ul></div>` : ''}
-        <p class="u-decides2">En este nivel decides: <b>${esc(m.decides.toLowerCase())}</b>.</p>
-        <div class="u-fila izq">${btn('empezar_plan', 'PLANEAR LA MISIÓN ▶', { cls: 'grande', primario: true })}</div>
+        <p class="u-decides2">In this level you decide: <b>${esc(m.decides.toLowerCase())}</b>.</p>
+        <div class="u-fila izq">${btn('empezar_plan', 'PLAN MISSION ▶', { cls: 'grande', primario: true })}</div>
       </section>
     </main>` + pieAida(TX.aida.briefing);
   }
@@ -167,9 +167,9 @@ var LunarUI = (function () {
         const p = rutas[r];
         return {
           id: r, elegida: !!elegidos.ruta && s.ruta === r, color: r,
-          titulo: r === 'directa' ? 'RUTA DIRECTA' : 'RUTA DE AHORRO',
-          texto: r === 'directa' ? 'La más corta, pero cruza terreno más empinado.' : 'Da un rodeo por terreno más suave.',
-          datos: [n0(p.distancia) + ' m ida y vuelta', 'pide ' + n(p.total) + ' Wh']
+          titulo: r === 'directa' ? 'DIRECT ROUTE' : 'ECONOMY ROUTE',
+          texto: r === 'directa' ? 'Shorter, but crosses steeper terrain.' : 'Takes a detour through gentler terrain.',
+          datos: [n0(p.distancia) + ' m round trip', 'demands ' + n(p.total) + ' Wh']
         };
       });
     }
@@ -177,9 +177,9 @@ var LunarUI = (function () {
       return ['bat100', 'bat160'].map(x => {
         const o = Motor.obj(x);
         return {
-          id: x, elegida: tiene(x), titulo: 'BATERÍA ' + o.energia + ' Wh',
-          texto: x === 'bat100' ? 'Ligera. Menos energía, pero cada paso cuesta un poco menos.'
-            : 'Mucha más energía, pero pesa casi el doble: cada paso cuesta un poco más.',
+          id: x, elegida: tiene(x), titulo: 'BATTERY ' + o.energia + ' Wh',
+          texto: x === 'bat100' ? 'Lightweight. Less power, but each step costs slightly less.'
+            : 'Much more power, but weighs nearly double: each step costs slightly more.',
           datos: chips(o)
         };
       });
@@ -188,8 +188,8 @@ var LunarUI = (function () {
       return ['o2chico', 'o2grande'].map(x => {
         const o = Motor.obj(x);
         return {
-          id: x, elegida: tiene(x), titulo: 'TANQUE DE ' + o.oxigeno + ' U',
-          texto: x === 'o2chico' ? 'Ligero. Mira abajo si cubre lo que pide el viaje.' : 'Más aire para caminar lejos, a cambio de más peso y más créditos.',
+          id: x, elegida: tiene(x), titulo: 'OXYGEN TANK ' + o.oxigeno + ' U',
+          texto: x === 'o2chico' ? 'Lightweight. Check below if it covers journey demand.' : 'More air to walk further, in exchange for more mass and credits.',
           datos: chips(o)
         };
       });
@@ -198,16 +198,16 @@ var LunarUI = (function () {
       return DATOS.cohetes.map(c => ({
         id: c.id, elegida: !!elegidos.cohete && s.cohete === c.id, titulo: c.nombre.toUpperCase(),
         texto: c.combustibleBase >= DATOS.costos.maniobra
-          ? 'Trae ' + c.combustibleBase + ' de combustible: ya puede corregir el descenso.'
-          : 'Trae ' + c.combustibleBase + ' de combustible: para corregir (pide ' + DATOS.costos.maniobra + ') necesita el extra.',
-        datos: ['carga hasta ' + c.capacidadMasa + ' kg', c.costo + ' cr']
+          ? 'Carries ' + c.combustibleBase + ' fuel: ready for descent correction.'
+          : 'Carries ' + c.combustibleBase + ' fuel: correcting (requires ' + DATOS.costos.maniobra + ') needs extra fuel.',
+        datos: ['payload up to ' + c.capacidadMasa + ' kg', c.costo + ' cr']
       }));
     }
     if (id === 'extras') {
       return [
-        ['fuelextra', 'COMBUSTIBLE EXTRA', '+30 de combustible para corregir el descenso y aterrizar más cerca.'],
-        ['escaner', 'ESCÁNER DE TERRENO', 'Revela una segunda muestra y registra los hallazgos científicos del mapa.'],
-        ['cont2', 'CONTENEDOR DOBLE', 'Guarda 2 muestras. Sin él, solo cabe una.']
+        ['fuelextra', 'EXTRA FUEL', '+30 maneuvering fuel to correct descent and land closer.'],
+        ['escaner', 'TERRAIN SCANNER', 'Reveals a second sample and records map scientific findings.'],
+        ['cont2', 'DUAL CONTAINER', 'Stores 2 samples. Without it, capacity is limited to one.']
       ].map(x => ({ id: x[0], elegida: tiene(x[0]), titulo: x[1], texto: x[2], datos: chips(Motor.obj(x[0])), casilla: true }));
     }
     return [];
@@ -221,28 +221,28 @@ var LunarUI = (function () {
     if (id === 'cohete') return elegidos.cohete ? Motor.cohetePorId(s.cohete).nombre : null;
     if (id === 'extras') {
       const x = ['fuelextra', 'escaner', 'cont2'].filter(e => s.equipo.includes(e)).map(e => Motor.obj(e).nombre);
-      return x.length ? x.join(' + ') : 'Ninguno';
+      return x.length ? x.join(' + ') : 'None';
     }
     return null;
   }
 
   function revisionHTML(v) {
     const lista = pasos().slice(0, -1).map((id, i) =>
-      `<li><button class="u-linea" data-l="ir_paso" data-x="${i}" data-nav><small>${TX.pasos[id].corto}</small><b>${esc(valorPaso(id) || '— sin elegir —')}</b><i>CAMBIAR</i></button></li>`).join('');
+      `<li><button class="u-linea" data-l="ir_paso" data-x="${i}" data-nav><small>${TX.pasos[id].corto}</small><b>${esc(valorPaso(id) || '— unselected —')}</b><i>CHANGE</i></button></li>`).join('');
     let caja;
     if (v.bloqueos.length) {
-      caja = `<div class="u-veredicto bloqueo"><b>⛔ ASÍ NO PUEDES LANZAR</b>${v.bloqueos.map(x => `<p>${esc(x)}</p>`).join('')}</div>`;
+      caja = `<div class="u-veredicto bloqueo"><b>⛔ CANNOT LAUNCH LIKE THIS</b>${v.bloqueos.map(x => `<p>${esc(x)}</p>`).join('')}</div>`;
     } else if (v.riesgos.length) {
-      caja = `<div class="u-veredicto riesgo"><b>⚠ PUEDES LANZAR, PERO HAY RIESGO</b>${v.riesgos.map(x => `<p>${esc(x)}</p>`).join('')}</div>`;
+      caja = `<div class="u-veredicto riesgo"><b>⚠ LAUNCH PERMITTED, BUT RISKS EXIST</b>${v.riesgos.map(x => `<p>${esc(x)}</p>`).join('')}</div>`;
     } else {
-      caja = `<div class="u-veredicto ok"><b>✓ PLAN SÓLIDO</b><p>Alcanza para ir, perforar y volver, con reserva de sobra.</p></div>`;
+      caja = `<div class="u-veredicto ok"><b>✓ SOLID PLAN</b><p>Sufficient power to travel, drill, and return with ample reserve.</p></div>`;
     }
     let nota = '';
     if (sis().combustible && !v.bloqueos.length && v.energia !== 'corrigiendo') {
       const margen = v.cerca ? v.t.energia - v.cerca.total : 0;
       nota = v.cerca
-        ? `<p class="u-nota">Si corriges el descenso en vuelo, el viaje baja a ${n(v.cerca.total)} Wh y te ${margen >= 0 ? 'sobrarían ' + n(margen) : 'faltarían ' + n(-margen)} Wh.</p>`
-        : `<p class="u-nota">Con ${v.t.combustible} de combustible no podrás corregir el descenso (pide ${DATOS.costos.maniobra}).</p>`;
+        ? `<p class="u-nota">If you correct descent in flight, journey drops to ${n(v.cerca.total)} Wh and you would have ${margen >= 0 ? n(margen) + ' Wh remaining' : 'a deficit of ' + n(-margen) + ' Wh'}.</p>`
+        : `<p class="u-nota">With ${v.t.combustible} fuel you cannot correct descent (requires ${DATOS.costos.maniobra}).</p>`;
     }
     return `<ul class="u-resumen">${lista}</ul>${caja}${nota}`;
   }
@@ -258,19 +258,19 @@ var LunarUI = (function () {
       </button>`).join('')}</div>`;
     const faltan = ids.slice(0, -1).filter(x => !pasoElegido(x));
     const nav = ultimo
-      ? btn('paso_ant', '◀ ATRÁS') + (sis().formulas ? btn('calculo', 'VER CÁLCULO') : '') +
-        btn('lanzar', v.riesgos.length ? 'LANZAR CON RIESGO ▲' : 'LANZAR ▲', { cls: 'grande', primario: true, off: !!v.bloqueos.length || !!faltan.length })
-      : (paso > 0 ? btn('paso_ant', '◀ ATRÁS') : btn('niveles', '◀ NIVELES')) +
-        btn('paso_sig', 'SIGUIENTE ▶', { cls: 'grande', primario: true, off: !pasoElegido(id) });
+      ? btn('paso_ant', '◀ BACK') + (sis().formulas ? btn('calculo', 'VIEW CALCULATION') : '') +
+        btn('lanzar', v.riesgos.length ? 'LAUNCH WITH RISK ▲' : 'LAUNCH ▲', { cls: 'grande', primario: true, off: !!v.bloqueos.length || !!faltan.length })
+      : (paso > 0 ? btn('paso_ant', '◀ BACK') : btn('niveles', '◀ LEVELS')) +
+        btn('paso_sig', 'NEXT ▶', { cls: 'grande', primario: true, off: !pasoElegido(id) });
     return cabecera() + `<main class="u-plan">
       <section class="u-plan-mapa">
-        <canvas id="u-mapa" width="560" height="420" aria-label="Mapa de pendientes del sitio"></canvas>
+        <canvas id="u-mapa" width="560" height="420" aria-label="Slope map of site"></canvas>
         <div class="u-leyenda">
-          <span><i class="l-suave"></i>Suave</span><span><i class="l-emp"></i>Empinado: gasta más</span><span><i class="l-no"></i>Sin paso</span><span><i class="l-roca"></i>Roca: hay que rodearla</span>
+          <span><i class="l-suave"></i>Gentle</span><span><i class="l-emp"></i>Steep: costs more</span><span><i class="l-no"></i>Impassable</span><span><i class="l-roca"></i>Boulder: detour</span>
         </div>
       </section>
       <section class="u-plan-paso">
-        <div class="u-pips"><b>PASO ${paso + 1} DE ${ids.length}</b>${pips}</div>
+        <div class="u-pips"><b>STEP ${paso + 1} OF ${ids.length}</b>${pips}</div>
         <h2>${esc(txt.titulo)}</h2>
         <p class="u-ayuda">${esc(txt.ayuda)}</p>
         ${cuerpo}
@@ -282,19 +282,19 @@ var LunarUI = (function () {
   function aidaPlan(v, id) {
     const t = v.t, p = v.p;
     if (id === 'revision') {
-      if (v.bloqueos.length) return 'Con ese plan no despegamos. Cambia lo que marca el aviso.';
-      if (v.energia === 'corrigiendo' && v.riesgos.length === 1) return 'Tu plan depende de corregir el descenso. Tienes el combustible: no lo olvides en vuelo.';
-      if (v.riesgos.length) return 'Puedes lanzar así, pero yo no apostaría mi sueldo. Tú decides.';
-      return 'Plan sólido. Cuando quieras, lanzamos.';
+      if (v.bloqueos.length) return 'Cannot launch with this plan. Resolve the warnings above.';
+      if (v.energia === 'corrigiendo' && v.riesgos.length === 1) return 'Your plan relies on in-flight descent correction. You have the fuel: remember to trigger it.';
+      if (v.riesgos.length) return 'You can launch like this, but I would not bet my salary on it. Your call.';
+      return 'Solid plan. Ready for liftoff whenever you are.';
     }
     if (id === 'bateria' && t.energia) {
-      return p.margen < 0 ? 'Con esa batería te faltarían ' + n(-p.margen) + ' Wh para volver. Mira la barra.'
-        : p.margen < p.reserva ? 'Alcanza, pero muy justo: solo sobrarían ' + n(p.margen) + ' Wh.'
-        : 'Con esa batería te sobrarían ' + n(p.margen) + ' Wh al volver.';
+      return p.margen < 0 ? 'With that battery you will fall short by ' + n(-p.margen) + ' Wh to return. Check the gauge.'
+        : p.margen < p.reserva ? 'Sufficient, but tight: only ' + n(p.margen) + ' Wh remaining.'
+        : 'With that battery you will have ' + n(p.margen) + ' Wh remaining upon return.';
     }
-    if (id === 'ruta' && elegidos.ruta) return 'Esa ruta pide ' + n(p.total) + ' Wh entre ir, perforar y volver.';
+    if (id === 'ruta' && elegidos.ruta) return 'That route demands ' + n(p.total) + ' Wh across travel, drilling, and return.';
     if (id === 'oxigeno' && t.oxigeno) {
-      return t.oxigeno < p.ox ? 'Ese tanque no cubre el viaje.' : 'El viaje pide ' + n0(p.ox) + ' de oxígeno y llevas ' + t.oxigeno + '. Lo que sobra también pesa.';
+      return t.oxigeno < p.ox ? 'That tank does not cover journey demand.' : 'The journey demands ' + n0(p.ox) + ' oxygen and you carry ' + t.oxigeno + '. Excess oxygen also adds mass.';
     }
     return TX.aida[id];
   }
@@ -304,36 +304,36 @@ var LunarUI = (function () {
     const max = (t.energia ? Math.max(t.energia, p.total + p.reserva) : p.total * 1.5) * 1.04;
     const pc = x => (lim(x / max, 0, 1) * 100).toFixed(2) + '%';
     let veredicto;
-    if (!t.energia) veredicto = '<b class="u-neutro">AÚN NO LLEVAS BATERÍA</b>';
-    else if (p.margen < 0) veredicto = `<b class="alerta">✖ FALTAN ${n(-p.margen)} Wh</b>`;
-    else if (p.margen < p.reserva) veredicto = `<b class="ambar">⚠ MUY JUSTO: SOBRAN ${n(p.margen)} Wh</b>`;
-    else veredicto = `<b class="ok">✓ SOBRAN ${n(p.margen)} Wh</b>`;
+    if (!t.energia) veredicto = '<b class="u-neutro">NO BATTERY EQUIPPED</b>';
+    else if (p.margen < 0) veredicto = `<b class="alerta">✖ SHORT BY ${n(-p.margen)} Wh</b>`;
+    else if (p.margen < p.reserva) veredicto = `<b class="ambar">⚠ TIGHT: ${n(p.margen)} Wh SURPLUS</b>`;
+    else veredicto = `<b class="ok">✓ ${n(p.margen)} Wh SURPLUS</b>`;
     const seg = (cls, desde, ancho, etq) => `<div class="u-seg ${cls}" style="left:${pc(desde)};width:${pc(ancho)}"><span>${etq}</span></div>`;
     const resto = t.energia ? (p.margen >= 0
-      ? `<div class="u-sobra" style="left:${pc(p.total)};width:${pc(p.margen)}"><span>${p.margen / max > 0.06 ? 'SOBRA' : ''}</span></div>`
-      : `<div class="u-falta" style="left:${pc(t.energia)};width:${pc(-p.margen)}"><span>${-p.margen / max > 0.06 ? 'FALTA' : ''}</span></div>`) : '';
+      ? `<div class="u-sobra" style="left:${pc(p.total)};width:${pc(p.margen)}"><span>${p.margen / max > 0.06 ? 'SURPLUS' : ''}</span></div>`
+      : `<div class="u-falta" style="left:${pc(t.energia)};width:${pc(-p.margen)}"><span>${-p.margen / max > 0.06 ? 'DEFICIT' : ''}</span></div>`) : '';
     const mini = (titulo, frac, texto, estado) =>
       `<div class="u-mini-m ${estado}"><small>${titulo}</small><div class="u-mini-pista"><i style="width:${(lim(frac, 0, 1) * 100).toFixed(1)}%"></i></div><b>${texto}</b></div>`;
     let minis = '';
     if (si.oxigeno) {
-      minis += mini('OXÍGENO', t.oxigeno ? p.ox / t.oxigeno : 0,
-        t.oxigeno ? `pide ${n0(p.ox)} de ${t.oxigeno} ${t.oxigeno >= p.ox ? '✓' : '✖'}` : 'sin tanque', !t.oxigeno ? '' : t.oxigeno >= p.ox ? 'ok' : 'rojo');
+      minis += mini('OXYGEN', t.oxigeno ? p.ox / t.oxigeno : 0,
+        t.oxigeno ? `demands ${n0(p.ox)} of ${t.oxigeno} ${t.oxigeno >= p.ox ? '✓' : '✖'}` : 'no tank', !t.oxigeno ? '' : t.oxigeno >= p.ox ? 'ok' : 'rojo');
     }
     if (si.carga) {
       const mOk = s.masa.usada <= s.masa.capacidad, cOk = s.presupuesto.gastado <= s.presupuesto.total;
-      minis += mini('MASA', s.masa.usada / s.masa.capacidad, `${s.masa.usada} de ${s.masa.capacidad} kg ${mOk ? '✓' : '✖'}`, mOk ? 'ok' : 'rojo');
-      minis += mini('CRÉDITOS', s.presupuesto.gastado / s.presupuesto.total, `${s.presupuesto.gastado} de ${s.presupuesto.total} ${cOk ? '✓' : '✖'}`, cOk ? 'ok' : 'rojo');
+      minis += mini('MASS', s.masa.usada / s.masa.capacidad, `${s.masa.usada} of ${s.masa.capacidad} kg ${mOk ? '✓' : '✖'}`, mOk ? 'ok' : 'rojo');
+      minis += mini('CREDITS', s.presupuesto.gastado / s.presupuesto.total, `${s.presupuesto.gastado} of ${s.presupuesto.total} ${cOk ? '✓' : '✖'}`, cOk ? 'ok' : 'rojo');
     }
     if (si.combustible) {
       const ok = t.combustible >= DATOS.costos.maniobra;
-      minis += mini('COMBUSTIBLE', t.combustible / 70, `${t.combustible} · corregir pide ${DATOS.costos.maniobra} ${ok ? '✓' : '—'}`, ok ? 'ok' : '');
+      minis += mini('FUEL', t.combustible / 70, `${t.combustible} · correct needs ${DATOS.costos.maniobra} ${ok ? '✓' : '—'}`, ok ? 'ok' : '');
     }
     return `<section class="u-medidor">
-      <div class="u-med-top"><b>ENERGÍA</b><span>El viaje pide <b>${n(p.total)} Wh</b>${t.energia ? ` · llevas <b>${t.energia} Wh</b>` : ''}</span>${veredicto}</div>
+      <div class="u-med-top"><b>ENERGY</b><span>Journey demands <b>${n(p.total)} Wh</b>${t.energia ? ` · carrying <b>${t.energia} Wh</b>` : ''}</span>${veredicto}</div>
       <div class="u-pista">
-        ${seg('ida', 0, p.a.wh, 'IDA ' + n0(p.a.wh))}${seg('perf', p.a.wh, p.tarea, 'PERFORAR ' + n0(p.tarea))}${seg('vuelta', p.a.wh + p.tarea, p.b.wh, 'VUELTA ' + n0(p.b.wh))}
+        ${seg('ida', 0, p.a.wh, 'OUTBOUND ' + n0(p.a.wh))}${seg('perf', p.a.wh, p.tarea, 'DRILL ' + n0(p.tarea))}${seg('vuelta', p.a.wh + p.tarea, p.b.wh, 'RETURN ' + n0(p.b.wh))}
         ${resto}
-        ${t.energia ? `<div class="u-cap" style="left:${pc(t.energia)}"><span>BATERÍA ${t.energia}</span></div>` : ''}
+        ${t.energia ? `<div class="u-cap" style="left:${pc(t.energia)}"><span>BATTERY ${t.energia}</span></div>` : ''}
       </div>
       ${minis ? `<div class="u-minis">${minis}</div>` : ''}
     </section>`;
@@ -345,36 +345,36 @@ var LunarUI = (function () {
     const m = Lunar.map(s);
     let panel, aida = TX.aida.viaje;
     if (!sis().combustible || s.viaje.decidido) {
-      panel = `<p class="u-viaje-txt">${s.viaje.corrigio ? '✓ Descenso corregido: aterrizarás más cerca del cráter.'
-        : sis().combustible ? '✓ Descenso original conservado.' : 'La nave vuela sola hasta el punto de descenso. Lo que planeaste es lo que tendrás allá abajo.'}</p>
-        <div class="u-fila">${btn('descender', 'DESCENDER ▼', { cls: 'grande', primario: true })}</div>`;
+      panel = `<p class="u-viaje-txt">${s.viaje.corrigio ? '✓ Descent corrected: landing closer to the crater.'
+        : sis().combustible ? '✓ Nominal descent trajectory maintained.' : 'Autonomous flight to descent point. What you planned is what you have down there.'}</p>
+        <div class="u-fila">${btn('descender', 'DESCEND ▼', { cls: 'grande', primario: true })}</div>`;
     } else {
       const a = Lunar.proyectar(s), b = Lunar.proyectar(s, s.ruta, m.nearModule), e = s.recursos.energiaWh, puede = s.recursos.combustible >= DATOS.costos.maniobra;
       const tarjeta = (accion, titulo, texto, p, off, pie) => {
         const sobra = e - p.total;
         return `<button class="u-opcion" data-l="${accion}" data-x="" data-nav ${off ? 'disabled' : ''}>
           <span class="u-marca-op">${accion === 'mantener' ? 1 : 2}</span>
-          <span class="u-op-cuerpo"><b>${titulo}</b><span>${texto}</span><span class="${sobra >= 0 ? 'ok' : 'alerta'}">Caminas ${n0(p.distancia)} m · el viaje pide ${n(p.total)} Wh · te ${sobra >= 0 ? 'sobrarían ' + n(sobra) + ' ✓' : 'faltarían ' + n(-sobra) + ' ✖'}</span>${pie ? `<span class="alerta">${pie}</span>` : ''}</span>
+          <span class="u-op-cuerpo"><b>${titulo}</b><span>${texto}</span><span class="${sobra >= 0 ? 'ok' : 'alerta'}">Walk ${n0(p.distancia)} m · journey demands ${n(p.total)} Wh · ${sobra >= 0 ? n(sobra) + ' Wh surplus ✓' : n(-sobra) + ' Wh deficit ✖'}</span>${pie ? `<span class="alerta">${pie}</span>` : ''}</span>
         </button>`;
       };
-      panel = `<p class="u-viaje-txt">El escaneo encontró un punto de descenso más cerca del cráter. Tienes <b>${s.recursos.combustible}</b> de combustible.</p>
+      panel = `<p class="u-viaje-txt">In-flight radar located a landing site closer to the crater. You have <b>${s.recursos.combustible}</b> fuel.</p>
         <div class="u-opciones dos">
-          ${tarjeta('mantener', 'MANTENER EL DESCENSO', 'No gastas combustible.', a, false)}
-          ${tarjeta('corregir', 'CORREGIR EL DESCENSO', 'Gastas ' + DATOS.costos.maniobra + ' de combustible y aterrizas más cerca.', b, !puede,
-            puede ? '' : 'No disponible: te falta combustible. Eso se decidía en la agencia.')}
+          ${tarjeta('mantener', 'HOLD NOMINAL DESCENT', 'Conserves fuel.', a, false)}
+          ${tarjeta('corregir', 'CORRECT DESCENT', 'Burns ' + DATOS.costos.maniobra + ' fuel and lands closer.', b, !puede,
+            puede ? '' : 'Unavailable: insufficient fuel. Must be budgeted in the hangar.')}
         </div>`;
       aida = TX.aida.viajeDecision;
     }
     return cabecera() + `<main class="u-viaje">
       <canvas id="u-esc-viaje"></canvas>
-      <section class="u-viaje-panel"><h1>RUMBO A ${esc(meta().nombre).toUpperCase()}</h1>${panel}</section>
+      <section class="u-viaje-panel"><h1>EN ROUTE TO ${esc(meta().nombre).toUpperCase()}</h1>${panel}</section>
     </main>` + pieAida(aida);
   }
 
   function cineHTML(texto) {
     return `<div class="u-cine"><canvas id="u-esc-cine" class="u-fondo"></canvas>
       <p class="u-cine-texto" id="u-cine-texto">${texto}</p>
-      <button class="btn mini u-saltar" data-l="saltar" data-x="">SALTAR ▶</button></div>`;
+      <button class="btn mini u-saltar" data-l="saltar" data-x="">SKIP ▶</button></div>`;
   }
 
   /* --- superficie --- */
@@ -388,17 +388,17 @@ var LunarUI = (function () {
   function hudHTML() {
     const r = s.retorno, e = s.recursos.energiaWh, ini = Math.max(1, s.plan.energia), er = estadoRetorno();
     const cap = Motor.totales(s).capacidadMuestras, en = Lunar.contexto(s);
-    const objetivo = s.tomada ? '② Vuelve al módulo y entrega'
-      : en && en.accion === 'perforar' ? '① Estás en el cráter: perfora' : '① Llega al cráter y perfora';
+    const objetivo = s.tomada ? '② Return to module and deliver'
+      : en && en.accion === 'perforar' ? '① At the crater: drill core' : '① Reach crater and drill core';
     const llevas = s.muestras.recogidas.length;
-    return `<div class="u-obj"><small>OBJETIVO</small><b>${objetivo}</b></div>
+    return `<div class="u-obj"><small>OBJECTIVE</small><b>${objetivo}</b></div>
       <div class="u-gauge ${er.estado}">
-        <div class="u-g-top"><span>ENERGÍA <b>${n(e)}</b> Wh</span>
-          <span>volver cuesta <b>${n(r.wh)}</b> · ${er.sobra >= 0 ? 'te sobran <b>' + n(er.sobra) + '</b> ' + (er.estado === 'ambar' ? '⚠' : '✓') : 'te faltan <b>' + n(-er.sobra) + '</b> ✖'}</span></div>
-        <div class="u-g-pista"><i class="u-g-fill" style="width:${(lim(e / ini, 0, 1) * 100).toFixed(1)}%"></i><i class="u-g-volver" style="width:${(lim(r.wh / ini, 0, 1) * 100).toFixed(1)}%"></i>${r.wh / ini > 0.02 ? `<em style="left:${(lim(r.wh / ini, 0, 1) * 100).toFixed(1)}%">◀ PARA VOLVER</em>` : ''}</div>
+        <div class="u-g-top"><span>ENERGY <b>${n(e)}</b> Wh</span>
+          <span>return costs <b>${n(r.wh)}</b> · ${er.sobra >= 0 ? 'surplus: <b>' + n(er.sobra) + '</b> ' + (er.estado === 'ambar' ? '⚠' : '✓') : 'deficit: <b>' + n(-er.sobra) + '</b> ✖'}</span></div>
+        <div class="u-g-pista"><i class="u-g-fill" style="width:${(lim(e / ini, 0, 1) * 100).toFixed(1)}%"></i><i class="u-g-volver" style="width:${(lim(r.wh / ini, 0, 1) * 100).toFixed(1)}%"></i>${r.wh / ini > 0.02 ? `<em style="left:${(lim(r.wh / ini, 0, 1) * 100).toFixed(1)}%">◀ FOR RETURN</em>` : ''}</div>
       </div>
-      ${sis().oxigeno ? `<div class="u-dato ${s.recursos.oxigeno < r.ox ? 'rojo' : ''}"><small>OXÍGENO</small><b>${n0(s.recursos.oxigeno)}</b><span>volver pide ${n0(r.ox)}</span></div>` : ''}
-      <div class="u-dato ${llevas ? 'lleva' : ''}"><small>MUESTRAS</small><b>${llevas} de ${cap}</b><span>${llevas ? 'falta entregar' : 'contenedor vacío'}</span></div>`;
+      ${sis().oxigeno ? `<div class="u-dato ${s.recursos.oxigeno < r.ox ? 'rojo' : ''}"><small>OXYGEN</small><b>${n0(s.recursos.oxigeno)}</b><span>return demands ${n0(r.ox)}</span></div>` : ''}
+      <div class="u-dato ${llevas ? 'lleva' : ''}"><small>SAMPLES</small><b>${llevas} of ${cap}</b><span>${llevas ? 'pending delivery' : 'empty container'}</span></div>`;
   }
 
   function aidaSuperficie() {
@@ -413,43 +413,43 @@ var LunarUI = (function () {
 
   function accHTML() {
     const c = Lunar.contexto(s), pv = Lunar.preverAccion(s);
-    const etq = { perforar: 'PERFORAR', escanear: 'ESCANEAR', recoger: 'RECOGER', escanear_poi: 'ESCANEAR HALLAZGO' };
+    const etq = { perforar: 'DRILL', escanear: 'SCAN', recoger: 'COLLECT', escanear_poi: 'SCAN FINDING' };
     let centro = '', texto = aidaSuperficie(), clase = '';
     if (c && c.accion === 'entregar') {
       if (s.muestras.recogidas.length) {
-        centro = btn('accion', 'E · ENTREGAR', { cls: 'grande', primario: true });
-        texto = 'Estás en el módulo. Entrega la muestra para que cuente.';
+        centro = btn('accion', 'E · DELIVER', { cls: 'grande', primario: true });
+        texto = 'You are at the module. Deliver the sample to secure it.';
       } else if (s.pasos.length > 1) {
-        centro = btn('accion', 'E · TERMINAR SIN MUESTRA');
-        texto = 'Estás en el módulo sin muestras. Puedes seguir explorando o terminar aquí.';
+        centro = btn('accion', 'E · CONCLUDE WITHOUT SAMPLE');
+        texto = 'You are at the module without samples. Keep exploring or conclude here.';
       }
     } else if (c && c.falta) {
       centro = btn('accion', 'E · ' + etq[c.accion], { off: true });
-      texto = c.falta + '. Eso se decidía en la agencia.';
+      texto = c.falta + '. Must be equipped in the hangar.';
       clase = 'alerta';
     } else if (c) {
       centro = btn('accion', 'E · ' + etq[c.accion] + ' (' + c.wh + ' Wh)', pv.margen >= 0 ? { cls: 'grande', primario: true } : { cls: 'grande peligro' });
       texto = pv.margen >= 0
-        ? 'Gasta ' + c.wh + ' Wh. Después todavía te sobrarán ' + n(pv.margen) + ' Wh para volver ✓'
-        : 'Gasta ' + c.wh + ' Wh. Después te FALTARÁN ' + n(-pv.margen) + ' Wh para volver ✖';
+        ? 'Costs ' + c.wh + ' Wh. Afterwards you will have ' + n(pv.margen) + ' Wh left to return ✓'
+        : 'Costs ' + c.wh + ' Wh. Afterwards you will be SHORT BY ' + n(-pv.margen) + ' Wh to return ✖';
       clase = pv.margen >= 0 ? 'ok' : 'alerta';
       if (c.aviso) { texto = c.aviso; clase = 'ambar'; }
-      if (c.poi && pv.margen >= 0) texto = 'Señal científica. Escanearla gasta ' + c.wh + ' Wh; después te sobrarán ' + n(pv.margen) + ' para volver ✓';
+      if (c.poi && pv.margen >= 0) texto = 'Scientific signal. Scanning costs ' + c.wh + ' Wh; you will still have ' + n(pv.margen) + ' Wh left to return ✓';
     }
     const cruz = [['w', '▲'], ['a', '◀'], ['s', '▼'], ['d', '▶']].map(k =>
-      `<button class="btn u-cruz-${k[0]}" data-l="mv" data-x="${k[0]}" aria-label="Mover">${k[1]}</button>`).join('');
+      `<button class="btn u-cruz-${k[0]}" data-l="mv" data-x="${k[0]}" aria-label="Move">${k[1]}</button>`).join('');
     return `<div class="u-acc-aida ${clase}"><canvas id="u-aida" width="10" height="9"></canvas><p>${esc(texto)}</p></div>
       <div class="u-acc-centro">${centro}</div>
       <div class="u-cruz">${cruz}</div>
-      ${btn('pausa', 'ESC · PAUSA', { cls: 'mini' })}`;
+      ${btn('pausa', 'ESC · PAUSE', { cls: 'mini' })}`;
   }
 
   function superficieHTML() {
     return cabecera() + `<main class="u-sup">
       <div class="u-hud" id="u-hud">${hudHTML()}</div>
       <div class="u-campo">
-        <canvas id="u-campo" tabindex="0" aria-label="Superficie lunar. Flechas o WASD para moverte, E para actuar"></canvas>
-        <div class="u-minimapa"><canvas id="u-mini-sup" width="160" height="120"></canvas><span>MAPA</span></div>
+        <canvas id="u-campo" tabindex="0" aria-label="Lunar surface. Arrow keys or WASD to move, E to act"></canvas>
+        <div class="u-minimapa"><canvas id="u-mini-sup" width="160" height="120"></canvas><span>MAP</span></div>
         <div class="u-hallazgo" id="u-hallazgo" hidden></div>
         <div class="u-fin" id="u-fin" hidden></div>
       </div>
@@ -462,7 +462,7 @@ var LunarUI = (function () {
     const caja = document.getElementById('u-hallazgo');
     if (!caja) return;
     caja.hidden = false;
-    caja.innerHTML = `<small>HALLAZGO REGISTRADO · +${poi.ciencia} CIENCIA</small><b>${esc(poi.nombre)}</b><p>${esc(poi.hallazgo)}</p>`;
+    caja.innerHTML = `<small>FINDING LOGGED · +${poi.ciencia} SCIENCE</small><b>${esc(poi.nombre)}</b><p>${esc(poi.hallazgo)}</p>`;
   }
 
   function refrescarSuperficie() {
@@ -478,31 +478,31 @@ var LunarUI = (function () {
     const r = informe, f = r.final, m = meta(), ini = Math.max(1, s.plan.energia);
     const previsto = s.aterrizaje ? s.aterrizaje.total : s.plan.total;
     const consejo = r.resultado === 'exito' && !m.desbloquea
-      ? (f.rango === 'S+' ? 'Rango máximo en el nivel más difícil. Misión Umbral, completada.' : 'Superaste el último nivel. El rango S+ pide traer las dos muestras y conservar la reserva.')
+      ? (f.rango === 'S+' ? 'Maximum rank on the most challenging tier. Mission Umbral completed.' : 'You cleared the final level. Rank S+ requires retrieving both samples and retaining your reserve.')
       : r.resumen.consejo;
     const sig = m.desbloquea && abierto(m.desbloquea) ? meta(m.desbloquea) : null;
     const exito = r.resultado === 'exito';
-    const botones = (exito && sig ? btn('siguiente_nivel', 'SIGUIENTE NIVEL: ' + sig.nivelNombre + ' ▶', { x: sig.id, cls: 'grande', primario: true }) : '') +
-      btn('repetir', exito && sig ? 'REPETIR' : 'REPETIR CAMBIANDO EL PLAN ▶', { cls: exito && sig ? '' : 'grande', primario: !(exito && sig) }) +
-      btn('detalle', 'DETALLE') + btn('niveles', 'NIVELES');
-    const antes = s.anterior ? `<p class="u-antes">Intento anterior: rango <b>${s.anterior.final.rango}</b>, sobraron ${n(s.anterior.restante)} Wh → ahora: rango <b>${f.rango}</b>, sobraron ${n(r.restante)} Wh.</p>` : '';
+    const botones = (exito && sig ? btn('siguiente_nivel', 'NEXT LEVEL: ' + sig.nivelNombre + ' ▶', { x: sig.id, cls: 'grande', primario: true }) : '') +
+      btn('repetir', exito && sig ? 'REPEAT' : 'REPEAT CHANGING PLAN ▶', { cls: exito && sig ? '' : 'grande', primario: !(exito && sig) }) +
+      btn('detalle', 'DETAILS') + btn('niveles', 'LEVELS');
+    const antes = s.anterior ? `<p class="u-antes">Previous attempt: rank <b>${s.anterior.final.rango}</b>, ${n(s.anterior.restante)} Wh remaining → now: rank <b>${f.rango}</b>, ${n(r.restante)} Wh remaining.</p>` : '';
     return cabecera() + `<main class="u-inf" style="--c:${f.color}">
       <section class="u-inf-rango">
         <canvas id="u-emblema" width="14" height="11"></canvas>
-        <b>${f.rango}</b><small>RANGO</small>
+        <b>${f.rango}</b><small>RANK</small>
       </section>
       <section class="u-inf-texto">
-        <p class="u-kicker">INFORME DE MISIÓN · NIVEL ${m.nivel} · ${esc(m.nombre).toUpperCase()}</p>
+        <p class="u-kicker">MISSION REPORT · LEVEL ${m.nivel} · ${esc(m.nombre).toUpperCase()}</p>
         <h1>${esc(f.titulo)}</h1>
         <ul class="u-frases">${r.resumen.frases.map(x => `<li>${esc(x)}</li>`).join('')}${r.hallazgos
-          ? `<li>${r.cienciaHallazgos ? 'Registraste ' + (r.hallazgos === 1 ? 'un hallazgo científico' : r.hallazgos + ' hallazgos científicos') + ': +' + r.cienciaHallazgos + ' de ciencia.' : 'Lo que escaneaste se perdió con la señal.'}</li>` : ''}</ul>
+          ? `<li>${r.cienciaHallazgos ? 'Logged ' + (r.hallazgos === 1 ? '1 scientific finding' : r.hallazgos + ' scientific findings') + ': +' + r.cienciaHallazgos + ' science.' : 'Scanned data was lost with telemetry.'}</li>` : ''}</ul>
         <div class="u-inf-barra">
           <div class="u-g-pista"><i class="u-gastado" style="width:${(lim(r.consumo / ini, 0, 1) * 100).toFixed(1)}%"></i><em class="${previsto / ini > 0.85 ? 'izq' : ''}" style="left:${(lim(previsto / ini, 0, 1) * 100).toFixed(1)}%">PLAN</em></div>
-          <p>De <b>${n(ini)} Wh</b> gastaste <b>${n(r.consumo)}</b> (el plan pedía ${n(previsto)}) y te sobraron <b>${n(r.restante)}</b>.</p>
+          <p>Out of <b>${n(ini)} Wh</b> you spent <b>${n(r.consumo)}</b> (plan estimated ${n(previsto)}) with <b>${n(r.restante)} Wh</b> remaining.</p>
         </div>
-        <p class="u-leccion"><b>LECCIÓN</b>${esc(f.leccion)}</p>
+        <p class="u-leccion"><b>LESSON</b>${esc(f.leccion)}</p>
         ${antes}
-        ${r.nuevoDesbloqueo ? `<p class="u-desbloqueo">★ NIVEL ${meta(r.nuevoDesbloqueo).nivel} DESBLOQUEADO: ${meta(r.nuevoDesbloqueo).nivelNombre}</p>` : ''}
+        ${r.nuevoDesbloqueo ? `<p class="u-desbloqueo">★ LEVEL ${meta(r.nuevoDesbloqueo).nivel} UNLOCKED: ${meta(r.nuevoDesbloqueo).nivelNombre}</p>` : ''}
         <p class="u-consejo">▶ ${esc(consejo)}</p>
         <div class="u-fila izq">${botones}</div>
       </section>
@@ -515,53 +515,53 @@ var LunarUI = (function () {
     if (!modal) return '';
     let c = '';
     if (modal === 'ayuda') {
-      c = `<h2>CÓMO SE JUEGA</h2>${listaMision()}
+      c = `<h2>HOW TO PLAY</h2>${listaMision()}
         <p class="u-regla"><b>⚡</b>${esc(TX.regla)}</p>
         <dl class="u-ctl">${TX.controles.map(k => `<dt>${k[0]}</dt><dd>${esc(k[1])}</dd>`).join('')}</dl>
-        <div class="u-fila">${btn('cerrar', 'ENTENDIDO', { cls: 'grande', primario: true })}${btn('glosario', 'GLOSARIO')}${btn('creditos', 'DATOS Y CRÉDITOS')}${btn('borrar', 'BORRAR PROGRESO')}</div>`;
+        <div class="u-fila">${btn('cerrar', 'UNDERSTOOD', { cls: 'grande', primario: true })}${btn('glosario', 'GLOSSARY')}${btn('creditos', 'DATA & CREDITS')}${btn('borrar', 'RESET PROGRESS')}</div>`;
     } else if (modal === 'glosario') {
       const txt = x => esc(x.replace('{reserva}', Math.round(R.reserva * 100)).replace('{pendiente}', R.pendienteMax));
-      c = `<h2>GLOSARIO: QUÉ ES Y QUÉ IMPLICA</h2>
+      c = `<h2>GLOSSARY: TERMS & IMPLICATIONS</h2>
         <dl class="u-glosario">${TX.glosario.map(g => `<dt>${g[0]}</dt><dd>${txt(g[1])}</dd>`).join('')}</dl>
-        <div class="u-fila">${btn('cerrar', 'ENTENDIDO', { cls: 'grande', primario: true })}</div>`;
+        <div class="u-fila">${btn('cerrar', 'UNDERSTOOD', { cls: 'grande', primario: true })}</div>`;
     } else if (modal === 'borrar') {
-      c = `<h2>¿BORRAR EL PROGRESO?</h2><p>Se bloquean de nuevo los niveles 2 y 3 y se olvidan los rangos. Sirve para que otra persona empiece de cero.</p>
-        <div class="u-fila">${btn('cerrar', 'NO, VOLVER', { cls: 'grande', primario: true })}${btn('borrar_si', 'SÍ, BORRAR')}</div>`;
+      c = `<h2>RESET PROGRESS?</h2><p>Tiers 2 and 3 will lock again and recorded ranks will clear. Useful for a fresh playthrough.</p>
+        <div class="u-fila">${btn('cerrar', 'NO, GO BACK', { cls: 'grande', primario: true })}${btn('borrar_si', 'YES, RESET')}</div>`;
     } else if (modal === 'pausa') {
-      c = `<h2>MISIÓN EN PAUSA</h2><p>Nada se gasta mientras estás en pausa.</p>
-        <p class="u-nota">A bordo: ${esc(s.equipo.map(id => Motor.obj(id)).filter(o => sis().oxigeno || o.tipo !== 'oxigeno').map(o => o.nombre).join(' · '))}.</p>
-        <div class="u-fila">${btn('cerrar', 'CONTINUAR', { cls: 'grande', primario: true })}${btn('ayuda', 'CÓMO SE JUEGA')}${btn('abandonar', 'ABANDONAR MISIÓN')}</div>`;
+      c = `<h2>MISSION PAUSED</h2><p>No resources drain while paused.</p>
+        <p class="u-nota">On board: ${esc(s.equipo.map(id => Motor.obj(id)).filter(o => sis().oxigeno || o.tipo !== 'oxigeno').map(o => o.nombre).join(' · '))}.</p>
+        <div class="u-fila">${btn('cerrar', 'RESUME', { cls: 'grande', primario: true })}${btn('ayuda', 'HOW TO PLAY')}${btn('abandonar', 'ABORT MISSION')}</div>`;
     } else if (modal === 'confirmar_fin') {
-      c = `<h2>¿TERMINAR SIN MUESTRA?</h2><p>Si cierras la misión ahora, vuelves a salvo pero sin el núcleo del cráter.</p>
-        <div class="u-fila">${btn('cerrar', 'SEGUIR EXPLORANDO', { cls: 'grande', primario: true })}${btn('fin_si', 'TERMINAR AQUÍ')}</div>`;
+      c = `<h2>CONCLUDE WITHOUT SAMPLE?</h2><p>If you conclude the mission now, you return safely but without the crater core.</p>
+        <div class="u-fila">${btn('cerrar', 'KEEP EXPLORING', { cls: 'grande', primario: true })}${btn('fin_si', 'CONCLUDE HERE')}</div>`;
     } else if (modal === 'calculo') {
-      c = `<h2>DE DÓNDE SALEN LOS NÚMEROS</h2>
-        <p>Energía de cada paso = metros × ${R.whMetro} Wh × (1 + masa ÷ ${R.masaReferencia} kg) × (1 + pendiente ÷ ${R.pendienteReferencia}°)².</p>
-        <p>Por eso pesan dos cosas: los <b>kilos</b> que llevas y, sobre todo, la <b>pendiente</b>, que va al cuadrado.</p>
-        <p>Perforar gasta ${R.acciones.perforar.wh} Wh, escanear ${R.acciones.escanear.wh} y recoger ${R.acciones.recoger.wh}. El oxígeno baja ${R.oxMetro} por metro.</p>
-        <p>La reserva recomendada es el ${Math.round(R.reserva * 100)} % de lo que pide el viaje.</p>
-        <p class="u-nota">Son reglas de juego calibradas para enseñar, no estimaciones de ingeniería de la NASA.</p>
-        <div class="u-fila">${btn('cerrar', 'CERRAR', { cls: 'grande', primario: true })}</div>`;
+      c = `<h2>WHERE THE NUMBERS COME FROM</h2>
+        <p>Energy per step = meters × ${R.whMetro} Wh × (1 + mass ÷ ${R.masaReferencia} kg) × (1 + slope ÷ ${R.pendienteReferencia}°)².</p>
+        <p>Two factors dominate consumption: loaded <b>mass</b> and, most heavily, <b>slope incline</b>, which scales quadratically.</p>
+        <p>Drilling drains ${R.acciones.perforar.wh} Wh, scanning ${R.acciones.escanear.wh} Wh, and collecting ${R.acciones.recoger.wh} Wh. Oxygen depletes by ${R.oxMetro} per meter.</p>
+        <p>Recommended reserve is ${Math.round(R.reserva * 100)}% of total trip requirement.</p>
+        <p class="u-nota">Calibrated gameplay rules designed to teach tradeoffs, not NASA flight specifications.</p>
+        <div class="u-fila">${btn('cerrar', 'CLOSE', { cls: 'grande', primario: true })}</div>`;
     } else if (modal === 'creditos') {
-      c = `<h2>DATOS Y CRÉDITOS</h2>
-        <p><b>QUÉ ES REAL.</b> ${esc(TX.real)}</p>
-        <p><b>QUÉ ES DE JUEGO.</b> ${esc(TX.juego)}</p>
+      c = `<h2>DATA & CREDITS</h2>
+        <p><b>WHAT IS REAL.</b> ${esc(TX.real)}</p>
+        <p><b>WHAT IS GAME MECHANICS.</b> ${esc(TX.juego)}</p>
         <p class="u-nota">${esc(TX.fuente)}</p>
-        <p>Misión Umbral es un proyecto del NASA Space Apps Challenge 2026. Arte, código y sonido originales del equipo.</p>
-        <div class="u-fila">${btn('cerrar', 'CERRAR', { cls: 'grande', primario: true })}</div>`;
+        <p>Mission Umbral is a project created for the NASA Space Apps Challenge 2026. Original art, code, and audio by the team.</p>
+        <div class="u-fila">${btn('cerrar', 'CLOSE', { cls: 'grande', primario: true })}</div>`;
     } else if (modal === 'detalle') {
       const r = informe, f = r.final;
-      c = `<h2>DETALLE DE LA MISIÓN</h2>
+      c = `<h2>MISSION DETAILS</h2>
         <p class="u-epilogo">«${esc(f.epilogo)}»</p>
         <table class="u-tabla">
-          <tr><th></th><th>Plan</th><th>Real</th></tr>
-          <tr><td>Distancia caminada</td><td>${n0(s.plan.distancia)} m</td><td>${n0(r.distancia)} m</td></tr>
-          <tr><td>Energía gastada</td><td>${n(s.plan.total)} Wh</td><td>${n(r.consumo)} Wh</td></tr>
-          <tr><td>Energía sobrante</td><td>${n(s.plan.margen)} Wh</td><td>${n(r.restante)} Wh</td></tr>
+          <tr><th></th><th>Plan</th><th>Actual</th></tr>
+          <tr><td>Distance walked</td><td>${n0(s.plan.distancia)} m</td><td>${n0(r.distancia)} m</td></tr>
+          <tr><td>Energy consumed</td><td>${n(s.plan.total)} Wh</td><td>${n(r.consumo)} Wh</td></tr>
+          <tr><td>Energy remaining</td><td>${n(s.plan.margen)} Wh</td><td>${n(r.restante)} Wh</td></tr>
         </table>
-        <p>Caminar gastó ${n(s.movimientoWh)} Wh; perforar y otras acciones, ${n(s.accionesWh)} Wh. Reserva recomendada: ${n(s.plan.reserva)} Wh.</p>
+        <p>Walking consumed ${n(s.movimientoWh)} Wh; drilling and actions, ${n(s.accionesWh)} Wh. Recommended reserve: ${n(s.plan.reserva)} Wh.</p>
         ${sis().combustible ? `<p class="u-nota">${esc(r.causa)}</p>` : ''}
-        <div class="u-fila">${btn('cerrar', 'CERRAR', { cls: 'grande', primario: true })}</div>`;
+        <div class="u-fila">${btn('cerrar', 'CLOSE', { cls: 'grande', primario: true })}</div>`;
     }
     return `<div class="velo"><section class="panel modal u-modal" role="dialog" aria-modal="true">${c}</section></div>`;
   }
@@ -802,9 +802,9 @@ var LunarUI = (function () {
     ctx.fillStyle = '#e4a33c'; ctx.fillRect(bx + Math.round(bw * vuelve), by - 3, 1, 14);
     ctx.font = 'bold 8px monospace';
     ctx.fillStyle = '#dce9f8';
-    ctx.fillText('ENERGÍA', bx, by + 20);
-    if (vuelve > 0.02) { ctx.fillStyle = '#e4a33c'; ctx.fillText('◀ PARA VOLVER', Math.max(bx + 44, bx + Math.round(bw * vuelve) + 3), by + 20); }
-    if (fase === 3) { ctx.fillStyle = '#6fd08c'; ctx.fillText('✓ MUESTRA ENTREGADA', x1 + 20, y0 - 26); }
+    ctx.fillText('ENERGY', bx, by + 20);
+    if (vuelve > 0.02) { ctx.fillStyle = '#e4a33c'; ctx.fillText('◀ FOR RETURN', Math.max(bx + 44, bx + Math.round(bw * vuelve) + 3), by + 20); }
+    if (fase === 3) { ctx.fillStyle = '#6fd08c'; ctx.fillText('✓ SAMPLE DELIVERED', x1 + 20, y0 - 26); }
     // resalta en la lista el paso que se está viendo
     root.querySelectorAll('.u-brief .u-mision li').forEach((li, i) => li.classList.toggle('viva', i === Math.min(fase, 2)));
   }
@@ -830,8 +830,8 @@ var LunarUI = (function () {
     spr(ctx, ARTE.cristal, tx - 7, ty - 9, 2);
     ctx.font = 'bold 13px monospace';
     const rotulo = (txt, x, y) => { ctx.fillStyle = '#0b1026'; ctx.fillRect(x - 3, y - 12, txt.length * 8 + 6, 16); ctx.fillStyle = '#dce9f8'; ctx.fillText(txt, x, y); };
-    rotulo('MÓDULO', lim(mx - 24, 4, 500), my + 28);
-    rotulo('CRÁTER', lim(tx - 24, 4, 500), ty - 18);
+    rotulo('MODULE', lim(mx - 24, 4, 500), my + 28);
+    rotulo('CRATER', lim(tx - 24, 4, 500), ty - 18);
     // el viajero recorre la ruta elegida, ida y vuelta, para que se vea el plan entero
     if (hayRuta) {
       const todo = rutas[s.ruta].ida.concat(rutas[s.ruta].vuelta), i = (reloj * 9) % (todo.length - 1), a = todo[Math.floor(i)], b = todo[Math.floor(i) + 1];
@@ -906,7 +906,7 @@ var LunarUI = (function () {
     spr(ctx, ARTE.cohete, cx - 12, y, 3);
     ctx.restore();
     const txt = document.getElementById('u-cine-texto');
-    if (txt) txt.textContent = t < 0.33 ? '3' : t < 0.66 ? '2' : t < 1 ? '1' : 'DESPEGUE';
+    if (txt) txt.textContent = t < 0.33 ? '3' : t < 0.66 ? '2' : t < 1 ? '1' : 'LIFTOFF';
   }
 
   function dibujarDescenso() {
@@ -934,7 +934,7 @@ var LunarUI = (function () {
     }
     ctx.restore();
     const txt = document.getElementById('u-cine-texto');
-    if (txt) txt.textContent = t < T ? 'DESCENSO' : 'CONTACTO';
+    if (txt) txt.textContent = t < T ? 'DESCENT' : 'TOUCHDOWN';
   }
 
   function dibujarSuperficie(dt) {
@@ -985,13 +985,13 @@ var LunarUI = (function () {
     ctx.strokeStyle = '#e2eaf2'; ctx.lineWidth = 1;
     ctx.strokeRect(tx - 14 - pulso / 2 + 0.5, ty - 14 - pulso / 2 + 0.5, 28 + pulso, 28 + pulso);
     if (!s.tomada) spr(ctx, ARTE.cristal, tx - 7, ty - 11, 2);
-    rotulo(s.tomada ? '✓ PERFORADO' : 'CRÁTER', tx, ty - 20, s.tomada ? '#6fd08c' : '#ffffff');
+    rotulo(s.tomada ? '✓ DRILLED' : 'CRATER', tx, ty - 20, s.tomada ? '#6fd08c' : '#ffffff');
 
     // muestra extra (solo si el nivel trae escáner)
     if (sis().escaner && !s.extraTomada) {
       const [ex, ey] = xy(m.extra);
       spr(ctx, s.revelada ? ARTE.muestra : ARTE.roca, ex - 6, ey - (s.revelada ? 9 : 4), 2);
-      rotulo(s.revelada ? 'MUESTRA' : '? SEÑAL', ex, ey - 14, '#9fd6ff');
+      rotulo(s.revelada ? 'SAMPLE' : '? SIGNAL', ex, ey - 14, '#9fd6ff');
     }
 
     // hallazgos científicos: señales que el escáner puede registrar
@@ -1004,7 +1004,7 @@ var LunarUI = (function () {
         ctx.lineWidth = 1;
         ctx.strokeRect(hx - 12 - lat / 2 + 0.5, hy - 12 - lat / 2 + 0.5, 24 + lat, 24 + lat);
         sprRecurso(ctx, poi.tipo, hx, hy, 2);
-        rotulo(hecho ? '✓ REGISTRADO' : '? HALLAZGO', hx, hy - 18, hecho ? '#6fd08c' : '#7df9ff');
+        rotulo(hecho ? '✓ LOGGED' : '? FINDING', hx, hy - 18, hecho ? '#6fd08c' : '#7df9ff');
       });
     }
 
@@ -1014,7 +1014,7 @@ var LunarUI = (function () {
     spr(ctx, ARTE.modulo, mx - 14, my - 10, 2);
     ctx.fillStyle = Math.floor(reloj * 2.2) % 2 ? '#58c5d8' : '#e6a640';
     ctx.fillRect(mx - 1, my - 15, 3, 4);
-    rotulo('MÓDULO', mx, my - 19, '#f3d998');
+    rotulo('MODULE', mx, my - 19, '#f3d998');
 
     // polvo
     particulas = particulas.filter(p => {
@@ -1060,7 +1060,7 @@ var LunarUI = (function () {
       ctx.fillStyle = Math.floor(reloj * 3) % 2 ? '#ffffff' : '#e4a33c';
       ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-5, -6); ctx.lineTo(-5, 6); ctx.closePath(); ctx.fill();
       ctx.restore();
-      rotulo((s.tomada ? 'MÓDULO ' : 'CRÁTER ') + metros + ' m', lim(bx, 46, W - 46), lim(by + (py > by ? -12 : 18), 12, H - 6));
+      rotulo((s.tomada ? 'MODULE ' : 'CRATER ') + metros + ' m', lim(bx, 46, W - 46), lim(by + (py > by ? -12 : 18), 12, H - 6));
     }
 
     // marco de aviso: ámbar si vas justo, rojo si ya no alcanza
@@ -1115,7 +1115,7 @@ var LunarUI = (function () {
     if (pantalla === 'plan') return planHTML();
     if (pantalla === 'despegue') return cineHTML('3');
     if (pantalla === 'viaje') return viajeHTML();
-    if (pantalla === 'descenso') return cineHTML('DESCENSO');
+    if (pantalla === 'descenso') return cineHTML('DESCENT');
     if (pantalla === 'superficie') return superficieHTML();
     return informeHTML();
   }
@@ -1196,9 +1196,9 @@ var LunarUI = (function () {
     if (caja) {
       caja.hidden = false;
       caja.className = 'u-fin ' + tipo;
-      caja.innerHTML = tipo === 'exito' ? '<b>¡MUESTRA ENTREGADA!</b><span>El módulo despega de regreso a la Tierra</span>'
-        : tipo === 'varado' ? '<b>SEÑAL PERDIDA</b><span>Te quedaste sin ' + (s.agotado === 'oxigeno' ? 'oxígeno' : 'energía') + '</span>'
-        : '<b>MISIÓN CERRADA</b><span>Volviste sin el núcleo</span>';
+      caja.innerHTML = tipo === 'exito' ? '<b>SAMPLE DELIVERED!</b><span>Lander ascending for Earth return</span>'
+        : tipo === 'varado' ? '<b>SIGNAL LOST</b><span>Depleted ' + (s.agotado === 'oxigeno' ? 'oxygen' : 'power') + '</span>'
+        : '<b>MISSION CONCLUDED</b><span>Returned without the core</span>';
     }
     refrescarSuperficie();
   }
@@ -1214,12 +1214,12 @@ var LunarUI = (function () {
       }
       // un paso caro (terreno empinado) deja ver su precio
       flotantes = flotantes.filter(f => !f.paso);
-      if (gasto >= 1.5) flotantes.push({ paso: true, x: (s.pos[0] + 0.5) * 24, y: (s.pos[1] + 0.5) * 24 - 22, vida: 0.8, txt: 'EMPINADO −' + n(gasto) + ' Wh', color: gasto >= 2.2 ? '#ff9d9d' : '#f3d998' });
+      if (gasto >= 1.5) flotantes.push({ paso: true, x: (s.pos[0] + 0.5) * 24, y: (s.pos[1] + 0.5) * 24 - 22, vida: 0.8, txt: 'STEEP −' + n(gasto) + ' Wh', color: gasto >= 2.2 ? '#ff9d9d' : '#f3d998' });
       if (estadoRetorno().estado === 'rojo' && reloj - ultimaAlerta > 1.6) { ultimaAlerta = reloj; LunarAudio.alerta(); }
       refrescarSuperficie();
     } else if (s.etapa === 'superficie' && Lunar.esObstaculo(Lunar.map(s), [s.pos[0] + d[0], s.pos[1] + d[1]])) {
       flotantes = flotantes.filter(f => !f.paso);
-      flotantes.push({ paso: true, x: px + d[0] * 24, y: py + d[1] * 24 - 16, vida: 0.9, txt: 'ROCA: RODÉALA', color: '#f3d998' });
+      flotantes.push({ paso: true, x: px + d[0] * 24, y: py + d[1] * 24 - 16, vida: 0.9, txt: 'BOULDER: DETOUR', color: '#f3d998' });
     }
     comprobarFin();
   }
@@ -1239,10 +1239,10 @@ var LunarUI = (function () {
       else if (c.accion === 'escanear' || c.accion === 'escanear_poi') LunarAudio.escanear();
       else LunarAudio.elegir();
       flotantes.push({ x: px, y: py - 20, vida: 1.4, txt: '−' + c.wh + ' Wh', color: '#f3d998' });
-      if (c.accion === 'escanear_poi') { flotantes.push({ x: px, y: py - 32, vida: 1.6, txt: '+' + c.poi.ciencia + ' CIENCIA', color: '#7df9ff' }); mostrarHallazgo(c.poi); }
-      else if (c.accion !== 'escanear') flotantes.push({ x: px, y: py - 32, vida: 1.6, txt: '+1 MUESTRA', color: '#6fd08c' });
+      if (c.accion === 'escanear_poi') { flotantes.push({ x: px, y: py - 32, vida: 1.6, txt: '+' + c.poi.ciencia + ' SCIENCE', color: '#7df9ff' }); mostrarHallazgo(c.poi); }
+      else if (c.accion !== 'escanear') flotantes.push({ x: px, y: py - 32, vida: 1.6, txt: '+1 SAMPLE', color: '#6fd08c' });
     } else if (!r.ok) {
-      flotantes.push({ x: px, y: py - 20, vida: 1.6, txt: 'NO SE PUEDE', color: '#ff9d9d' });
+      flotantes.push({ x: px, y: py - 20, vida: 1.6, txt: 'ACTION BLOCKED', color: '#ff9d9d' });
     }
     refrescarSuperficie();
     comprobarFin();

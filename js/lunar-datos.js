@@ -3,17 +3,17 @@ var REGLAS_LUNARES = {
   pendienteMax: 27, whMetro: 0.012, masaReferencia: 200, pendienteReferencia: 15,
   oxMetro: 0.025, reserva: 0.15, muestraKg: 1, pasoSegundos: 0.14,
   acciones: { perforar: {wh:25,ox:5}, escanear: {wh:5,ox:2}, recoger: {wh:3,ox:2} },
-  categorias: ['Herramientas','Energía','Soporte vital','Muestras'],
+  categorias: ['Tools','Energy','Life Support','Samples'],
   usos: {
-    taladro:'Habilita Perforar: extrae el núcleo científico (25 Wh).',
-    escaner:'Habilita Escanear: revela una muestra opcional (5 Wh).',
-    bat100:'Alimenta movimiento y acciones: 100 Wh al aterrizar.',
-    bat160:'Alimenta movimiento y acciones: 160 Wh; añade 15 kg frente a la estándar.',
-    o2chico:'Permite respirar: 100 unidades O₂, consumidas por distancia y trabajo.',
-    o2grande:'Permite respirar: 160 unidades O₂ para explorar más.',
-    cont1:'Habilita almacenar 1 muestra, todavía sin asegurar hasta entregarla.',
-    cont2:'Habilita almacenar 2 muestras, todavía sin asegurar hasta entregarlas.',
-    fuelextra:'Habilita corregir descenso: añade 30 unidades de combustible.'
+    taladro:'Enables Drill: extracts the scientific core (25 Wh).',
+    escaner:'Enables Scan: reveals an optional sample (5 Wh).',
+    bat100:'Powers movement and actions: 100 Wh upon landing.',
+    bat160:'Powers movement and actions: 160 Wh; adds 15 kg compared to standard.',
+    o2chico:'Allows breathing: 100 O₂ units, consumed by distance and work.',
+    o2grande:'Allows breathing: 160 O₂ units to explore further.',
+    cont1:'Stores 1 sample, unsecured until delivered.',
+    cont2:'Stores 2 samples, unsecured until delivered.',
+    fuelextra:'Enables descent correction: adds 30 fuel units.'
   }
 };
 
@@ -23,17 +23,17 @@ var SITIOS_LUNARES = {
     id: 'Site01',
     nombre: 'Connecting Ridge',
     nivel: 1,
-    dificultad: 'Fácil',
+    dificultad: 'Easy',
     estrellas: '★☆☆',
     claseDificultad: 'facil',
-    descripcion: 'Pendientes suaves (2°-15°). Terreno estable ideal para calibrar batería y masa.',
+    descripcion: 'Gentle slopes (2°-15°). Stable terrain ideal for calibrating battery and mass.',
     desbloqueoRequerido: null,
     desbloquea: 'Site04',
     // --- nivel jugable: qué sistemas entran en juego y qué decide el jugador ---
-    nivelNombre: 'BÁSICO',
-    lema: 'Lo esencial: llevar energía para ir y para volver.',
-    decides: 'Ruta y batería',
-    terreno: 'Terreno suave',
+    nivelNombre: 'BASIC',
+    lema: 'The essentials: bring enough power to go and return.',
+    decides: 'Route and battery',
+    terreno: 'Gentle terrain',
     sistemas: {oxigeno: false, carga: false, combustible: false, escaner: false, formulas: false},
     presupuesto: 1100,
     cohete: 'halcon',
@@ -43,57 +43,53 @@ var SITIOS_LUNARES = {
   },
   Site04: {
     id: 'Site04',
-    nombre: 'Borde de Shackleton',
+    nombre: 'Shackleton Rim',
     nivel: 2,
-    dificultad: 'Desafiante',
+    dificultad: 'Challenging',
     estrellas: '★★☆',
     claseDificultad: 'medio',
-    descripcion: 'Pendientes mixtas (10°-25°). Terreno estándar VIPER con trampas de sombra y cráter pronunciado.',
+    descripcion: 'Mixed slopes (10°-25°). Standard VIPER terrain with shadow traps and a steep crater.',
     desbloqueoRequerido: 'Site01',
     desbloquea: 'Site11',
-    nivelNombre: 'INTERMEDIO',
-    lema: 'Ahora también respiras, pesas y pagas.',
-    decides: 'Ruta, batería y oxígeno',
-    terreno: 'Pendientes mixtas',
+    nivelNombre: 'INTERMEDIATE',
+    lema: 'Now you also breathe, weigh, and pay.',
+    decides: 'Route, battery, and oxygen',
+    terreno: 'Mixed slopes',
     sistemas: {oxigeno: true, carga: true, combustible: false, escaner: false, formulas: false},
-    // 950 créditos: caben batería grande + tanque chico, o batería chica +
-    // tanque grande, pero no las dos mejoras a la vez. Hay que elegir.
+    // 950 credits
     presupuesto: 950,
     cohete: 'halcon',
     kit: ['taladro', 'cont1'],
     pasos: ['ruta', 'bateria', 'oxigeno', 'revision'],
     novedades: [
-      ['OXÍGENO', 'Se gasta con cada metro. Si se acaba, no vuelves.'],
-      ['MASA', 'Cada kilo que subes a la nave hace que cada paso gaste más energía.'],
-      ['PRESUPUESTO', 'No alcanza para llevarlo todo. Hay que elegir.']
+      ['OXYGEN', 'Consumed with every meter. If it runs out, you do not return.'],
+      ['MASS', 'Every kilo added to the craft makes each step consume more energy.'],
+      ['BUDGET', 'Not enough to take everything. Choices are mandatory.']
     ]
   },
   Site11: {
     id: 'Site11',
-    nombre: 'Borde de Gerlache',
+    nombre: 'de Gerlache Rim',
     nivel: 3,
-    dificultad: 'Extremo',
+    dificultad: 'Extreme',
     estrellas: '★★★',
     claseDificultad: 'dificil',
-    descripcion: 'Pendientes extremas (>25°). Zonas escarpadas intransitables que exigen optimización máxima de vatios.',
+    descripcion: 'Extreme slopes (>25°). Rugged impassable cliffs demanding maximum watt optimization.',
     desbloqueoRequerido: 'Site04',
     desbloquea: null,
-    nivelNombre: 'AVANZADO',
-    lema: 'Terreno extremo: aquí cada decisión cuenta.',
-    decides: 'Todo: ruta, batería, oxígeno, cohete y extras',
-    terreno: 'Pendientes extremas',
+    nivelNombre: 'ADVANCED',
+    lema: 'Extreme terrain: every decision matters here.',
+    decides: 'Everything: route, battery, oxygen, rocket, and extras',
+    terreno: 'Extreme slopes',
     sistemas: {oxigeno: true, carga: true, combustible: true, escaner: true, formulas: true},
-    // 1200 créditos: alcanza para el plan completo con Halcón (1140), pero
-    // entonces la carga queda a 2 kg del límite. Con Titán sobra carga y
-    // falta dinero para el contenedor doble.
     presupuesto: 1200,
     cohete: 'halcon',
     kit: ['taladro', 'cont1'],
     pasos: ['ruta', 'bateria', 'oxigeno', 'cohete', 'extras', 'revision'],
     novedades: [
-      ['COMBUSTIBLE', 'En vuelo puedes corregir el descenso y aterrizar más cerca del cráter.'],
-      ['ESCÁNER', 'Revela una segunda muestra. Más ciencia, más riesgo.'],
-      ['FÓRMULAS', 'Puedes abrir de dónde sale cada número.']
+      ['FUEL', 'In flight you can correct descent and land closer to the crater.'],
+      ['SCANNER', 'Reveals a second sample. More science, more risk.'],
+      ['FORMULAS', 'Inspect where every number comes from.']
     ]
   }
 };
@@ -103,162 +99,162 @@ var FINALES_LUNARES = {
   pionero: {
     id: 'pionero',
     rango: 'S+',
-    titulo: 'PIONERO ARTEMIS — ESTÁNDAR DE ORO',
-    subtitulo: 'Éxito Absoluto en el Polo Sur Lunar',
+    titulo: 'ARTEMIS PIONEER — GOLD STANDARD',
+    subtitulo: 'Absolute Success at the Lunar South Pole',
     color: '#f6d365',
     icono: '👑',
-    resumen: 'Recuperaste el núcleo del cráter y la muestra secundaria manteniendo tu reserva intacta (≥15%).',
-    epilogo: 'Tu rigor en la distribución de masa y energía superó los estándares de ingeniería espacial. La dirección de vuelo de la NASA archiva tu plan de misión como el protocolo de referencia para las futuras tripulaciones del programa Artemis en el Polo Sur.',
-    leccion: 'La redundancia no significa sobrediseñar: significa reservar el margen exacto para responder a la incertidumbre sin poner en riesgo el retorno.'
+    resumen: 'Retrieved the crater core and secondary sample while keeping your reserve intact (≥15%).',
+    epilogo: 'Your precision in mass and energy distribution exceeded spaceflight engineering standards. NASA flight operations archives your mission plan as the reference protocol for future Artemis crews at the South Pole.',
+    leccion: 'Redundancy does not mean overdesigning: it means holding the exact margin needed to answer uncertainty without risking return.'
   },
   maestro: {
     id: 'maestro',
     rango: 'S',
-    titulo: 'INGENIERO MAESTRO — SIMULACIÓN EJEMPLAR',
-    subtitulo: 'Planificación Óptima de Recursos',
+    titulo: 'MASTER ENGINEER — EXEMPLARY SIMULATION',
+    subtitulo: 'Optimal Resource Planning',
     color: '#6dd6cf',
     icono: '⚙️',
-    resumen: 'Objetivo científico primordial asegurado dentro del balance óptimo de presupuesto y batería.',
-    epilogo: 'Demostraste que el diseño técnico disciplinado vence a la suerte. Tu cálculo entre masa de lanzamiento, vatios por metro y reserva de regreso permitió extraer el núcleo sin derrochar un solo crédito de la agencia.',
-    leccion: 'Cada kilogramo que no subes en la rampa de despegue es energía que tu rover ahorra en cada metro de regolito lunar.'
+    resumen: 'Primary scientific goal secured within an optimal balance of budget and battery.',
+    epilogo: 'You proved disciplined technical design beats luck. Your balance between launch mass, watts per meter, and return reserve extracted the core without wasting a single agency credit.',
+    leccion: 'Every kilogram left off the launch pad is energy your rover saves across every meter of lunar regolith.'
   },
   revolucion: {
     id: 'revolucion',
     rango: 'A+',
-    titulo: 'REVOLUCIÓN POLAR — FRONTERA CIENTÍFICA',
-    subtitulo: 'Audacia Geológica en Cráter Profundo',
+    titulo: 'POLAR REVOLUTION — SCIENTIFIC FRONTIER',
+    subtitulo: 'Geological Daring in Deep Crater',
     color: '#86e5f4',
     icono: '🔬',
-    resumen: 'Exploración de alto impacto con escáner y muestras extraídas en terreno escarpado.',
-    epilogo: 'Las muestras obtenidas en las trampas frías permanentes confirman concentraciones de volátiles esenciales y agua congelada. Tu expedición marca el primer paso real hacia la extracción in-situ de recursos (ISRU) para una presencia humana sostenible.',
-    leccion: 'La ciencia más valiosa suele estar en las pendientes más peligrosas; saber equipar el escáner y medir los vatios de desvío es lo que permite volver con vida.'
+    resumen: 'High-impact exploration with scanner and samples retrieved from steep terrain.',
+    epilogo: 'Samples gathered from permanently shadowed cold traps confirm key volatiles and water ice. Your expedition marks the first true step toward In-Situ Resource Utilization (ISRU) for sustainable human presence.',
+    leccion: 'The most valuable science often rests on the steepest slopes; equipping the scanner and budgeting detour watts is what brings you home alive.'
   },
   in_extremis: {
     id: 'in_extremis',
     rango: 'A',
-    titulo: 'ODISEA MILAGROSA — AL FILO DEL ABISMO',
-    subtitulo: 'Retorno Heroico con Margen Crítico',
+    titulo: 'MIRACULOUS ODYSSEY — ON THE BRINK',
+    subtitulo: 'Heroic Return with Critical Margin',
     color: '#ff9f43',
     icono: '⚡',
-    resumen: 'Muestra entregada en el módulo con batería en reserva de emergencia (≤5% Wh).',
-    epilogo: 'La esclusa del módulo se selló mientras los indicadores de batería parpadeaban en rojo crítico con apenas unos vatios de margen. Una hazaña de nervios de acero que el Centro de Control de Vuelo recordará por generaciones.',
-    leccion: 'Salvaste la misión por ingenio al límite, pero en operaciones espaciales reales este margen es insostenible. En tu próxima misión, añade más batería o elige la ruta de ahorro.'
+    resumen: 'Sample delivered to module with battery in emergency reserve (≤5% Wh).',
+    epilogo: 'The airlock sealed while battery indicators flashed critical red with just a few watts to spare. A feat of iron nerves that Mission Control will remember for generations.',
+    leccion: 'You saved the mission through brinkmanship, but in real space operations this margin is unsustainable. Next time, add more battery or take the economy route.'
   },
   tactico: {
     id: 'tactico',
     rango: 'B',
-    titulo: 'RETORNO TÁCTICO — PRUDENCIA OPERATIVA',
-    subtitulo: 'Supervivencia y Conservación de Activos',
+    titulo: 'TACTICAL RETURN — OPERATIONAL PRUDENCE',
+    subtitulo: 'Survival and Asset Preservation',
     color: '#54a0ff',
     icono: '🛡️',
-    resumen: 'Supiste abortar a tiempo al detectar margen insuficiente; salvaste la nave e instrumentos.',
-    epilogo: 'Reconociste el punto de no retorno antes de quedar atrapado en la oscuridad del cráter. Aunque el núcleo profundo quedó atrás, la tripulación, los instrumentos y los datos de telemetría regresaron intactos a la Tierra.',
-    leccion: 'En la exploración espacial, saber abortar es tan valioso como saber perforar. La codicia sin vatios de respaldo solo produce chatarra en la Luna.'
+    resumen: 'You aborted in time upon detecting insufficient margin, saving the spacecraft and instruments.',
+    epilogo: 'You recognized the point of no return before becoming trapped in crater darkness. Although the deep core remained behind, crew, instruments, and telemetry returned intact to Earth.',
+    leccion: 'In space exploration, knowing when to abort is just as valuable as knowing when to drill. Greed without reserve watts only produces lunar junk.'
   },
   forense: {
     id: 'forense',
     rango: 'F',
-    titulo: 'MONOLITO SILENCIOSO — TELEMETRÍA FORENSE',
-    subtitulo: 'Misión Varada en Regolito Criogénico',
+    titulo: 'SILENT MONOLITH — FORENSIC TELEMETRY',
+    subtitulo: 'Mission Stranded in Cryogenic Regolith',
     color: '#ff6b6b',
     icono: '⚠️',
-    resumen: 'La energía o el soporte vital se agotaron antes de alcanzar la esclusa del módulo.',
-    epilogo: 'El rover se detuvo en las sombras permanentes a escasos metros de la salvación. El equipo de investigación de accidentes de la NASA aísla la causa raíz en la telemetría para recalibrar los simuladores.',
-    leccion: 'El regolito no perdona. Si la subida o la masa de la muestra no se presupuestan antes del despegue, el margen se rompe en el camino de regreso. ¡Aprende de los datos y vuelve a intentarlo!'
+    resumen: 'Power or life support ran out before reaching the module airlock.',
+    epilogo: 'The rover ceased operations in perpetual shadow just meters from safety. The NASA mishap investigation board isolates the root cause in telemetry to recalibrate mission simulators.',
+    leccion: 'The regolith forgives nothing. If the uphill climb or sample mass is not budgeted before launch, the return margin breaks. Learn from the data and try again!'
   }
 };
 
 /* Textos de la interfaz guiada: la misión en tres pasos, lo que se decide en
    cada pantalla y la voz de AIDA. Solo texto: ninguna regla vive aquí. */
 var TEXTOS_LUNARES = {
-  lema: 'Planea. Explora. Y vuelve.',
+  lema: 'Plan. Explore. Return.',
   mision: [
-    ['IR', 'Camina desde el módulo hasta el cráter.'],
-    ['PERFORAR', 'Saca el núcleo de hielo que hay dentro.'],
-    ['VOLVER', 'Regresa al módulo. La muestra solo cuenta si vuelves.']
+    ['GO', 'Walk from the lander to the crater.'],
+    ['DRILL', 'Extract the ice core located inside.'],
+    ['RETURN', 'Get back to the module. The sample only counts if you return.']
   ],
-  regla: 'Cada paso gasta energía, y en terreno empinado gasta mucho más. Si se acaba lejos del módulo, pierdes la muestra.',
+  regla: 'Every step drains energy, and steep slopes cost much more. If power runs out far from the module, the sample is lost.',
   controles: [
-    ['← ↑ ↓ →', 'Caminar (también W A S D)'],
-    ['E', 'Perforar, recoger o entregar'],
-    ['ESC', 'Pausa'],
-    ['M', 'Sonido']
+    ['← ↑ ↓ →', 'Walk (also W A S D)'],
+    ['E', 'Drill, collect or deliver'],
+    ['ESC', 'Pause'],
+    ['M', 'Sound toggle']
   ],
   pasos: {
     ruta: {
-      corto: 'RUTA',
-      titulo: '¿Por dónde vas al cráter?',
-      ayuda: 'En el mapa, lo oscuro y rayado es terreno empinado: ahí cada paso gasta más energía.'
+      corto: 'ROUTE',
+      titulo: 'Which path to the crater?',
+      ayuda: 'On the map, dark striped terrain is steep: every step there drains more power.'
     },
     bateria: {
-      corto: 'BATERÍA',
-      titulo: '¿Qué batería llevas?',
-      ayuda: 'La batería es toda la energía que tendrás para ir, perforar y volver. Se mide en Wh.'
+      corto: 'BATTERY',
+      titulo: 'Which battery will you carry?',
+      ayuda: 'The battery is all the power you have to go, drill, and return. Measured in Wh.'
     },
     oxigeno: {
-      corto: 'OXÍGENO',
-      titulo: '¿Cuánto oxígeno llevas?',
-      ayuda: 'El oxígeno se gasta con cada metro que caminas. Llevar de más también pesa.'
+      corto: 'OXYGEN',
+      titulo: 'How much oxygen will you carry?',
+      ayuda: 'Oxygen depletes with every meter walked. Carrying extra also adds mass.'
     },
     cohete: {
-      corto: 'COHETE',
-      titulo: '¿En qué cohete viajas?',
-      ayuda: 'El cohete decide cuántos kilos puedes subir y cuánto combustible tienes para maniobrar.'
+      corto: 'ROCKET',
+      titulo: 'Which rocket will you launch on?',
+      ayuda: 'The rocket sets payload mass capacity and available maneuvering fuel.'
     },
     extras: {
       corto: 'EXTRAS',
-      titulo: '¿Qué extras subes a la nave?',
-      ayuda: 'Ninguno es obligatorio. Cada uno abre una posibilidad, pero pesa y cuesta.'
+      titulo: 'What extras will you load?',
+      ayuda: 'None are required. Each adds a capability, but costs mass and credits.'
     },
     revision: {
-      corto: 'REVISIÓN',
-      titulo: 'Revisa tu plan antes de lanzar',
-      ayuda: 'Después del lanzamiento ya no podrás cambiar nada.'
+      corto: 'REVIEW',
+      titulo: 'Review your plan before launch',
+      ayuda: 'After launch, mission parameters are sealed.'
     }
   },
   // Glosario: qué es cada cosa y qué implica al decidir. {reserva} y {pendiente}
   // se rellenan con las reglas vigentes.
   glosario: [
-    ['ENERGÍA (Wh)', 'Lo que guarda la batería. Caminar, perforar y escanear la gastan. Si llega a cero lejos del módulo, no vuelves.'],
-    ['RESERVA', 'La energía que te sobra al volver. Se recomienda el {reserva} % de lo que pide el viaje: es el colchón para un desvío.'],
-    ['PENDIENTE', 'La inclinación del terreno. Cuenta al cuadrado: el doble de pendiente cuesta mucho más del doble. Por encima de {pendiente}° no se pasa.'],
-    ['MASA', 'Los kilos que subes a la nave. Cada kilo encarece cada paso, y el cohete tiene un tope de carga.'],
-    ['PRESUPUESTO', 'Los créditos de la misión. No alcanzan para todo: llevar algo es renunciar a otra cosa.'],
-    ['OXÍGENO', 'Se gasta con cada metro que caminas. El tanque grande dura más, pero pesa y cuesta más.'],
-    ['COMBUSTIBLE', 'Sirve para corregir el descenso y aterrizar más cerca del cráter. Si no lo subiste, esa opción no existe.'],
-    ['NÚCLEO', 'La muestra de hielo del cráter: el objetivo científico. Solo cuenta si la entregas en el módulo.']
+    ['ENERGY (Wh)', 'Stored in the battery. Walking, drilling, and scanning consume it. If it hits zero far from the module, you do not return.'],
+    ['RESERVE', 'Power remaining upon return. Recommended {reserva}% of total journey demand: a vital cushion against terrain hazards.'],
+    ['SLOPE', 'Terrain incline. Penalties scale quadratically: double the slope costs far more than double. Slopes above {pendiente}° are impassable.'],
+    ['MASS', 'Payload kilograms loaded. Every kilo increases energy per step, and rockets have a payload cap.'],
+    ['BUDGET', 'Mission credits. Insufficient for everything: picking one upgrade means sacrificing another.'],
+    ['OXYGEN', 'Consumed with every meter walked. Larger tanks last longer, but weigh and cost more.'],
+    ['FUEL', 'Used to correct trajectory and land closer to the target. If unequipped, this option is unavailable.'],
+    ['CORE', 'The crater ice sample: the primary scientific objective. Only counts once delivered to the module.']
   ],
   // Qué es dato real y qué es regla de juego (créditos y documentación).
-  real: 'Los tres mapas son pendientes reales del Polo Sur de la Luna, medidas por el altímetro LOLA de la sonda LRO de la NASA: 5 m por píxel, agrupados en celdas de 20 m. Connecting Ridge, el borde de Shackleton y el borde de De Gerlache son sitios que la NASA estudia para futuros alunizajes.',
-  juego: 'La energía, el oxígeno, la masa, los costos y la posición del módulo, del cráter, de las rocas y de los hallazgos son reglas de juego: están pensadas para enseñar a decidir, no para simular una misión real.',
-  fuente: 'Fuente: Barker et al. (2021), «Improved LOLA Elevation Maps for South Pole Landing Sites», Planetary and Space Science 203, 105119. Datos: NASA GSFC, PGDA, producto 78.',
+  real: 'The three maps represent real Lunar South Pole slopes measured by NASA LRO LOLA laser altimeter: 5 m per pixel, aggregated into 20 m grid cells. Connecting Ridge, Shackleton Rim, and de Gerlache Rim are candidate Artemis landing sites.',
+  juego: 'Energy, oxygen, mass, costs, and placements of lander, crater, boulders, and findings are calibrated gameplay rules designed to teach engineering trade-offs, not formal flight software.',
+  fuente: 'Source: Barker et al. (2021), "Improved LOLA Elevation Maps for South Pole Landing Sites", Planetary and Space Science 203, 105119. Data: NASA GSFC, PGDA product 78.',
   aida: {
-    niveles: 'Soy AIDA, tu control de misión. Empieza por el nivel básico: cada nivel añade algo nuevo.',
-    briefing: 'Regla de oro: una muestra que no vuelve al módulo no cuenta.',
-    ruta: 'Elige una ruta y mira abajo cuánta energía pide el viaje.',
-    bateria: 'Elige una batería. La barra de abajo te dice si alcanza para volver.',
-    oxigeno: 'Mira cuánto oxígeno pide el viaje antes de cargar el tanque grande.',
-    cohete: 'Un cohete más grande carga más, pero se come el presupuesto.',
-    extras: 'Puedes lanzar sin extras. Súbelos solo si tienes un plan para usarlos.',
-    despegue: 'Motores encendidos. Ya no hay vuelta atrás.',
-    viaje: 'El plan quedó sellado: lo que no subiste a la nave, ya no lo tendrás.',
-    viajeDecision: 'Corregir gasta combustible y te deja más cerca. Mantener lo conserva. Tú decides.',
-    descenso: 'Contacto en tres, dos, uno…',
-    caminar: 'Usa las flechas o W A S D para caminar. Sigue la línea punteada hasta el cráter.',
-    alCrater: 'Vas bien. La barra de arriba te dice cuánto cuesta volver desde donde estás.',
-    enCrater: 'Estás sobre el cráter. Pulsa E para perforar.',
-    volver: 'Tienes el núcleo. Sigue la línea azul hasta el módulo y pulsa E para entregarlo.',
-    justo: 'Cuidado: te queda poco margen para volver. Regresa ya.',
-    sinRetorno: 'Ya no te alcanza para volver. Acércate todo lo que puedas al módulo.',
-    extra: 'Hay una señal cerca. Desviarte cuesta energía: mira la barra antes de ir.',
+    niveles: 'I am AIDA, your mission flight director. Start with the basic mission: each tier adds new systems.',
+    briefing: 'Golden rule: a sample that does not make it back to the lander does not count.',
+    ruta: 'Choose a route and check projected journey energy below.',
+    bateria: 'Choose a battery. The meter below indicates if you have enough power to return.',
+    oxigeno: 'Check how much oxygen the journey requires before taking a larger tank.',
+    cohete: 'A heavy-lift rocket carries more payload, but consumes budget.',
+    extras: 'You can launch without extras. Take them only if you have a plan to use them.',
+    despegue: 'Engines ignited. Liftoff confirmed.',
+    viaje: 'The plan is sealed: whatever stayed on Earth is not on board.',
+    viajeDecision: 'Correcting uses fuel to land closer. Holding saves fuel. Your call.',
+    descenso: 'Touchdown in three, two, one…',
+    caminar: 'Use arrow keys or W A S D to walk. Follow the dotted line to the crater.',
+    alCrater: 'Looking good. The top gauge shows return power cost from your current position.',
+    enCrater: 'You are over the crater. Press E to drill.',
+    volver: 'Core secured. Follow the blue line back to the module and press E to deliver.',
+    justo: 'Warning: narrow return margin. Head back now.',
+    sinRetorno: 'Insufficient power to return. Get as close to the module as possible.',
+    extra: 'Signal detected nearby. Detours consume energy: check your gauge before diverging.',
     // Una frase por final: la personalidad de AIDA al cerrar la misión.
     finales: {
-      pionero: 'Impecable. Voy a enmarcar este plan en la sala de control.',
-      maestro: 'Limpio y sin dramas. Así da gusto dirigir una misión.',
-      revolucion: 'Ciencia de primera en terreno de tercera. Bien jugado.',
-      in_extremis: 'Volviste… con el corazón en la boca. No lo hagamos costumbre.',
-      tactico: 'Sin muestra, pero con tripulación. Lo prefiero así.',
-      forense: 'Perdimos la señal. Mira dónde se rompió el margen y vuelve a intentarlo.'
+      pionero: 'Flawless execution. I am framing this flight plan in Mission Control.',
+      maestro: 'Clean and disciplined. Exactly how an exploration mission should run.',
+      revolucion: 'Top-tier science on extreme terrain. Well played.',
+      in_extremis: 'You made it back... by a razor-thin margin. Let us not make that a habit.',
+      tactico: 'No sample, but the crew is safe. I will take that any day.',
+      forense: 'Telemetry lost. Examine where the margin broke and try again.'
     }
   }
 };
@@ -754,28 +750,28 @@ var PUNTOS_INTERES_LUNARES = {
   Site01: {
     obstaculos: [[12, 10], [13, 10], [20, 8], [21, 8], [26, 18], [27, 18], [8, 12], [17, 13], [31, 14]],
     escaneos: [
-      { id: 'poi_01_a', tipo: 'sonda', pos: [15, 6], nombre: 'Baliza Sismológica NASA', hallazgo: 'Sensor de impacto meteorítico y sismos lunares profundos.', ciencia: 20 },
-      { id: 'poi_01_b', tipo: 'mineral', pos: [28, 20], nombre: 'Afloramiento de Ilmenita', hallazgo: 'Óxidos de hierro y titanio para extracción in-situ de oxígeno (ISRU).', ciencia: 25 },
-      { id: 'poi_01_c', tipo: 'hielo', pos: [10, 22], nombre: 'Pozo de Sombra Criogénica', hallazgo: 'Temperatura de 48 K con condensados de hielo polar atrapado.', ciencia: 30 },
-      { id: 'poi_01_d', tipo: 'sonda', pos: [22, 13], nombre: 'Sonda Precursora VIPER', hallazgo: 'Módulo de penetrómetro con telemetría de densidad del regolito.', ciencia: 35 }
+      { id: 'poi_01_a', tipo: 'sonda', pos: [15, 6], nombre: 'NASA Seismological Beacon', hallazgo: 'Meteorite impact and deep moonquake seismic sensor.', ciencia: 20 },
+      { id: 'poi_01_b', tipo: 'mineral', pos: [28, 20], nombre: 'Ilmenite Outcrop', hallazgo: 'Iron and titanium oxides for in-situ oxygen extraction (ISRU).', ciencia: 25 },
+      { id: 'poi_01_c', tipo: 'hielo', pos: [10, 22], nombre: 'Cryogenic Cold Trap', hallazgo: 'Permanently shadowed 48 K cold trap holding trapped volatile ice.', ciencia: 30 },
+      { id: 'poi_01_d', tipo: 'sonda', pos: [22, 13], nombre: 'VIPER Precursor Probe', hallazgo: 'Penetrometer sensor logging regolith mechanical strength.', ciencia: 35 }
     ]
   },
   Site04: {
     obstaculos: [[10, 8], [11, 8], [18, 14], [19, 14], [28, 22], [29, 22], [14, 18], [24, 16], [32, 12]],
     escaneos: [
-      { id: 'poi_04_a', tipo: 'escarpe', pos: [8, 14], nombre: 'Escarpe Tectónico Lobulado', hallazgo: 'Falla compresional activa por contracción del núcleo lunar.', ciencia: 25 },
-      { id: 'poi_04_b', tipo: 'hielo', pos: [22, 10], nombre: 'Veta Glaciar de Shackleton', hallazgo: 'Concentración masiva de volátiles de agua al 5.5% en peso.', ciencia: 35 },
-      { id: 'poi_04_c', tipo: 'sonda', pos: [16, 24], nombre: 'Reflector Láser Polar', hallazgo: 'Retrorreflector de esquina para telemetría milimétrica Tierra-Luna.', ciencia: 30 },
-      { id: 'poi_04_d', tipo: 'mineral', pos: [30, 8], nombre: 'Dique Basáltico KREEP', hallazgo: 'Magma lunar primitivo enriquecido con tierras raras y potasio.', ciencia: 35 }
+      { id: 'poi_04_a', tipo: 'escarpe', pos: [8, 14], nombre: 'Lobate Tectonic Scarp', hallazgo: 'Active thrust fault from global lunar core contraction.', ciencia: 25 },
+      { id: 'poi_04_b', tipo: 'hielo', pos: [22, 10], nombre: 'Shackleton Glacial Vein', hallazgo: 'Subsurface volatile deposit with 5.5% water ice by weight.', ciencia: 35 },
+      { id: 'poi_04_c', tipo: 'sonda', pos: [16, 24], nombre: 'Polar Laser Reflector', hallazgo: 'Corner-cube retroreflector for sub-millimeter Earth-Moon ranging.', ciencia: 30 },
+      { id: 'poi_04_d', tipo: 'mineral', pos: [30, 8], nombre: 'KREEP Basaltic Dike', hallazgo: 'Primitive lunar magma enriched with rare earths and potassium.', ciencia: 35 }
     ]
   },
   Site11: {
     obstaculos: [[8, 10], [9, 10], [18, 18], [19, 18], [26, 12], [27, 12], [15, 14], [23, 22], [30, 19]],
     escaneos: [
-      { id: 'poi_11_a', tipo: 'mineral', pos: [12, 8], nombre: 'Brecha Anortosítica Mg-Suite', hallazgo: 'Muestra primordial del manto lunar con 4.360 millones de años.', ciencia: 30 },
-      { id: 'poi_11_b', tipo: 'hielo', pos: [25, 20], nombre: 'Depósito Criogénico Gerlache', hallazgo: 'Firma a 38 K con amoníaco, metano y hielo ultra-puro conservado.', ciencia: 40 },
-      { id: 'poi_11_c', tipo: 'sonda', pos: [19, 9], nombre: 'Estación Automática Artemis', hallazgo: 'Paquete de radiación cósmica y espectroscopía de rayos alfa.', ciencia: 35 },
-      { id: 'poi_11_d', tipo: 'escarpe', pos: [32, 10], nombre: 'Boca de Tubo de Lava', hallazgo: 'Cavidad subterránea con protección total contra micrometeoritos.', ciencia: 45 }
+      { id: 'poi_11_a', tipo: 'mineral', pos: [12, 8], nombre: 'Mg-Suite Anorthositic Breccia', hallazgo: 'Primordial 4.36-billion-year-old lunar crust bedrock sample.', ciencia: 30 },
+      { id: 'poi_11_b', tipo: 'hielo', pos: [25, 20], nombre: 'de Gerlache Cryo-Deposit', hallazgo: 'Ultra-cold 38 K deposit preserving ammonia, methane, and pure ice.', ciencia: 40 },
+      { id: 'poi_11_c', tipo: 'sonda', pos: [19, 9], nombre: 'Artemis Automated Station', hallazgo: 'Cosmic radiation and alpha particle X-ray spectrometer array.', ciencia: 35 },
+      { id: 'poi_11_d', tipo: 'escarpe', pos: [32, 10], nombre: 'Lava Tube Skylight', hallazgo: 'Subterranean lava tube cavity with complete micrometeorite shielding.', ciencia: 45 }
     ]
   }
 };

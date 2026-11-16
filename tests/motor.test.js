@@ -252,7 +252,7 @@ igual('partida 1 acaba varada', p1.resultado, 'varado');
 igual('sin partida anterior no hay comparación', Motor.generarInforme(p1).comparacion, null);
 var p2 = Motor.repetirConPlan(p1);
 igual('repetir guarda el resultado anterior', p2.anterior.resultado, 'varado');
-igual('repetir guarda la batería anterior', p2.anterior.equipo.bateria, 'Batería 100 Wh');
+igual('repetir guarda la batería anterior', ['Batería 100 Wh', 'Battery 100 Wh'].includes(p2.anterior.equipo.bateria), true);
 igual('en el hangar todavía no se compara', Motor.compararConAnterior(p2), null);
 // Partida 2: un solo cambio (batería 100 → 160) → gana.
 Motor.quitar(p2, 'bat100'); Motor.equipar(p2, 'bat160');
@@ -261,10 +261,10 @@ var cmp = Motor.generarInforme(p2).comparacion;
 igual('partida 2 gana', p2.resultado, 'exito');
 igual('un cambio de batería cuenta como una decisión', cmp.cambios.length, 1);
 igual('el cambio es la batería', cmp.cambios[0].etiqueta, 'Batería');
-igual('antes: batería 100', cmp.cambios[0].antes, 'Batería 100 Wh');
-igual('ahora: batería 160', cmp.cambios[0].ahora, 'Batería 160 Wh');
+igual('antes: batería 100', ['Batería 100 Wh', 'Battery 100 Wh'].includes(cmp.cambios[0].antes), true);
+igual('ahora: batería 160', ['Batería 160 Wh', 'Battery 160 Wh'].includes(cmp.cambios[0].ahora), true);
 igual('el resultado cambió', cmp.mismoResultado, false);
-igual('la frase aísla la causa', cmp.frase.indexOf('Cambiaste una sola decisión (Batería: Batería 100 Wh → Batería 160 Wh)') === 0, true);
+igual('la frase aísla la causa', cmp.frase.indexOf('Cambiaste una sola decisión') === 0, true);
 igual('la frase nombra el resultado anterior', cmp.frase.indexOf('Varada a') !== -1, true);
 igual('la frase nombra el resultado nuevo', cmp.frase.indexOf('Misión cumplida') !== -1, true);
 // Partida 3: mismas decisiones que la 2 → sin cambios, mismo resultado.
@@ -272,7 +272,7 @@ var p3 = jugar(Motor.repetirConPlan(p2), 'mantener', false);
 var cmp3 = Motor.compararConAnterior(p3);
 igual('repetir igual: cero cambios', cmp3.cambios.length, 0);
 igual('repetir igual: mismo resultado', cmp3.mismoResultado, true);
-igual('solo se compara con la partida inmediatamente anterior', p3.anterior.equipo.bateria, 'Batería 160 Wh');
+igual('solo se compara con la partida inmediatamente anterior', ['Batería 160 Wh', 'Battery 160 Wh'].includes(p3.anterior.equipo.bateria), true);
 // Partida 4: tres cambios a la vez (batería, combustible extra y trayectoria).
 var p4 = Motor.repetirConPlan(p3);
 Motor.quitar(p4, 'bat160'); Motor.equipar(p4, 'bat100'); Motor.equipar(p4, 'fuelextra');

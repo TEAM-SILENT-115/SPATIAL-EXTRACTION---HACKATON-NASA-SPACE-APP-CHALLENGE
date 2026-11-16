@@ -158,14 +158,14 @@ var Lunar = (function () {
   function evaluar(s) {
     const p = proyectar(s), t = Motor.totales(s), bloqueos = [], riesgos = [];
     const sis = sistemas(s);
-    if (s.masa.usada > s.masa.capacidad) bloqueos.push('La carga pesa ' + (s.masa.usada - s.masa.capacidad) + ' kg más de lo que el cohete puede llevar. Quita equipo o usa un cohete mayor.');
-    if (s.presupuesto.gastado > s.presupuesto.total) bloqueos.push('El equipo cuesta ' + (s.presupuesto.gastado - s.presupuesto.total) + ' créditos más que tu presupuesto. Quita algo.');
-    if (!p.viable) bloqueos.push('No existe un camino transitable hasta el cráter.');
-    if (!t.energia) bloqueos.push('Falta la batería: sin energía no puedes salir del módulo.');
-    if (!t.oxigeno) bloqueos.push('Falta el oxígeno: sin él no puedes salir del módulo.');
-    if (!t.taladro) riesgos.push('Sin Taladro de núcleo no podrás recuperar el objetivo.');
-    if (!t.capacidadMuestras) riesgos.push('Sin contenedor no podrás guardar muestras.');
-    if (s.masa.usada + R.muestraKg > s.masa.capacidad) riesgos.push('No queda carga útil para la muestra de 1 kg.');
+    if (s.masa.usada > s.masa.capacidad) bloqueos.push('Payload exceeds launch capacity by ' + (s.masa.usada - s.masa.capacidad) + ' kg. Remove equipment or choose a larger rocket.');
+    if (s.presupuesto.gastado > s.presupuesto.total) bloqueos.push('Equipment exceeds budget by ' + (s.presupuesto.gastado - s.presupuesto.total) + ' credits. Remove items.');
+    if (!p.viable) bloqueos.push('No traversable path exists to the crater.');
+    if (!t.energia) bloqueos.push('Missing battery: without power you cannot leave the lander.');
+    if (!t.oxigeno) bloqueos.push('Missing oxygen: without it you cannot leave the lander.');
+    if (!t.taladro) riesgos.push('Without Core Drill you cannot retrieve the target core.');
+    if (!t.capacidadMuestras) riesgos.push('Without container you cannot store samples.');
+    if (s.masa.usada + R.muestraKg > s.masa.capacidad) riesgos.push('No payload capacity left for 1 kg sample.');
     // Con combustible para corregir, el descenso cercano puede salvar un plan corto.
     const cerca = sis.combustible && t.combustible >= DATOS.costos.maniobra ? proyectar(s, s.ruta, map(s).nearModule) : null;
     const salva = !!(cerca && t.energia - cerca.total >= 0);
@@ -173,13 +173,13 @@ var Lunar = (function () {
     if (t.energia && p.margen < 0) {
       energia = salva ? 'corrigiendo' : 'falta';
       riesgos.push(salva
-        ? 'Solo alcanza si corriges el descenso en vuelo: así sobrarían ' + n1(t.energia - cerca.total) + ' Wh. Sin corregir faltan ' + n1(-p.margen) + '.'
-        : 'Por esa ruta la batería NO alcanza para ir y volver: faltan ' + n1(-p.margen) + ' Wh.');
+        ? 'Only sufficient if you correct descent in flight: saving ' + n1(t.energia - cerca.total) + ' Wh. Without correcting you are short by ' + n1(-p.margen) + ' Wh.'
+        : 'Along this route battery power is INSUFFICIENT for round trip: short by ' + n1(-p.margen) + ' Wh.');
     } else if (t.energia && p.margen < p.reserva) {
       energia = 'justo';
-      riesgos.push('Alcanza muy justo: sobran ' + n1(p.margen) + ' Wh y se recomiendan ' + n1(p.reserva) + '. Un desvío te deja sin volver.');
+      riesgos.push('Very tight margin: only ' + n1(p.margen) + ' Wh surplus with ' + n1(p.reserva) + ' Wh recommended. Any detour will strand you.');
     }
-    if (sis.oxigeno && t.oxigeno && t.oxigeno < p.ox) riesgos.push('El oxígeno NO alcanza para ir y volver: llevas ' + t.oxigeno + ' y hacen falta ' + n1(p.ox) + '.');
+    if (sis.oxigeno && t.oxigeno && t.oxigeno < p.ox) riesgos.push('Oxygen is INSUFFICIENT for round trip: carrying ' + t.oxigeno + ' but ' + n1(p.ox) + ' required.');
     return {p, t, bloqueos, riesgos, energia, cerca};
   }
 
@@ -221,13 +221,13 @@ var Lunar = (function () {
   }
 
   function lanzar(s) {
-    if (s.etapa !== 'hangar' || !s.prueba) return {ok:false, msg:'Pulsa PROBAR PLAN antes de lanzar.'};
+    if (s.etapa !== 'hangar' || !s.prueba) return {ok:false, msg:'Click TEST PLAN before launching.'};
     const v = evaluar(s);
     if (v.bloqueos.length) return {ok:false, msg:v.bloqueos.join(' ')};
     s.plan = JSON.parse(JSON.stringify({...v.p, sitio:s.sitio, ruta:s.ruta, equipo:s.equipo, masa:s.masa.usada, energia:v.t.energia}));
     s.recursos = {energiaWh:v.t.energia, oxigeno:v.t.oxigeno, combustible:v.t.combustible};
     s.etapa = 'viaje';
-    return {ok:true, msg:'Plan sellado. Escanea el punto de descenso.'};
+    return {ok:true, msg:'Plan confirmed. Scan landing area.'};
   }
 
   function escanearViaje(s) {
@@ -235,14 +235,14 @@ var Lunar = (function () {
   }
 
   function decidir(s, corregir) {
-    if (s.etapa !== 'viaje' || !s.viaje.escaneado || s.viaje.decidido) return {ok:false, msg:'Primero escanea.'};
-    if (corregir && s.recursos.combustible < DATOS.costos.maniobra) return {ok:false, msg:'Faltan 30 unidades de combustible de maniobra.'};
+    if (s.etapa !== 'viaje' || !s.viaje.escaneado || s.viaje.decidido) return {ok:false, msg:'Scan first.'};
+    if (corregir && s.recursos.combustible < DATOS.costos.maniobra) return {ok:false, msg:'Requires 30 units of maneuvering fuel.'};
     s.viaje.decidido = true;
     s.viaje.corrigio = corregir;
     if (corregir) s.recursos.combustible -= DATOS.costos.maniobra;
     s.modulo = (corregir ? map(s).nearModule : map(s).module).slice();
     s.aterrizaje = proyectar(s, s.ruta, s.modulo);
-    return {ok:true, msg:corregir ? 'Corrección aplicada: módulo más cerca del objetivo.' : 'Descenso previsto conservado.'};
+    return {ok:true, msg:corregir ? 'Correction executed: lander positioned closer to crater.' : 'Nominal descent trajectory maintained.'};
   }
 
   function descender(s) {
@@ -260,7 +260,7 @@ var Lunar = (function () {
     if (s.recursos.energiaWh + 1e-8 < s.retorno.wh && !s.margenRoto) {
       s.margenRoto = {
         pos: s.pos.slice(),
-        accion: s.registro.at(-1)?.accion || 'desvío',
+        accion: s.registro.at(-1)?.accion || 'detour',
         falta: s.retorno.wh - s.recursos.energiaWh
       };
     }
@@ -315,20 +315,20 @@ var Lunar = (function () {
   function contexto(s) {
     if (s.etapa !== 'superficie') return null;
     if (eq(s.pos, s.modulo)) {
-      return {accion:'entregar', texto: s.muestras.recogidas.length ? 'Entregar muestras' : 'Cerrar misión sin muestras', wh: 0};
+      return {accion:'entregar', texto: s.muestras.recogidas.length ? 'Deliver samples' : 'Conclude mission without samples', wh: 0};
     }
     if (eq(s.pos, map(s).target) && !s.tomada) {
-      return {accion:'perforar', texto:'Perforar', wh: R.acciones.perforar.wh, falta: !Motor.totales(s).taladro ? 'Falta Taladro de núcleo' : null};
+      return {accion:'perforar', texto:'Drill', wh: R.acciones.perforar.wh, falta: !Motor.totales(s).taladro ? 'Missing Core Drill' : null};
     }
     if (sistemas(s).escaner && eq(s.pos, map(s).extra) && !s.extraTomada) {
       return {
         accion: s.revelada ? 'recoger' : 'escanear',
-        texto: s.revelada ? 'Recoger' : 'Escanear',
+        texto: s.revelada ? 'Collect' : 'Scan',
         wh: R.acciones[s.revelada ? 'recoger' : 'escanear'].wh,
-        falta: !s.revelada && !Motor.totales(s).escaner ? 'Falta Escáner de terreno' : null,
+        falta: !s.revelada && !Motor.totales(s).escaner ? 'Missing Terrain Scanner' : null,
         // Con un solo hueco, la muestra extra dejaría fuera al núcleo.
         aviso: s.revelada && !s.tomada && Motor.totales(s).capacidadMuestras - s.muestras.recogidas.length <= 1
-          ? 'Solo te cabe una muestra: si recoges esta, el núcleo ya no entrará.' : null
+          ? 'Only 1 container slot left: collecting this leaves no room for crater core.' : null
       };
     }
     const pois = sistemas(s).escaner && typeof PUNTOS_INTERES_LUNARES !== 'undefined' ? PUNTOS_INTERES_LUNARES[s.sitio] : null;
@@ -337,10 +337,10 @@ var Lunar = (function () {
       if (pExtra && (!s.escaneosExtra || !s.escaneosExtra.includes(pExtra.id))) {
         return {
           accion: 'escanear_poi',
-          texto: 'Escanear ' + pExtra.nombre,
+          texto: 'Scan ' + pExtra.nombre,
           wh: R.acciones.escanear.wh,
           poi: pExtra,
-          falta: !Motor.totales(s).escaner ? 'Falta Escáner de terreno' : null
+          falta: !Motor.totales(s).escaner ? 'Missing Terrain Scanner' : null
         };
       }
     }
@@ -349,32 +349,32 @@ var Lunar = (function () {
 
   function interactuar(s) {
     const c = contexto(s);
-    if (!c) return {ok:false, msg:'Acércate al centro de un marcador.'};
+    if (!c) return {ok:false, msg:'Approach the center of a marker.'};
     if (c.accion === 'entregar') {
       s.muestras.entregadas = s.muestras.recogidas.slice();
       s.resultado = s.tomada ? 'exito' : s.muestras.entregadas.length ? 'parcial' : 'sin_muestra';
       s.etapa = 'informe';
-      return {ok:true, msg:'Muestras aseguradas en el módulo.'};
+      return {ok:true, msg:'Samples secured in the lander module.'};
     }
-    if (c.falta) return {ok:false, msg: c.falta + '. Debías equiparlo en la agencia.'};
+    if (c.falta) return {ok:false, msg: c.falta + '. Must be equipped in the hangar.'};
     if (c.accion !== 'escanear' && c.accion !== 'escanear_poi' && (s.muestras.recogidas.length >= Motor.totales(s).capacidadMuestras || masa(s) + R.muestraKg > s.masa.capacidad)) {
-      return {ok:false, msg:'No hay capacidad de contenedor o carga útil para 1 kg más.'};
+      return {ok:false, msg:'No container capacity or payload allowance for 1 kg more.'};
     }
     const cost = R.acciones[c.accion === 'escanear_poi' ? 'escanear' : c.accion];
     if (!gastar(s, cost.wh, cost.ox, c.accion)) {
-      return {ok:false, msg:'Recursos insuficientes para esta acción. Puedes intentar regresar.'};
+      return {ok:false, msg:'Insufficient resources for this action. Try returning to module.'};
     }
     s.accionesWh += cost.wh;
     s.tutorial.interactuado = true;
     if (c.accion === 'perforar') {
       s.tomada = true;
-      s.muestras.recogidas.push('Núcleo del cráter');
+      s.muestras.recogidas.push('Crater Core');
       s.perforando = true;
     }
     if (c.accion === 'escanear') s.revelada = true;
     if (c.accion === 'recoger') {
       s.extraTomada = true;
-      s.muestras.recogidas.push('Regolito superficial');
+      s.muestras.recogidas.push('Surface Regolith');
     }
     if (c.accion === 'escanear_poi') {
       if (!s.escaneosExtra) s.escaneosExtra = [];
@@ -386,14 +386,14 @@ var Lunar = (function () {
         ok: true,
         accion: 'escanear_poi',
         poi: c.poi,
-        msg: 'Hallazgo registrado: ' + c.poi.nombre + '. ' + c.poi.hallazgo
+        msg: 'Finding registered: ' + c.poi.nombre + '. ' + c.poi.hallazgo
       };
     }
     actualizarRetorno(s);
     comprobarAgotado(s);
     return {
       ok: true,
-      msg: c.accion === 'escanear' ? 'Muestra revelada. Evalúa el margen antes de recogerla.' : 'Muestra guardada. Solo cuenta al entregarla en el módulo.'
+      msg: c.accion === 'escanear' ? 'Sample revealed. Check reserve before collecting.' : 'Sample stowed. Only secured once delivered to module.'
     };
   }
 
@@ -470,19 +470,19 @@ var Lunar = (function () {
     s.nuevoDesbloqueo = nuevoDesbloqueo;
 
     let causa = s.viaje.corrigio ?
-      'La corrección gastó 30 de combustible y redujo la proyección de ' + plan.total.toFixed(1) + ' a ' + s.aterrizaje.total.toFixed(1) + ' Wh.' :
-      'Mantener conservó el combustible y el recorrido previsto.';
+      'Descent correction burned 30 maneuvering fuel and reduced path consumption from ' + plan.total.toFixed(1) + ' to ' + s.aterrizaje.total.toFixed(1) + ' Wh.' :
+      'Nominal descent maintained trajectory and conserved fuel.';
     if (s.margenRoto) {
-      causa += ' El margen de regreso se rompió tras ' + s.margenRoto.accion + ' en [' + s.margenRoto.pos + ']; faltaban ' + s.margenRoto.falta.toFixed(1) + ' Wh.';
+      causa += ' Return safety margin breached after ' + s.margenRoto.accion + ' at [' + s.margenRoto.pos + ']; lacked ' + s.margenRoto.falta.toFixed(1) + ' Wh.';
     }
     if (s.resultado === 'varado') {
-      causa += ' Repite con más batería, la ruta de ahorro o menos desvíos.';
+      causa += ' Retry with a larger battery, the economy route, or avoiding detours.';
     }
     if (!s.tomada) {
-      causa += s.equipo.includes('taladro') ? ' No recuperaste el núcleo marcado como objetivo.' : ' Faltó el Taladro de núcleo elegido en la agencia.';
+      causa += s.equipo.includes('taladro') ? ' Did not retrieve the mission target core.' : ' Missing Core Drill in loadout.';
     }
     if (s.accionesWh > R.acciones.perforar.wh) {
-      causa += ' Las acciones extra consumieron ' + (s.accionesWh - R.acciones.perforar.wh).toFixed(1) + ' Wh además del núcleo.';
+      causa += ' Extra actions consumed ' + (s.accionesWh - R.acciones.perforar.wh).toFixed(1) + ' Wh beyond the core.';
     }
 
     return {
@@ -507,44 +507,44 @@ var Lunar = (function () {
   // por qué y qué probar ahora. Sin jerga y con las cifras de esa partida.
   function resumenJugador(s) {
     const plan = s.plan, restante = s.recursos.energiaWh, frases = [];
-    const acciones = {desplazamiento:'dar un paso más', perforar:'perforar', escanear:'escanear', recoger:'recoger la muestra extra'};
+    const acciones = {desplazamiento:'taking another step', perforar:'drilling', escanear:'scanning', recoger:'collecting the extra sample'};
     let consejo;
     if (s.resultado === 'varado') {
-      const falta = s.agotado === 'oxigeno' ? 'oxígeno' : 'energía';
-      frases.push('Te quedaste sin ' + falta + ' a ' + Math.round(s.retorno ? s.retorno.metros : 0) + ' m del módulo. La muestra se quedó en la Luna.');
+      const falta = s.agotado === 'oxigeno' ? 'oxygen' : 'power';
+      frases.push('Depleted ' + falta + ' at ' + Math.round(s.retorno ? s.retorno.metros : 0) + ' m from module. Sample remains on the lunar surface.');
       if (plan.margen < 0) {
-        frases.push('El plan ya salía corto desde la agencia: pedía ' + n1(plan.total) + ' Wh y llevabas ' + n1(plan.energia) + '.');
+        frases.push('The plan already came up short from the hangar: required ' + n1(plan.total) + ' Wh with only ' + n1(plan.energia) + ' Wh loaded.');
       } else if (s.margenRoto) {
-        frases.push('Cruzaste el punto sin retorno al ' + (acciones[s.margenRoto.accion] || 'desviarte') + ': desde ahí volver costaba más de lo que te quedaba.');
+        frases.push('Crossed the point of no return when ' + (acciones[s.margenRoto.accion] || 'diverting') + ': return cost exceeded remaining resources.');
       }
       consejo = s.agotado === 'oxigeno'
-        ? 'Prueba con un tanque de oxígeno mayor o un camino más corto.'
-        : 'Prueba con una batería más grande, la ruta de ahorro o menos desvíos.';
+        ? 'Try with a larger oxygen tank or a shorter route.'
+        : 'Try with a larger battery, the economy route, or avoiding detours.';
     } else if (!s.tomada) {
-      frases.push('Volviste a salvo al módulo, pero sin el núcleo del cráter.');
-      frases.push('Saber volver a tiempo también es ingeniería: la nave y la tripulación están enteras.');
-      consejo = 'Repite la misión: llega al cráter, perfora y regresa.';
+      frases.push('Returned safely to the lander module, but without the crater core.');
+      frases.push('Recognizing when to abort is sound engineering: crew and spacecraft remain safe.');
+      consejo = 'Repeat mission: reach the crater, drill the core, and return.';
     } else {
-      frases.push((s.muestras.entregadas.length > 1 ? 'Trajiste el núcleo y una muestra extra' : 'Trajiste el núcleo del cráter')
-        + ' y volviste con ' + n1(restante) + ' Wh de sobra.');
+      frases.push((s.muestras.entregadas.length > 1 ? 'Retrieved crater core and extra sample' : 'Retrieved crater core')
+        + ' and returned with ' + n1(restante) + ' Wh surplus.');
       // Lo caminado de más frente al plan (el plan cambia si se corrigió el descenso).
       const previsto = s.aterrizaje ? s.aterrizaje.total : plan.total;
       if (s.gastado > previsto * 1.08 + R.acciones.escanear.wh + R.acciones.recoger.wh) {
-        frases.push('Gastaste ' + n1(s.gastado - previsto) + ' Wh más que el plan: cada desvío también se paga.');
+        frases.push('Consumed ' + n1(s.gastado - previsto) + ' Wh more than planned: each detour adds energy cost.');
       }
       if (s.viaje.corrigio && s.aterrizaje) {
-        frases.push('Corregir el descenso acortó la caminata: el plan bajó de ' + n1(plan.total) + ' a ' + n1(s.aterrizaje.total) + ' Wh.');
+        frases.push('Correcting descent shortened surface distance: flight plan dropped from ' + n1(plan.total) + ' to ' + n1(s.aterrizaje.total) + ' Wh.');
       }
       // sobrar más de lo que pidió el viaje entero es haber cargado de más
       if (restante > plan.total) {
-        frases.push('Te sobró muchísima energía: cargaste más batería, y más peso, de la que hacía falta.');
-        consejo = 'Prueba con un equipo más ligero: llevar de más también cuesta.';
+        frases.push('Surplus energy was huge: carried more battery and mass than necessary.');
+        consejo = 'Try a lighter loadout: excess payload mass penalizes every meter walked.';
       } else if (restante + 1e-8 >= plan.reserva) {
-        frases.push('Tu reserva superó la recomendada (' + n1(plan.reserva) + ' Wh): un margen sano.');
-        consejo = 'Buen equilibrio. Prueba el siguiente nivel o cambia una decisión para comparar.';
+        frases.push('Final reserve exceeded recommendation (' + n1(plan.reserva) + ' Wh): healthy safety margin.');
+        consejo = 'Great engineering balance. Advance to the next level or tweak loadout to compare.';
       } else {
-        frases.push('Llegaste muy justo: la reserva recomendada era ' + n1(plan.reserva) + ' Wh.');
-        consejo = 'Un paso en falso y no vuelves. Prueba con más batería o con menos peso a bordo.';
+        frases.push('Returned on very tight margin: recommended reserve was ' + n1(plan.reserva) + ' Wh.');
+        consejo = 'One false step would have stranded the rover. Try a larger battery or lower payload mass.';
       }
     }
     return {frases, consejo};
@@ -552,91 +552,91 @@ var Lunar = (function () {
 
   function guiaPaso(s) {
     if (s.etapa === 'hangar') {
-      // Paso 1: Sección 01 - Ruta
+      // Step 1: Section 01 - Route
       if (!s.tutorial.rutaElegida && !s.tutorial.comparado) {
         return {
           paso: 1,
           total: 6,
-          fase: '01 / SITIO Y RUTA',
+          fase: '01 / SITE AND ROUTE',
           selector: 'button[data-l="ruta"][data-x="directa"]',
-          badge: 'PASO 1 DE 6',
-          texto: 'Haz clic en [ RUTA DIRECTA ] en la Sección 01 para comparar el trazado más corto.',
-          detalle: 'Observa cómo la distancia y las pendientes modifican el consumo previsto.'
+          badge: 'STEP 1 OF 6',
+          texto: 'Click [ DIRECT ROUTE ] in Section 01 to evaluate the shortest path.',
+          detalle: 'Observe how distance and slopes affect estimated energy consumption.'
         };
       }
 
-      // Paso 2: Sección 02 - Categoría 0: Herramientas
+      // Step 2: Section 02 - Category 0: Tools
       if (!s.tutorial.cat1 && (s.tutorial.catIndex === 0 || s.tutorial.catIndex === undefined)) {
         return {
           paso: 2,
           total: 6,
-          fase: '02 / HERRAMIENTAS',
+          fase: '02 / TOOLS',
           selector: 'button[data-l="category"][data-x="1"]',
-          badge: 'PASO 2 DE 6',
-          texto: 'HERRAMIENTAS: El Taladro es imprescindible para extraer el núcleo y el Escáner revela recursos. Haz clic en [ ENERGÍA ].',
-          detalle: 'Sin taladro no podrás perforar en el cráter.'
+          badge: 'STEP 2 OF 6',
+          texto: 'TOOLS: Core Drill is required to extract samples and Scanner detects scientific signals. Click [ ENERGY ].',
+          detalle: 'Without a drill you cannot extract samples inside the crater.'
         };
       }
 
-      // Paso 3: Sección 02 - Categoría 1: Energía
+      // Step 3: Section 02 - Category 1: Energy
       if (!s.tutorial.cat2 && s.tutorial.catIndex === 1) {
         return {
           paso: 3,
           total: 6,
-          fase: '02 / ENERGÍA',
+          fase: '02 / ENERGY',
           selector: 'button[data-l="category"][data-x="2"]',
-          badge: 'PASO 3 DE 6',
-          texto: 'ENERGÍA: Baterías (100 Wh o 160 Wh) dan autonomía para caminar y perforar. Haz clic en [ SOPORTE VITAL ].',
-          detalle: 'Más batería te da autonomía, pero pesa más y encarece cada metro.'
+          badge: 'STEP 3 OF 6',
+          texto: 'ENERGY: Batteries (100 Wh or 160 Wh) provide range for traversal and drilling. Click [ LIFE SUPPORT ].',
+          detalle: 'More battery grants range, but added mass increases consumption per meter.'
         };
       }
 
-      // Paso 4: Sección 02 - Categoría 2: Soporte vital
+      // Step 4: Section 02 - Category 2: Life Support
       if (!s.tutorial.cat3 && s.tutorial.catIndex === 2) {
         return {
           paso: 4,
           total: 6,
-          fase: '02 / SOPORTE VITAL',
+          fase: '02 / LIFE SUPPORT',
           selector: 'button[data-l="category"][data-x="3"]',
-          badge: 'PASO 4 DE 6',
-          texto: 'SOPORTE VITAL: Tanques de O₂ para respirar y combustible para corregir descenso. Haz clic en [ MUESTRAS ].',
-          detalle: 'Llevar combustible extra habilita la corrección de aterrizaje en vuelo.'
+          badge: 'STEP 4 OF 6',
+          texto: 'LIFE SUPPORT: O₂ tanks for breathing and maneuvering fuel to correct descent. Click [ SAMPLES ].',
+          detalle: 'Carrying extra fuel enables trajectory correction during descent.'
         };
       }
 
-      // Paso 5: Sección 02 - Categoría 3: Muestras
+      // Step 5: Section 02 - Category 3: Samples
       if (!s.tutorial.equipoVisto && s.tutorial.catIndex === 3) {
         return {
           paso: 5,
           total: 6,
-          fase: '02 / MUESTRAS',
+          fase: '02 / SAMPLES',
           selector: 'button[data-l="test"]',
-          badge: 'PASO 5 DE 6',
-          texto: 'MUESTRAS: Contenedores para almacenar rocas y regolito. ¡Carga lista! Haz clic en [ PROBAR PLAN ] en la Sección 03.',
-          detalle: 'Cada muestra recogida pesará 1 kg y aumentará el consumo de retorno.'
+          badge: 'STEP 5 OF 6',
+          texto: 'SAMPLES: Containers to store rock and regolith. Loadout ready! Click [ TEST PLAN ] in Section 03.',
+          detalle: 'Each collected sample weighs 1 kg and increases return energy cost.'
         };
       }
 
-      // Paso 6: Sección 03 - Probar el plan / Lanzar
+      // Step 6: Section 03 - Test plan / Launch
       if (!s.prueba) {
         return {
           paso: 6,
           total: 6,
-          fase: '03 / PROBAR EL PLAN',
+          fase: '03 / TEST PLAN',
           selector: 'button[data-l="test"]',
-          badge: 'PASO 6 DE 6',
-          texto: 'Haz clic en [ PROBAR PLAN ] en la Sección 03 para calcular telemetría, reserva y balance de energía.',
-          detalle: 'La simulación calcula si tu batería y oxígeno soportan la ruta elegida.'
+          badge: 'STEP 6 OF 6',
+          texto: 'Click [ TEST PLAN ] in Section 03 to calculate telemetry, reserve, and power balance.',
+          detalle: 'Simulation validates whether battery and oxygen sustain the selected route.'
         };
       }
       return {
         paso: 6,
         total: 6,
-        fase: '03 / AUTORIZAR DESPEGUE',
+        fase: '03 / AUTHORIZE LIFTOFF',
         selector: 'button[data-l="launch"]',
-        badge: 'AUTORIZADO',
-        texto: '¡Telemetría validada! Haz clic en [ LANZAR ] en la Sección 03 para despegar hacia la Luna.',
-        detalle: 'Tu nave viajará a la órbita lunar con la configuración ensayada.'
+        badge: 'AUTHORIZED',
+        texto: 'Telemetry validated! Click [ LAUNCH ] in Section 03 to lift off toward the Moon.',
+        detalle: 'Spacecraft will transit to lunar orbit with the tested loadout.'
       };
     }
     if (s.etapa === 'viaje') {
@@ -644,32 +644,32 @@ var Lunar = (function () {
         return {
           paso: 1,
           total: 2,
-          fase: 'EN VUELO · TELEMETRÍA',
+          fase: 'IN FLIGHT · TELEMETRY',
           selector: 'button[data-l="scanflight"]',
-          badge: 'PASO 1 DE 2',
-          texto: 'Haz clic en [ ESCANEAR DESCENSO ] para evaluar la plataforma más cercana al objetivo.',
-          detalle: 'Los sensores en órbita calculan la distancia exacta al cráter objetivo.'
+          badge: 'STEP 1 OF 2',
+          texto: 'Click [ SCAN DESCENT ] to assess closest landing site to target.',
+          detalle: 'Orbital radar computes exact distance to the destination crater.'
         };
       }
       if (!s.viaje.decidido) {
         return {
           paso: 2,
           total: 2,
-          fase: 'EN VUELO · TRAYECTORIA',
+          fase: 'IN FLIGHT · TRAJECTORY',
           selector: 'button[data-l="keep"]',
-          badge: 'PASO 2 DE 2',
-          texto: 'Haz clic en [ MANTENER ] para confirmar el descenso nominal directo.',
-          detalle: 'O elige Corregir si tienes 30 u de combustible para acercar el módulo.'
+          badge: 'STEP 2 OF 2',
+          texto: 'Click [ MAINTAIN ] to confirm direct nominal descent.',
+          detalle: 'Or select Correct if you carry 30 fuel to land closer.'
         };
       }
       return {
         paso: 2,
         total: 2,
-        fase: 'DESCENSO AUTORIZADO',
+        fase: 'DESCENT AUTHORIZED',
         selector: 'button[data-l="land"]',
-        badge: 'LISTO',
-        texto: 'Trayectoria sellada. Haz clic en [ DESCENDER A SUPERFICIE ] para comenzar a jugar.',
-        detalle: 'La nave iniciará el aterrizaje suave en el Polo Sur Lunar.'
+        badge: 'READY',
+        texto: 'Trajectory locked. Click [ DESCEND TO SURFACE ] to begin exploration.',
+        detalle: 'Spacecraft initiates touchdown burn at the Lunar South Pole.'
       };
     }
     if (s.etapa === 'superficie') {
@@ -677,41 +677,41 @@ var Lunar = (function () {
         return {
           paso: 1,
           total: 3,
-          fase: 'SUPERFICIE LUNAR · MOVIMIENTO',
+          fase: 'LUNAR SURFACE · MOVEMENT',
           selector: '#l-field',
-          badge: 'PASO 1 DE 3',
-          texto: 'Usa las teclas WASD o las FLECHAS del teclado para mover a tu astronauta en el terreno.',
-          detalle: 'Cada metro consume energía Wh y oxígeno. Evita las rocas oscuras ▲.'
+          badge: 'STEP 1 OF 3',
+          texto: 'Use WASD or ARROW keys to navigate your astronaut on the lunar terrain.',
+          detalle: 'Each meter drains Wh power and oxygen. Avoid dark boulders ▲.'
         };
       }
       if (!s.tomada) {
         return {
           paso: 2,
           total: 3,
-          fase: 'SUPERFICIE LUNAR · EXTRACCIÓN',
+          fase: 'LUNAR SURFACE · EXTRACTION',
           selector: '#l-field',
-          badge: 'PASO 2 DE 3',
-          texto: 'Sigue la línea ámbar hasta el cráter ◇ y pulsa la tecla [ E ] para perforar el núcleo.',
-          detalle: 'Extracción científica requerida para el éxito de la misión.'
+          badge: 'STEP 2 OF 3',
+          texto: 'Follow amber trajectory line to crater ◇ and press [ E ] to drill core.',
+          detalle: 'Scientific sample required for mission success.'
         };
       }
       return {
         paso: 3,
         total: 3,
-        fase: 'SUPERFICIE LUNAR · RETORNO',
+        fase: 'LUNAR SURFACE · RETURN',
         selector: '#l-field',
-        badge: 'PASO 3 DE 3',
-        texto: '¡Núcleo a bordo! Sigue la línea azul de regreso al módulo ▣ y pulsa [ E ] para entregar y ganar.',
-        detalle: 'Debes llegar con energía y oxígeno antes de agotar los recursos.'
+        badge: 'STEP 3 OF 3',
+        texto: 'Core on board! Follow cyan return path to module ▣ and press [ E ] to secure and win.',
+        detalle: 'Reach module with power and oxygen before resources deplete.'
       };
     }
     return {
       paso: 1,
       total: 1,
-      fase: 'INFORME DE MISIÓN',
+      fase: 'MISSION REPORT',
       selector: 'button[data-l="repeat"], button[data-l="new"]',
-      badge: 'FIN MISIÓN',
-      texto: 'Revisa tu balance de ingeniería y presiona [ NUEVA MISIÓN ] para el siguiente reto.',
+      badge: 'DEBRIEF',
+      texto: 'Review engineering balance and click [ NEW MISSION ] for the next challenge.',
       detalle: ''
     };
   }

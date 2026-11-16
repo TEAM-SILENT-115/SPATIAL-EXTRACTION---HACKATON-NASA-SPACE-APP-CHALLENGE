@@ -17,32 +17,32 @@ var DATOS = {
   cohetes: [
     {
       id: 'halcon',
-      nombre: 'Halcón ligero',
+      nombre: 'Falcon Light',
       costo: 300,
       capacidadMasa: 120,
       combustibleBase: 20,
-      descripcion: 'Barato y liviano, pero trae poco combustible de maniobra.'
+      descripcion: 'Inexpensive and light, but carries limited maneuvering fuel.'
     },
     {
       id: 'titan',
-      nombre: 'Titán pesado',
+      nombre: 'Titan Heavy',
       costo: 450,
       capacidadMasa: 180,
       combustibleBase: 40,
-      descripcion: 'Caro. Admite más carga y trae más combustible de maniobra.'
+      descripcion: 'Expensive. Higher payload capacity and carries more maneuvering fuel.'
     }
   ],
 
   objetos: [
-    { id: 'bat100',    nombre: 'Batería 100 Wh',     tipo: 'bateria',     energia: 100,  masa: 20, costo: 150, icono: '⚡', descripcion: 'Fuente de energía estándar para la expedición.' },
-    { id: 'bat160',    nombre: 'Batería 160 Wh',     tipo: 'bateria',     energia: 160,  masa: 35, costo: 260, icono: '⚡', descripcion: 'Más autonomía, pero pesa y cuesta bastante más.' },
-    { id: 'o2chico',   nombre: 'Tanque O₂ 100',      tipo: 'oxigeno',     oxigeno: 100,  masa: 15, costo: 100, icono: '◍', descripcion: 'Reserva de oxígeno básica.' },
-    { id: 'o2grande',  nombre: 'Tanque O₂ 160',      tipo: 'oxigeno',     oxigeno: 160,  masa: 28, costo: 180, icono: '◍', descripcion: 'Reserva de oxígeno ampliada.' },
-    { id: 'taladro',   nombre: 'Taladro de núcleo',  tipo: 'herramienta', masa: 25, costo: 200, icono: '⛏', descripcion: 'Imprescindible para extraer la muestra profunda del cráter.' },
-    { id: 'escaner',   nombre: 'Escáner de terreno', tipo: 'herramienta', masa: 10, costo: 90,  icono: '◎', descripcion: 'Permite escanear cada punto de la superficie y descubrir hallazgos ocultos.' },
-    { id: 'cont1',     nombre: 'Contenedor simple',  tipo: 'contenedor',  capacidad: 1, masa: 8,  costo: 60,  icono: '▣', descripcion: 'Espacio para 1 muestra.' },
-    { id: 'cont2',     nombre: 'Contenedor doble',   tipo: 'contenedor',  capacidad: 2, masa: 18, costo: 110, icono: '▣', descripcion: 'Espacio para 2 muestras.' },
-    { id: 'fuelextra', nombre: 'Combustible extra',  tipo: 'combustible', combustible: 30, masa: 15, costo: 80, icono: '▲', descripcion: 'Reserva de maniobra adicional para el cohete.' }
+    { id: 'bat100',    nombre: 'Battery 100 Wh',     tipo: 'bateria',     energia: 100,  masa: 20, costo: 150, icono: '⚡', descripcion: 'Standard expedition power supply.' },
+    { id: 'bat160',    nombre: 'Battery 160 Wh',     tipo: 'bateria',     energia: 160,  masa: 35, costo: 260, icono: '⚡', descripcion: 'Extended autonomy, but significantly heavier and more expensive.' },
+    { id: 'o2chico',   nombre: 'O₂ Tank 100',        tipo: 'oxigeno',     oxigeno: 100,  masa: 15, costo: 100, icono: '◍', descripcion: 'Basic oxygen reserve.' },
+    { id: 'o2grande',  nombre: 'O₂ Tank 160',        tipo: 'oxigeno',     oxigeno: 160,  masa: 28, costo: 180, icono: '◍', descripcion: 'Extended oxygen reserve.' },
+    { id: 'taladro',   nombre: 'Core Drill',         tipo: 'herramienta', masa: 25, costo: 200, icono: '⛏', descripcion: 'Essential for extracting deep crater samples.' },
+    { id: 'escaner',   nombre: 'Terrain Scanner',    tipo: 'herramienta', masa: 10, costo: 90,  icono: '◎', descripcion: 'Scans surface locations to uncover hidden scientific findings.' },
+    { id: 'cont1',     nombre: 'Single Container',   tipo: 'contenedor',  capacidad: 1, masa: 8,  costo: 60,  icono: '▣', descripcion: 'Capacity for 1 sample.' },
+    { id: 'cont2',     nombre: 'Dual Container',     tipo: 'contenedor',  capacidad: 2, masa: 18, costo: 110, icono: '▣', descripcion: 'Capacity for 2 samples.' },
+    { id: 'fuelextra', nombre: 'Extra Fuel',         tipo: 'combustible', combustible: 30, masa: 15, costo: 80, icono: '▲', descripcion: 'Additional maneuvering propellant for the spacecraft.' }
   ],
 
   // Costos de acciones. La energía se mide en Wh, el oxígeno en unidades O₂.
@@ -84,66 +84,64 @@ var DATOS = {
   // (25) y escanear (5) quedan 40 Wh, la veta cuesta 10 y volver 35 → −5.
   mapa: {
     llanura: {
-      nombre: 'Llanura helada',
+      nombre: 'Frozen Plains',
       pasosACrater: 6,
       muestras: [2, 4],
       rocosos: [3, 4, 5],
-      riesgoWh: 3,          // Wh extra por paso rocoso
-      probRocoso: 0.3,      // probabilidad de que el escaneo del viaje revele terreno rocoso
-      salidaCrater: 5,      // Wh extra al salir del cráter (subida)
-      nota: 'Terreno conocido y estable. El cráter queda lejos.'
+      riesgoWh: 3,
+      probRocoso: 0.3,
+      salidaCrater: 5,
+      nota: 'Known and stable terrain. The crater is far away.'
     },
     crater: {
-      nombre: 'Borde del cráter',
+      nombre: 'Crater Rim',
       pasosACrater: 3,
       muestras: [4, 5],
-      rocosos: [0, 1, 2, 3],  // incluye el punto de aterrizaje: toda la zona es rocosa
+      rocosos: [0, 1, 2, 3],
       riesgoWh: 5,
-      probRocoso: 0.6,      // zona menos reconocida: sale rocosa más veces y cuesta más
+      probRocoso: 0.6,
       salidaCrater: 5,
-      nota: 'Aterrizas junto al cráter (3 pasos), pero el terreno es más incierto: si sale rocoso, cada paso cuesta el doble.'
+      nota: 'Land right by the crater (3 steps), but terrain is more uncertain: if rocky, each step costs double.'
     }
   },
 
   objetivos: {
     crater_profunda: {
-      nombre: 'Extraer 1 muestra profunda del cráter',
-      corto: '1 profunda',
-      herramienta: 'Taladro de núcleo',
+      nombre: 'Extract 1 deep crater sample',
+      corto: '1 deep',
+      herramienta: 'Core Drill',
       espacioMinimo: 1
     },
     llanura_doble: {
-      nombre: 'Traer 2 muestras superficiales de la llanura',
-      corto: '2 superficiales',
-      herramienta: 'Contenedor con espacio para 2',
+      nombre: 'Retrieve 2 surface plain samples',
+      corto: '2 surface',
+      herramienta: 'Container with space for 2',
       espacioMinimo: 2
     }
   },
 
-  // Textos de interfaz centralizados (por si se traduce).
+  // Centralized UI texts
   textos: {
-    titulo: 'MISIÓN UMBRAL',
-    pregunta: '¿Cómo prepararías una expedición si solo pudieras llevar lo que cabe en tu cohete y todavía no supieras exactamente qué encontrarás al aterrizar?',
-    ficcion: 'Todos los valores son ficticios y de juego: calibrados para enseñar, no para simular la realidad.',
-    btnEquipar: 'EQUIPAR', btnQuitar: 'QUITAR', btnObjetivo: 'OBJETIVO',
-    btnProbar: 'PROBAR', btnVerCalculo: 'VER CÁLCULO', btnLanzar: 'LANZAR',
-    btnReservar: 'RESERVAR', btnRecomendado: 'USAR RECOMENDACIÓN',
-    tramos: { ida: 'Ida', exploracion: 'Exploración', regreso: 'Regreso' },
-    tooltipReserva: 'Reserva: cuánta energía apartas para cada tramo. Lo que no apartes para la ida o el regreso queda para explorar.',
-    reservaInvadida: 'Entraste en la reserva de regreso.',
-    btnEscanear: 'ESCANEAR', btnCorregir: 'CORREGIR', btnMantener: 'MANTENER',
-    btnDescender: 'DESCENDER', btnAvanzar: 'AVANZAR', btnRetroceder: 'VOLVER',
-    btnPerforar: 'PERFORAR', btnRecoger: 'RECOGER', btnRegresar: 'REGRESAR',
-    btnRepetir: 'REPETIR CAMBIANDO EL PLAN', btnNueva: 'MISIÓN NUEVA',
-    btnEntendido: 'ENTENDIDO',
-    // Glosario: una línea por término técnico. La interfaz lo muestra como
-    // burbuja la primera vez que el término aparece y luego al hacer clic.
-    tooltipMargen: 'Margen: recursos que llevas por encima de lo que el plan estima consumir. Es lo que te salva cuando el terreno sale peor de lo previsto.',
-    tooltipCargaUtil: 'Carga útil: la masa total de equipo que el cohete puede llevar. Cada pieza que equipas la gasta.',
-    tooltipAutonomia: 'Autonomía: cuánto puedes operar en superficie con la energía y el oxígeno que llevas, contando la vuelta.',
-    eventoViajeDespejado: 'Nuevo escaneo: el terreno de tu zona de descenso está DESPEJADO. La estimación de la agencia se mantiene.',
-    riesgoTerreno: 'Riesgo de terreno rocoso',
-    eventoViaje: 'Nuevo escaneo: el terreno de tu zona de descenso es ROCOSO. Desplazarse ahí costará más energía de la prevista.',
-    regresoEstimado: 'Regreso estimado desde aquí'
+    titulo: 'MISSION UMBRAL',
+    pregunta: 'How would you prepare an expedition if you could only carry what fits on your rocket and did not yet know what you would find upon landing?',
+    ficcion: 'All values are game mechanics: calibrated to teach, not to simulate real engineering.',
+    btnEquipar: 'EQUIP', btnQuitar: 'REMOVE', btnObjetivo: 'OBJECTIVE',
+    btnProbar: 'TEST', btnVerCalculo: 'VIEW CALCULATION', btnLanzar: 'LAUNCH',
+    btnReservar: 'RESERVE', btnRecomendado: 'USE RECOMMENDATION',
+    tramos: { ida: 'Outbound', exploracion: 'Exploration', regreso: 'Return' },
+    tooltipReserva: 'Reserve: how much energy you budget for each leg. What is not budgeted for outbound or return remains for exploration.',
+    reservaInvadida: 'Entered return reserve.',
+    btnEscanear: 'SCAN', btnCorregir: 'CORRECT', btnMantener: 'HOLD',
+    btnDescender: 'DESCEND', btnAvanzar: 'ADVANCE', btnRetroceder: 'RETURN',
+    btnPerforar: 'DRILL', btnRecoger: 'COLLECT', btnRegresar: 'RETURN',
+    btnRepetir: 'REPEAT CHANGING PLAN', btnNueva: 'NEW MISSION',
+    btnEntendido: 'UNDERSTOOD',
+    tooltipMargen: 'Margin: resources carried above estimated plan consumption. Keeps you alive when terrain is rougher than expected.',
+    tooltipCargaUtil: 'Payload: total equipment mass the rocket can carry. Each equipped item consumes it.',
+    tooltipAutonomia: 'Autonomy: how far you can operate on surface with power and oxygen carried, including return.',
+    eventoViajeDespejado: 'New scan: landing zone terrain is CLEAR. Agency estimate holds.',
+    riesgoTerreno: 'Rocky terrain risk',
+    eventoViaje: 'New scan: landing zone terrain is ROCKY. Moving there costs more energy than expected.',
+    regresoEstimado: 'Estimated return from here'
   }
 };
